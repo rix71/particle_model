@@ -1,0 +1,109 @@
+!===============================
+! Run parameters
+!-------------------------------
+! runid - [char] Name of the run
+!===============================
+&run_params
+  runid = 'diffusion_test_off'
+/
+!===============================
+! Physical parameters
+!-------------------------------
+! do_diffusion - [bool] Diffuse particles if True
+! do_velocity  - [bool] Calculate particles' own velocity (True)
+!                or advect with current speed (False)
+! Ah           - [float] Horisontal diffusion constant
+! kv           - [float] Vertical diffusion constant
+!===============================
+&params
+  do_diffusion = .false.
+  do_velocity = .false.
+  Ah = 0.01
+  kv = 0.0001
+/
+!===============================
+! Domain variables
+!-------------------------------
+! topofile     - [char] Topography file
+! bathyvarname - [char] Name of bathymetry variable in topofile
+! lonvarname   - [char] Name of longitude variable in topofile
+! latvarname   - [char] Name of latitude variable in topofile
+! nx           - [int] Number of x-points
+! ny           - [int] Number of y-points
+!===============================
+&domain_vars
+  topofile = 'topo.nc'
+  bathyvarname = 'bathymetry'
+  lonvarname = 'lon'
+  latvarname = 'lat'
+  nx = 1557
+  ny = 890
+/
+!===============================
+! Particle variables
+!-------------------------------
+! inputstep   - [int] Interval at which particles will be released
+! coordfile   - [char] Particle initialisation file
+!===============================
+&particle_vars
+  inputstep = 1800
+  coordfile = 'particle_coords.dat'
+/
+!===============================
+! Time variables
+!-------------------------------
+! run_start - [char] Start of simulation
+! run_end   - [char] End of simulation
+! dt        - [float] Time step
+!===============================
+&time_vars
+  run_start = '2017-07-29 03:00:00'
+  run_end = '2017-08-10 03:00:00'
+  dt = 600.0
+/
+!===============================
+! Field variables
+!-------------------------------
+! GETMPATH       - [char] Path to GETM data
+! pmapfile       - [char] Parallel setup file, only needed if has_subdomains=.true.
+! has_subdomains - [bool] Data in multiple files or one file
+!                  If .true., will search for directories (named as start dates e.g. 20190131) "GETMPATH/*/"
+!                  If .false., will assume all files are in one directory
+!                  and search for file names "GETMPATH/[prefix]*[suffix]*.nc"
+! file_prefix    - [char] Before processor number
+! file_suffix    - [char] After processor number
+! startlevel     - [int] First index from which to read nlevels
+! nlevels        - [int] Number of levels
+! uvarname       - [char] Name of current x-component variable in GETM data
+! vvarname       - [char] Name of current y-component variable in GETM data
+! wvarname       - [char] Name of current z-component variable in GETM data
+! zaxvarname     - [char] Name of vertical layer depth variable in GETM data
+! zax_style      - [int] Depth values (1) or layer thickness (2)
+! run_3d         - [bool] Do 3D simulation
+!===============================
+&field_vars
+  GETMPATH = '/share/msi-archive/mfo/enriko.siht/getm_results/gof_250m/exp_003a/data'
+  pmapfile = 'par_setup.dat'
+  has_subdomains = .true.
+  file_prefix = 'GOF.particles.'
+  file_suffix = ''
+  startlevel = 1
+  nlevels = 1
+  uvarname = 'velx3d'
+  vvarname = 'vely3d'
+  wvarname = 'w'
+  zaxvarname = 'zcn'
+  zax_style = 1
+  run_3d = .false.
+/
+!===============================
+! Output variables
+!-------------------------------
+! outDir     - [char] Where do I save the data?
+! outputstep - [int] How often to save the data?
+!===============================
+&output_vars
+  outDir = '/share/msi/msi/enriko.siht/projects/Response/particle_model/diffusion_test_off'
+  outputstep = 1
+/
+~                     
