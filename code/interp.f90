@@ -23,10 +23,10 @@ contains
 
     dbghead(bilinearinterp)
 
-    ! debug(x11); debug(x12); debug(x21); 
+    ! debug(x11); debug(x12); debug(x21);
     ! debug(x22); debug(x);
     ! debug(y1); debug(y2); debug(y)
-    ! debug(z11); debug(z12); debug(z21); 
+    ! debug(z11); debug(z12); debug(z21);
     ! debug(z22);
 
     z1 = (x12 - x) / (x12 - x11) * z11 + (x - x11) / (x12 - x11) * z12
