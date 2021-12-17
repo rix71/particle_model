@@ -6,7 +6,7 @@ module initialise
   !----------------------------------------------------------------
   use precdefs
   use errors
-  use run_params, only: runid
+  use run_params, only: runid, dry_run
   use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, &
                         file_prefix, file_suffix, startlevel, nlevels, &
                         uvarname, vvarname, wvarname, zaxvarname, zax_style, run_3d
@@ -15,10 +15,10 @@ module initialise
   use fields, only: init_dirlist, init_fields, find_file, find_folder
   use nc_manager, only: nc_read_time_val
   use particle_vars, only: inputstep, coordfile, nParticles, &
-                           nInitParticles, initCoords, particles
+                           nInitParticles, initCoords, particles, max_age, &
+                           kill_beached, kill_boundary
   use time_vars
   use modtime
-  use loop_vars, only: ipart
   use params, only: do_diffusion, do_velocity, Ah, kv
   implicit none
   private
@@ -34,7 +34,7 @@ contains
     !---------------------------------------------
     ! First things to read in
     !---------------------------------------------
-    namelist /run_params/ runid
+    namelist /run_params/ runid, dry_run
 
     open (NMLFILE, file=NMLFILENAME, action='read', iostat=ierr)
     if (ierr .ne. 0) call throw_error('init_run', "Failed to open "//NMLFILENAME, ierr)
@@ -51,7 +51,7 @@ contains
     !---------------------------------------------
     namelist /params/ do_diffusion, do_velocity, Ah, kv
     namelist /domain_vars/ TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny
-    namelist /particle_vars/ inputstep, coordfile
+    namelist /particle_vars/ inputstep, coordfile, max_age, kill_beached, kill_boundary
     namelist /time_vars/ run_start, run_end, dt
     namelist /field_vars/ GETMPATH, PMAPFILE, has_subdomains, &
       file_prefix, file_suffix, startlevel, nlevels, &
@@ -68,6 +68,43 @@ contains
     read (NMLFILE, nml=field_vars)
     close (NMLFILE, iostat=ierr)
     if (ierr .ne. 0) call throw_error('init_namelist', "Failed to close "//NMLFILENAME, ierr)
+
+    FMT2, LINE
+    FMT2, "&params"
+    FMT3, var2val(do_diffusion)
+    FMT3, var2val(do_velocity)
+    FMT3, var2val(Ah)
+    FMT3, var2val(kv)
+    FMT2, LINE
+    FMT2, "&domain_vars"
+    FMT3, var2val_char(TOPOFILE)
+    FMT3, var2val_char(bathyvarname)
+    FMT3, var2val_char(lonvarname)
+    FMT3, var2val_char(latvarname)
+    FMT3, var2val(nx)
+    FMT3, var2val(ny)
+    FMT2, LINE
+    FMT2, "&particle_vars"
+    FMT3, var2val(inputstep)
+    FMT3, var2val_char(coordfile)
+    FMT3, var2val(max_age)
+    FMT3, var2val(kill_beached)
+    FMT3, var2val(kill_boundary)
+    FMT2, LINE
+    FMT2, "&field_vars"
+    FMT3, var2val_char(GETMPATH)
+    FMT3, var2val_char(PMAPFILE)
+    FMT3, var2val(has_subdomains)
+    FMT3, var2val_char(file_prefix)
+    FMT3, var2val_char(file_suffix)
+    FMT3, var2val(startlevel)
+    FMT3, var2val(nlevels)
+    FMT3, var2val_char(uvarname)
+    FMT3, var2val_char(vvarname)
+    FMT3, var2val_char(zaxvarname)
+    FMT3, var2val(zax_style)
+    FMT3, var2val(run_3d)
+
     FMT2, "Finished init namelist"
 
   end subroutine init_namelist
@@ -121,6 +158,7 @@ contains
     !---------------------------------------------
     ! Allocate array for estimated amount of particles
     !---------------------------------------------
+    integer :: ipart
 
     !print
     FMT1, "======== Init particles ========"
@@ -130,9 +168,10 @@ contains
     read (COORDFILE, *) nInitParticles
     allocate (initCoords(nInitParticles, 6))
     do ipart = 1, nInitParticles
-      read (COORDFILE, *) initCoords(ipart, 1), initCoords(ipart, 2), &
+      read (COORDFILE, *, iostat=ierr) initCoords(ipart, 1), initCoords(ipart, 2), &
         initCoords(ipart, 3), initCoords(ipart, 4), &
         initCoords(ipart, 5), initCoords(ipart, 6)
+      if (ierr .ne. 0) call throw_error("init_particles_from_coordfile", "Failed to read from "//trim(coordfile), ierr)
     end do
     close (COORDFILE, iostat=ierr)
     if (ierr .ne. 0) call throw_error("init_particles_from_coordfile", "Failed to close "//trim(coordfile), ierr)

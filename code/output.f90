@@ -8,20 +8,26 @@ module output
   use particle_type
   use run_params, only: runid
   use particle_vars, only: particles
-  use time_vars, only: theDate
+  use time_vars, only: theDate, nTimes, dt
   use field_vars, only: run_3d
+  use netcdf
+  use nc_manager, only: nc_initialise, nc_add_dimension, nc_add_variable, nc_add_attr, nc_check, FILLVALUE_BIG
   implicit none
   private
   !===================================================
   !---------------------------------------------
   public :: outputstep, init_output, open_beach_bdy_files, &
             close_beach_bdy_files, write_data, &
-            write_beached, write_boundary
+            write_beached, write_boundary, write_data_only_active, &
+            write_all_particles, write_active_particles, &
+            write_data_snapshot
   !---------------------------------------------
   integer                     :: outputstep
   character(len=512)          :: outDir
-  character(len=*), parameter :: dataDir = 'data'
-  namelist /output_vars/ outDir, outputstep
+  integer                     :: nc_t_dimid, nc_p_dimid
+  character(len=512)          :: nc_fileout_all, nc_fileout_active, nc_fileout_snap
+  logical                     :: write_all_particles, write_active_particles
+  namelist /output_vars/ outDir, outputstep, write_all_particles, write_active_particles
   !---------------------------------------------
   integer                     :: ierr
   !===================================================
@@ -30,6 +36,7 @@ contains
   subroutine init_output
 
     logical :: dirExists
+    integer :: nfiles = 0
 
     FMT1, "======== Init output ========"
 
@@ -39,17 +46,85 @@ contains
     close (NMLFILE, iostat=ierr)
     if (ierr .ne. 0) call throw_error("init_output", "Failed to close "//NMLFILENAME, ierr)
 
-#ifndef NOSYSCALLS
     inquire (file=trim(outDir), exist=dirExists)
     if (.not. dirExists) then
+#ifndef NOSYSCALLS
       FMT2, "Making directory "//trim(outDir)
       !call system('mkdir '//trim(outDir))
-      call system('mkdir -p '//trim(outDir)//'/'//trim(dataDir))
-    end if
+      call system('mkdir -p '//trim(outDir))
+#else
+      call throw_error("init_output", "Out dir ("//trim(outDir)//") does not exist!")
 #endif
+    end if
+
+    if (write_all_particles) nfiles = nfiles + 1
+    if (write_active_particles) nfiles = nfiles + 1
+
+    FMT2, var2val(write_all_particles)
+    FMT2, var2val(write_active_particles)
+    FMT2, "Writing output every ", outputstep, " timesteps, or ", (outputstep * dt) / 3600., "hours"
+    FMT2, "This will result in ", nfiles * nTimes / outputstep, " files"
+
+    if (write_all_particles) then
+      nc_fileout_all = trim(outDir)//'/'//trim(runid)//'.all.nc'
+      call init_nc_output(nc_fileout_all)
+    end if
+
+    if (write_active_particles) then
+      nc_fileout_active = trim(outDir)//'/'//trim(runid)//'.active.nc'
+      call init_nc_output(nc_fileout_active)
+    end if
+
+    nc_fileout_snap = trim(outDir)//'/'//trim(runid)//'.snap.nc'
+    call nc_initialise(nc_fileout_snap)
+    call nc_add_dimension(nc_fileout_snap, "particle", nc_p_dimid)
+    call nc_add_variable(nc_fileout_snap, "time", "float", 1, [nc_p_dimid])
+    call nc_add_attr(nc_fileout_snap, "time", "units", "seconds since 1900-01-01 00:00:00")
+
+    call nc_add_variable(nc_fileout_snap, "x", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(nc_fileout_snap, "x", "units", "degrees east")
+
+    call nc_add_variable(nc_fileout_snap, "y", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(nc_fileout_snap, "y", "units", "degrees north")
+
+    call nc_add_variable(nc_fileout_snap, "age", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(nc_fileout_snap, "age", "units", "s")
+
+    call nc_add_variable(nc_fileout_snap, "trajectory", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(nc_fileout_snap, "trajectory", "units", "m")
+
+    call nc_add_variable(nc_fileout_snap, "particle_num", "int", 1, [nc_p_dimid])
+
+    ! call init_nc_output(nc_fileout_snap)
 
     return
   end subroutine init_output
+  !===========================================
+  subroutine init_nc_output(file_name)
+
+    character(len=512), intent(in) :: file_name
+
+    call nc_initialise(file_name)
+    call nc_add_dimension(file_name, "particle", nc_p_dimid)
+    call nc_add_dimension(file_name, "time", nc_t_dimid)
+
+    call nc_add_variable(file_name, "time", "float", 1, [nc_t_dimid])
+    call nc_add_attr(file_name, "time", "units", "seconds since 1900-01-01 00:00:00")
+
+    call nc_add_variable(file_name, "x", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "x", "units", "degrees east")
+
+    call nc_add_variable(file_name, "y", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "y", "units", "degrees north")
+
+    call nc_add_variable(file_name, "age", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "age", "units", "s")
+
+    call nc_add_variable(file_name, "trajectory", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "trajectory", "units", "m")
+
+
+  end subroutine init_nc_output
   !===========================================
   subroutine open_beach_bdy_files
 
@@ -75,44 +150,230 @@ contains
     return
   end subroutine close_beach_bdy_files
   !===========================================
-  subroutine write_data(itime, nwrite)
+  subroutine write_data(nwrite)
     !---------------------------------------------
     ! Write the output
     ! TODO: selection for output
     !---------------------------------------------
 
-    integer, intent(in) :: itime, nwrite
-    integer             :: ipart
-    character(len=14)   :: outfilesuf
-    character(len=512)  :: fileout
+    integer, intent(in) :: nwrite
+    integer             :: ipart, ncid, varid
+    integer, save       :: nc_itime_out = 0
+    real(rk)            :: var2d(1, 1), dateval(1)
+    ! character(len=14)   :: outfilesuf
+    ! character(len=512)  :: fileout
 
+    call theDate%print_short_date
     FMT2, "Saving data... ", nwrite, " particles"
 
-    write (outfilesuf, '(i0.14)') theDate%shortDate(.true.)
-    fileout = trim(outDir)//'/'//trim(dataDir)//'/'//trim(runid)//'.'//outfilesuf//'.dat'
-    open (DATAOUTFILE, file=trim(fileout), iostat=ierr)
-    if (ierr .ne. 0) call throw_error("write_data", "Failed to open "//trim(fileout), ierr)
-    select case (run_3d)
-    case (.true.)
-      write (DATAOUTFILE, *) "timestep, lon, lat, source, age, depth, trajectory"
-      do ipart = 1, nwrite
-        write (DATAOUTFILE, *) itime, particles(ipart)%xPos, particles(ipart)%yPos, &
-          particles(ipart)%originNum, particles(ipart)%age, &
-          particles(ipart)%zPos, particles(ipart)%trajLen
-      end do
-    case (.false.)
-      write (DATAOUTFILE, *) "timestep, lon, lat, source, age, trajectory"
-      do ipart = 1, nwrite
-        write (DATAOUTFILE, *) itime, particles(ipart)%xPos, particles(ipart)%yPos, &
-          particles(ipart)%originNum, particles(ipart)%age, &
-          particles(ipart)%trajLen
-      end do
-    end select
-    close (DATAOUTFILE, iostat=ierr)
-    if (ierr .ne. 0) call throw_error("write_data", "Failed to close "//trim(fileout), ierr)
+    ! write (outfilesuf, '(i0.14)') theDate%shortDate(.true.)
+    ! fileout = trim(outDir)//'/'//trim(runid)//'.'//outfilesuf//'.dat'
+    ! open (DATAOUTFILE, file=trim(fileout), iostat=ierr)
+    ! if (ierr .ne. 0) call throw_error("write_data", "Failed to open "//trim(fileout), ierr)
+    ! select case (run_3d)
+    ! case (.true.)
+    !   write (DATAOUTFILE, *) "timestep, lon, lat, source, age, depth, trajectory"
+    !   do ipart = 1, nwrite
+    !     write (DATAOUTFILE, *) itime, particles(ipart)%xPos, particles(ipart)%yPos, &
+    !       particles(ipart)%originNum, particles(ipart)%age, &
+    !       particles(ipart)%zPos, particles(ipart)%trajLen
+    !   end do
+    ! case (.false.)
+    !   write (DATAOUTFILE, *) "timestep, lon, lat, source, age, trajectory"
+    !   do ipart = 1, nwrite
+    !     write (DATAOUTFILE, *) itime, particles(ipart)%xPos, particles(ipart)%yPos, &
+    !       particles(ipart)%originNum, particles(ipart)%age, &
+    !       particles(ipart)%trajLen
+    !   end do
+    ! end select
+    ! close (DATAOUTFILE, iostat=ierr)
+    ! if (ierr .ne. 0) call throw_error("write_data", "Failed to close "//trim(fileout), ierr)
+
+    nc_itime_out = nc_itime_out + 1
+    call nc_check(trim(nc_fileout_all), nf90_open(trim(nc_fileout_all), nf90_write, ncid), "write_data :: open")
+    call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "time", varid), "write_data :: inq varid")
+    dateval = theDate%date2num()
+    debug(dateval)
+    call nc_check(trim(nc_fileout_all), nf90_put_var(ncid, varid, dateval, start=[nc_itime_out], count=[1]), &
+                  "write_data :: put var")
+    do ipart = 1, nwrite
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "x", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%xPos
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "y", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%yPos
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "age", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%age
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "trajectory", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%trajLen
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+    end do
+    call nc_check(trim(nc_fileout_all), nf90_close(ncid), "write :: close")
 
     return
   end subroutine write_data
+  !===========================================
+  subroutine write_data_only_active(nwrite)
+
+    integer, intent(in) :: nwrite
+    integer             :: ipart, ncid, varid
+    integer, save       :: nc_itime_out = 0
+    real(rk)            :: var2d(1, 1), dateval(1)
+    ! character(len=14)   :: outfilesuf
+    ! character(len=512)  :: fileout
+
+    ! write (outfilesuf, '(i0.14)') theDate%shortDate(.true.)
+    ! fileout = trim(outDir)//'/'//trim(runid)//'.active.'//outfilesuf//'.dat'
+    ! open (DATAOUTFILE, file=trim(fileout), iostat=ierr)
+    ! if (ierr .ne. 0) call throw_error("write_data", "Failed to open "//trim(fileout), ierr)
+    ! select case (run_3d)
+    ! case (.true.)
+    !   write (DATAOUTFILE, *) "particle nr, timestep, lon, lat, source, age, depth, trajectory"
+    !   do ipart = nwrite, 1, -1
+    !     if (particles(ipart)%isActive) then
+    !       write (DATAOUTFILE, *) ipart, itime, particles(ipart)%xPos, particles(ipart)%yPos, &
+    !         particles(ipart)%originNum, particles(ipart)%age, &
+    !         particles(ipart)%zPos, particles(ipart)%trajLen
+    !     end if
+    !   end do
+    ! case (.false.)
+    !   write (DATAOUTFILE, *) "particle nr, timestep, lon, lat, source, age, trajectory"
+    !   do ipart = nwrite, 1, -1
+    !     if (particles(ipart)%isActive) then
+    !       write (DATAOUTFILE, *) ipart, itime, particles(ipart)%xPos, particles(ipart)%yPos, &
+    !         particles(ipart)%originNum, particles(ipart)%age, &
+    !         particles(ipart)%trajLen
+    !     end if
+    !   end do
+    ! end select
+    ! close (DATAOUTFILE, iostat=ierr)
+    ! if (ierr .ne. 0) call throw_error("write_data", "Failed to close "//trim(fileout), ierr)
+
+    nc_itime_out = nc_itime_out + 1
+    call nc_check(trim(nc_fileout_active), nf90_open(trim(nc_fileout_active), nf90_write, ncid), "write_data_active :: open")
+    call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "time", varid), "write_data_active :: inq varid")
+    dateval = theDate%date2num()
+    call nc_check(trim(nc_fileout_all), nf90_put_var(ncid, varid, dateval, start=[nc_itime_out], count=[1]), &
+                  "write_data_active :: put var")
+
+    do ipart = 1, nwrite
+      if (particles(ipart)%isActive) then
+        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "x", varid), "write_data_active :: inq varid")
+        var2d = particles(ipart)%xPos
+        call nc_check(trim(nc_fileout_active), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data_active :: put var")
+
+        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "y", varid), "write_data_active :: inq varid")
+        var2d = particles(ipart)%yPos
+        call nc_check(trim(nc_fileout_active), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data_active :: put var")
+
+        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "age", varid), "write_data_active :: inq varid")
+        var2d = particles(ipart)%age
+        call nc_check(trim(nc_fileout_active), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data_active :: put var")
+
+        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "trajectory", varid), "write_data_active :: inq varid")
+        var2d = particles(ipart)%trajLen
+        call nc_check(trim(nc_fileout_active), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data_active :: put var")
+      end if
+    end do
+
+    call nc_check(trim(nc_fileout_active), nf90_close(ncid), "write_data_active :: close")
+
+  end subroutine write_data_only_active
+  !===========================================
+  subroutine write_data_snapshot(p, particle_num)
+
+    class(particle), intent(in) :: p
+    integer, intent(in) :: particle_num
+    integer             :: ncid, varid
+    integer, save       :: nc_itime_out = 0
+    real(rk)            :: var1d(1), dateval(1)
+    ! character(len=14)   :: outfilesuf
+    ! character(len=512)  :: fileout
+    ! logical :: exist
+
+    ! write (outfilesuf, '(i0.14)') theDate%shortDate(.true.)
+    ! fileout = trim(outDir)//'/'//trim(runid)//'.snap.'//outfilesuf//'.dat'
+
+    ! inquire (file=trim(fileout), exist=exist)
+    ! if (exist) then
+    !   open (DATAOUTFILE, file=trim(fileout), status="old", position="append", action="write", iostat=ierr)
+    ! else
+    !   open (DATAOUTFILE, file=trim(fileout), status="new", action="write", iostat=ierr)
+    ! end if
+    ! if (ierr .ne. 0) call throw_error("write_data", "Failed to open "//trim(fileout), ierr)
+
+    ! select case (run_3d)
+    ! case (.true.)
+    !   if (.not. exist) write (DATAOUTFILE, *) "particle nr, timestep, lon, lat, source, age, depth, trajectory"
+    !   write (DATAOUTFILE, *) particle_num, itime, p%xPos, p%yPos, p%originNum, p%age, p%zPos, p%trajLen
+    ! case (.false.)
+    !   if (.not. exist) write (DATAOUTFILE, *) "particle nr, timestep, lon, lat, source, age, trajectory"
+    !   write (DATAOUTFILE, *) particle_num, itime, p%xPos, p%yPos, p%originNum, p%age, p%trajLen
+    ! end select
+    ! close (DATAOUTFILE, iostat=ierr)
+    ! if (ierr .ne. 0) call throw_error("write_data", "Failed to close "//trim(fileout), ierr)
+
+    nc_itime_out = nc_itime_out + 1
+    call nc_check(trim(nc_fileout_snap), nf90_open(trim(nc_fileout_snap), nf90_write, ncid), "write_data_active :: open")
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "time", varid), "write_data_active :: inq varid")
+    dateval = theDate%date2num()
+
+    call nc_check(trim(nc_fileout_snap), nf90_put_var(ncid, varid, dateval, start=[nc_itime_out], count=[1]), &
+                  "write_data_active :: put var")
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "x", varid), "write_data_active :: inq varid")
+    var1d = p%xPos
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_active :: put var")
+
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "y", varid), "write_data_active :: inq varid")
+    var1d = p%yPos
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_active :: put var")
+
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "age", varid), "write_data_active :: inq varid")
+    var1d = p%age
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_active :: put var")
+
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "trajectory", varid), "write_data_active :: inq varid")
+    var1d = p%trajLen
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_active :: put var")
+
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "particle_num", varid), "write_data_active :: inq varid")
+    var1d = particle_num
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_active :: put var")
+
+    call nc_check(trim(nc_fileout_snap), nf90_close(ncid), "write_data_active :: close")
+
+  end subroutine write_data_snapshot
   !===========================================
   subroutine write_beached(pin)
 

@@ -81,7 +81,7 @@ contains
     debug(rho_p); debug(rad_p); 
     debug(rho_env)
 
-    kin_visc = mu / rho_env
+    kin_visc = mu / rho_env ! NOT USING VISCOSITY???
     delta_rho = rho_p - rho_env
 
     debug(mu); debug(kin_visc); 
@@ -105,10 +105,10 @@ contains
     ! Needs condition delta_rho > 0? WRONG ORDER???
     if (delta_rho > 0.0d0) then
       DBG, "delta_rho > 0"; debug(delta_rho / rho_env)
-      vertical_velocity = ((delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
+      vertical_velocity = ((delta_rho / rho_env)*-1.0 * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
     else
       DBG, "delta_rho < 0"; debug(delta_rho / rho_env)
-      vertical_velocity = -1.0 * (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
+      vertical_velocity = -1.0 * (-1.0 * (delta_rho / rho_env)*-1.0 * g * w_star * kin_visc)**(1./3.)
     end if
 
     dbgtail(vertical_velocity)
@@ -219,8 +219,7 @@ contains
 
     rz0 = (((((R060 * tt + R150 * ss + R050) * tt + (R240 * ss + R140) * ss + R040) * tt &
            + ((R330 * ss + R230) * ss + R130) * ss + R030) * tt + (((R420 * ss + R320) * ss + R220) * ss + R120) * ss + R020) * tt &
-           + ((((R510 * ss + R410) * ss + R310) * ss + R210) * ss + R110) * ss + R010) * tt &
-          + (((((R600 * ss + R500) * ss + R400) * ss + R300) * ss + R200) * ss + R100) * ss + R000
+          + ((((R510 * ss+R410) * ss+R310) * ss+R210) * ss+R110) * ss+R010) * tt +(((((R600 * ss+R500) * ss+R400) * ss+R300) * ss+R200) * ss+R100) * ss+R000
 
     seawater_density_from_temp_and_salt = ((rz3 * zz + rz2) * zz + rz1) * zz + rz0
 

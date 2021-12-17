@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue Dec 14 11:56:13 2021
+# Make data base, printed on Fri Dec 17 15:39:42 2021
 
 # Variables
 
@@ -49,7 +49,7 @@ XDG_DATA_DIRS = /usr/local/share:/usr/share:/var/lib/snapd/desktop
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-TERMINATOR_UUID = urn:uuid:6f70d537-3035-473f-af5c-44b0103afadd
+TERMINATOR_UUID = urn:uuid:466de46e-3236-49fd-9d89-387655acca3c
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # environment
@@ -61,7 +61,7 @@ PATH = /home/enriko/.vscode-server/bin/7db1a2b88f7557e0a43fec75b6ba7e50b3e9f77e/
 # environment
 VSCODE_LOG_STACK = false
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-e0dcbf6c-7e56-4ef4-a2fc-6b42b6d7b398.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-f8052e64-efce-475f-a01f-710592d4c0ff.sock
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -69,7 +69,7 @@ LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:
 # automatic
 %F = $(notdir $%)
 # environment
-DISPLAY = 172.26.160.1:0.0
+DISPLAY = 172.20.128.1:0.0
 # environment
 VSCODE_PIPE_LOGGING = true
 # environment
@@ -79,7 +79,7 @@ PWD = /mnt/c/Users/enrik/OneDrive - TalTech/Documents/particle_model
 # environment
 WSL_INTEROP = /run/WSL/8_interop
 # environment
-WT_SESSION = 1d69e267-8e6b-4612-aadc-72fdf68e3b98
+WT_SESSION = 2a11cd9c-3f49-49e7-95fa-bf6146fc6fdc
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/server/remoteExtensionHostProcess
 # environment
@@ -115,7 +115,7 @@ NAME = Code
 # automatic
 %D = $(patsubst %/,%,$(dir $%))
 # environment
-VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/enrik/.vscode/extensions/ms-vscode-remote.remote-wsl-0.63.5
+VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/enrik/.vscode/extensions/ms-vscode-remote.remote-wsl-0.63.13
 # default
 MAKE_COMMAND := make
 # environment
@@ -175,9 +175,9 @@ WSL_DISTRO_NAME = Ubuntu-20.04
 
 # Directories
 
-# . (device 46, inode 3096224743851297): 14 files, no impossibilities.
+# . (device 46, inode 3096224743851297): 17 files, no impossibilities.
 
-# 14 files, no impossibilities in 1 directories.
+# 17 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -227,12 +227,12 @@ GNUmakefile:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 22 / storage = 237 B / avg = 10 B
-# current buf: size = 8162 B / used = 237 B / count = 22 / avg = 10 B
+# strcache buffers: 1 (0) / strings = 25 / storage = 263 B / avg = 10 B
+# current buf: size = 8162 B / used = 263 B / count = 25 / avg = 10 B
 
-# strcache performance: lookups = 25 / hit rate = 12%
+# strcache performance: lookups = 28 / hit rate = 10%
 # hash-table stats:
-# Load=22/8192=0%, Rehash=0, Collisions=2/25=8%
-# Finished Make data base on Tue Dec 14 11:56:13 2021
+# Load=25/8192=0%, Rehash=0, Collisions=2/28=7%
+# Finished Make data base on Fri Dec 17 15:39:42 2021
 
  

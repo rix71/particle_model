@@ -1,9 +1,12 @@
 FC = gfortran
-FFLAGS = -g -cpp -ffree-line-length-none -Wall -Wline-truncation \
+FFLAGS = -O3 -cpp -ffree-line-length-none -Wall -Wline-truncation \
 	 -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
+FFLAGS += -DWRITESTDOUT
 FFLAGS += -DDEBUG
+FFLAGS += -DNETCDFOUTPUT
+# FFLAGS += -DNOSYSCALLS
 
 MOD=./mod
 OBJ=./obj

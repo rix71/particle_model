@@ -2,9 +2,11 @@
 ! Run parameters
 !-------------------------------
 ! runid - [char] Name of the run
+! dry_run - [bool] Start loop
 !===============================
 &run_params
   runid = 'diffusion_test_off'
+  dry_run = .false.
 /
 !===============================
 ! Physical parameters
@@ -42,12 +44,19 @@
 !===============================
 ! Particle variables
 !-------------------------------
-! inputstep   - [int] Interval at which particles will be released
-! coordfile   - [char] Particle initialisation file
+! inputstep     - [int] Interval at which particles will be released
+! coordfile     - [char] Particle initialisation file
+! max_age       - [float] Life time of (all) particles in timesteps
+!                     -1 to achieve immortality!
+! kill_beached  - [bool] Set beached particle as inactive
+! kill_boundary - [bool] Set particle on boundary as inactive
 !===============================
 &particle_vars
   inputstep = 1800
   coordfile = 'particle_coords.dat'
+  max_age = -1
+  kill_beached = .true.
+  kill_boundary = .true.
 /
 !===============================
 ! Time variables
@@ -101,9 +110,13 @@
 !-------------------------------
 ! outDir     - [char] Where do I save the data?
 ! outputstep - [int] How often to save the data?
+! write_all_particles - [bool] Write all (active and inactive) particles
+! write_active_particles - [bool] Write only active particles
 !===============================
 &output_vars
   outDir = '/share/msi/msi/enriko.siht/projects/Response/particle_model/diffusion_test_off'
   outputstep = 1
+  write_all_particles = .false.
+  write_active_particles = .true.
 /
 ~                     

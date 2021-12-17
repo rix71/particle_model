@@ -1,3 +1,4 @@
+#define SAYLESS
 #include "cppdefs.h"
 module nc_manager
   !----------------------------------------------------------------
@@ -10,27 +11,17 @@ module nc_manager
   !===================================================
   !---------------------------------------------
   public :: nc_read1d, nc_read2d, nc_read4d, nc_read_time_val, &
-            nc_get_dim, nc_get_timeunit, nc_var_exists
-#ifdef NETCDFOUTPUT
+            nc_get_dim, nc_get_timeunit, nc_var_exists, nc_check
+
   !---------------------------------------------
   ! Public write variables/functions
-  public :: xDimName, yDimName, zDimName, timeDimName, &
-            FILLVALUE_BIG, FILLVALUE_TOPO, &
-            nc_x_dimid, nc_y_dimid, nc_z_dimid, nc_t_dimid, &
+  public :: FILLVALUE_BIG, FILLVALUE_TOPO, &
             nc_initialise, nc_add_dimension, &
             nc_add_variable, nc_add_attr, nc_write
-  !---------------------------------------------
-  ! Dimension names
-  character(len=*), parameter :: xDimName = 'lon'
-  character(len=*), parameter :: yDimName = 'lat'
-  character(len=*), parameter :: zDimName = 'level'
-  character(len=*), parameter :: timeDimName = 'time'
+
   !---------------------------------------------
   real(rk), parameter :: FILLVALUE_TOPO = -10.0d0
   real(rk), parameter :: FILLVALUE_BIG = -9999.0d0
-  !---------------------------------------------
-  ! Dimension IDs
-  integer :: nc_x_dimid, nc_y_dimid, nc_z_dimid, nc_t_dimid
   !---------------------------------------------
   ! Overload the writing subroutines
   interface nc_write
@@ -40,11 +31,9 @@ module nc_manager
     module procedure nc_write_real_3d
     module procedure nc_write_real_4d
   end interface nc_write
-#endif
   !===================================================
 contains
   !===========================================
-#ifdef NETCDFOUTPUT
   subroutine nc_initialise(FILE_NAME)
 
     integer                      :: ncid
@@ -52,8 +41,8 @@ contains
 
     FMT1, "======== Init netCDF output ========"
 
-    call checkdbg(trim(FILE_NAME), nf90_create(trim(FILE_NAME), nf90_clobber, ncid), "init :: create")
-    call checkdbg(trim(FILE_NAME), nf90_close(ncid), "init :: close")
+    call nc_check(trim(FILE_NAME), nf90_create(trim(FILE_NAME), nf90_netcdf4, ncid), "init :: create")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "init :: close")
 
     FMT2, trim(FILE_NAME), " initialized successfully"
 
@@ -71,15 +60,15 @@ contains
     FMT1, "======== Add netCDF dimension ========"
     FMT2, "Adding dimension ", trim(dimname), " to ", trim(FILE_NAME)
 
-    call checkdbg(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "add dim :: open")
-    call checkdbg(trim(FILE_NAME), nf90_redef(ncid), "add dim :: redef mode")
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "add dim :: open")
+    call nc_check(trim(FILE_NAME), nf90_redef(ncid), "add dim :: redef mode")
     if (present(dimsize)) then
-      call checkdbg(trim(FILE_NAME), nf90_def_dim(ncid, trim(dimname), dimsize, dimid), "add dim :: def "//trim(dimname))
+      call nc_check(trim(FILE_NAME), nf90_def_dim(ncid, trim(dimname), dimsize, dimid), "add dim :: def "//trim(dimname))
     else
-      call checkdbg(trim(FILE_NAME), nf90_def_dim(ncid, trim(dimname), nf90_unlimited, dimid), "add dim :: def "//trim(dimname))
+      call nc_check(trim(FILE_NAME), nf90_def_dim(ncid, trim(dimname), nf90_unlimited, dimid), "add dim :: def "//trim(dimname))
     end if
-    call checkdbg(trim(FILE_NAME), nf90_enddef(ncid), "add dim :: end def")
-    call checkdbg(trim(FILE_NAME), nf90_close(ncid), "add dim :: close")
+    call nc_check(trim(FILE_NAME), nf90_enddef(ncid), "add dim :: end def")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "add dim :: close")
 
     FMT2, trim(dimname), " added successfully"
 
@@ -103,19 +92,19 @@ contains
     FMT1, "======== Add netCDF variable ========"
     FMT2, "Adding variable ", trim(varname), " to ", trim(FILE_NAME)
 
-    call checkdbg(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "add var :: open")
-    call checkdbg(trim(FILE_NAME), nf90_redef(ncid), "add var :: redef mode")
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "add var :: open")
+    call nc_check(trim(FILE_NAME), nf90_redef(ncid), "add var :: redef mode")
     select case (dType)
     case ('float')
-      call checkdbg(trim(FILE_NAME), nf90_def_var(ncid, varname, nf90_double, dimids, varid), "add var :: def "//trim(varname))
+      call nc_check(trim(FILE_NAME), nf90_def_var(ncid, varname, nf90_double, dimids, varid), "add var :: def "//trim(varname))
       if (present(missing_val)) then
-        call checkdbg(trim(FILE_NAME), nf90_put_att(ncid, varid, "missing_value", missing_val), "add var :: def "//trim(varname))
+        call nc_check(trim(FILE_NAME), nf90_put_att(ncid, varid, "missing_value", missing_val), "add var :: def "//trim(varname))
       end if
     case ('int')
-      call checkdbg(trim(FILE_NAME), nf90_def_var(ncid, varname, nf90_int, dimids, varid), "add var :: def "//trim(varname))
+      call nc_check(trim(FILE_NAME), nf90_def_var(ncid, varname, nf90_int, dimids, varid), "add var :: def "//trim(varname))
     end select
-    call checkdbg(trim(FILE_NAME), nf90_enddef(ncid), "add var :: end def")
-    call checkdbg(trim(FILE_NAME), nf90_close(ncid), "add var :: close")
+    call nc_check(trim(FILE_NAME), nf90_enddef(ncid), "add var :: end def")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "add var :: close")
 
     FMT2, trim(varname), " added successfully"
 
@@ -134,12 +123,12 @@ contains
     FMT1, "======== Add netCDF attribute ========"
     FMT2, "Adding attribute ", trim(attrname), " to ", trim(FILE_NAME)
 
-    call checkdbg(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "add attr :: open")
-    call checkdbg(trim(FILE_NAME), nf90_redef(ncid), "add attr :: redef mode")
-    call checkdbg(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "add attr :: inq varid")
-    call checkdbg(trim(FILE_NAME), nf90_put_att(ncid, varid, trim(attrname), trim(attrval)), "add attr :: put "//trim(attrname))
-    call checkdbg(trim(FILE_NAME), nf90_enddef(ncid), "add attr :: end def")
-    call checkdbg(trim(FILE_NAME), nf90_close(ncid), "add attr :: close")
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "add attr :: open")
+    call nc_check(trim(FILE_NAME), nf90_redef(ncid), "add attr :: redef mode")
+    call nc_check(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "add attr :: inq varid")
+    call nc_check(trim(FILE_NAME), nf90_put_att(ncid, varid, trim(attrname), trim(attrval)), "add attr :: put "//trim(attrname))
+    call nc_check(trim(FILE_NAME), nf90_enddef(ncid), "add attr :: end def")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "add attr :: close")
 
     FMT2, trim(attrname), " added successfully"
 
@@ -161,12 +150,12 @@ contains
     FMT1, "======== Write netCDF variable ========"
     FMT2, "Writing variable ", trim(varname), " to ", trim(FILE_NAME)
 
-    call checkdbg(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
-    call checkdbg(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
+    call nc_check(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
     start = (/1/)
     count = (/nvals/)
-    call checkdbg(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
-    call checkdbg(trim(FILE_NAME), nf90_close(ncid), "write :: close")
+    call nc_check(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "write :: close")
 
     FMT2, trim(varname), " written successfully"
 
@@ -188,12 +177,12 @@ contains
     FMT1, "======== Write netCDF variable ========"
     FMT2, "Writing variable ", trim(varname), " to ", trim(FILE_NAME)
 
-    call checkdbg(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
-    call checkdbg(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
+    call nc_check(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
     start = (/1, 1/)
     count = (/nx, ny/)
-    call checkdbg(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
-    call checkdbg(trim(FILE_NAME), nf90_close(ncid), "write :: close")
+    call nc_check(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "write :: close")
 
     FMT2, trim(varname), " written successfully"
 
@@ -215,12 +204,12 @@ contains
     FMT1, "======== Write netCDF variable ========"
     FMT2, "Writing variable ", trim(varname), " to ", trim(FILE_NAME)
 
-    call checkdbg(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
-    call checkdbg(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
+    call nc_check(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
     start = (/1, 1/)
     count = (/nx, ny/)
-    call checkdbg(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
-    call checkdbg(trim(FILE_NAME), nf90_close(ncid), "write :: close")
+    call nc_check(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "write :: close")
 
     FMT2, trim(varname), " written successfully"
 
@@ -242,12 +231,12 @@ contains
     FMT1, "======== Write netCDF variable ========"
     FMT2, "Writing variable ", trim(varname), " to ", trim(FILE_NAME)
 
-    call checkdbg(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
-    call checkdbg(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
+    call nc_check(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
     start = [1, 1, itime]
     count = [nx, ny, 1]
-    call checkdbg(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
-    call checkdbg(trim(FILE_NAME), nf90_close(ncid), "write :: close")
+    call nc_check(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "write :: close")
 
     FMT2, trim(varname), " written successfully"
 
@@ -269,18 +258,17 @@ contains
     FMT1, "======== Write netCDF variable ========"
     FMT2, "Writing variable ", trim(varname), " to ", trim(FILE_NAME)
 
-    call checkdbg(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
-    call checkdbg(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
+    call nc_check(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
     start = (/1, 1, 1, itime/)
     count = (/nx, ny, nz, 1/)
-    call checkdbg(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
-    call checkdbg(trim(FILE_NAME), nf90_close(ncid), "write :: close")
+    call nc_check(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "write :: close")
 
     FMT2, trim(varname), " written successfully"
 
     return
   end subroutine nc_write_real_4d
-#endif
   !===========================================
   subroutine nc_read1d(fname, vname, nvals, dataout)
 
@@ -290,10 +278,10 @@ contains
     character(len=*)      :: vname
     real(rk), intent(out) :: dataout(nvals)
 
-    call checkdbg(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read1d :: open")
-    call checkdbg(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read1d :: inq_varid "//trim(vname))
-    call checkdbg(trim(fname), nf90_get_var(ncid, varid, dataout), "nc_read1d :: get_var "//trim(vname))
-    call checkdbg(trim(fname), nf90_close(ncid), "nc_read1d :: close")
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read1d :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read1d :: inq_varid "//trim(vname))
+    call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout), "nc_read1d :: get_var "//trim(vname))
+    call nc_check(trim(fname), nf90_close(ncid), "nc_read1d :: close")
 
     return
   end subroutine
@@ -306,10 +294,10 @@ contains
     character(len=*)     :: vname
     real(rk), intent(out) :: dataout(nx, ny)
 
-    call checkdbg(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read2d :: open")
-    call checkdbg(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read2d :: inq_varid "//trim(vname))
-    call checkdbg(trim(fname), nf90_get_var(ncid, varid, dataout), "nc_read2d :: get_var "//trim(vname))
-    call checkdbg(trim(fname), nf90_close(ncid), "nc_read2d :: close")
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read2d :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read2d :: inq_varid "//trim(vname))
+    call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout), "nc_read2d :: get_var "//trim(vname))
+    call nc_check(trim(fname), nf90_close(ncid), "nc_read2d :: close")
 
     return
   end subroutine nc_read2d
@@ -322,11 +310,11 @@ contains
     character(len=*)      :: vname
     real(rk), intent(out) :: dataout(count(1), count(2), count(3), count(4))
 
-    call checkdbg(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read4d :: open")
-    call checkdbg(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read4d :: inq_varid "//trim(vname))
-    call checkdbg(trim(fname), nf90_get_var(ncid, varid, dataout, start=start, &
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read4d :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read4d :: inq_varid "//trim(vname))
+    call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout, start=start, &
                                             count=count), "nc_read4d :: get_var "//trim(vname))
-    call checkdbg(trim(fname), nf90_close(ncid), "nc_read4d :: close")
+    call nc_check(trim(fname), nf90_close(ncid), "nc_read4d :: close")
 
     return
   end subroutine
@@ -339,10 +327,10 @@ contains
     real(rk), intent(out)        :: timeval
     real(rk)                     :: tmpval(1)
 
-    call checkdbg(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read_time_val :: open")
-    call checkdbg(trim(fname), nf90_inq_varid(ncid, 'time', varid), "nc_read_time_val :: inq_var_id 'time'")
-    call checkdbg(trim(fname), nf90_get_var(ncid, varid, tmpval, start=[n], count=[1]), "nc_read_time_val :: get_var 'time'")
-    call checkdbg(trim(fname), nf90_close(ncid), "nc_read_time_val :: close")
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read_time_val :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, 'time', varid), "nc_read_time_val :: inq_var_id 'time'")
+    call nc_check(trim(fname), nf90_get_var(ncid, varid, tmpval, start=[n], count=[1]), "nc_read_time_val :: get_var 'time'")
+    call nc_check(trim(fname), nf90_close(ncid), "nc_read_time_val :: close")
 
     timeval = tmpval(1)
 
@@ -356,10 +344,10 @@ contains
     character(len=*), intent(in) :: fname
     character(len=*), intent(in) :: dname
 
-    call checkdbg(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "get_dim :: open")
-    call checkdbg(trim(fname), nf90_inq_dimid(ncid, dname, dimid), 'get_dim :: inq_dim_id '//trim(dname))
-    call checkdbg(trim(fname), nf90_inquire_dimension(ncid, dimid, len=ndim), 'get_dim :: inq_dim '//trim(dname))
-    call checkdbg(trim(fname), nf90_close(ncid), 'get_dim :: close')
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "get_dim :: open")
+    call nc_check(trim(fname), nf90_inq_dimid(ncid, dname, dimid), 'get_dim :: inq_dim_id '//trim(dname))
+    call nc_check(trim(fname), nf90_inquire_dimension(ncid, dimid, len=ndim), 'get_dim :: inq_dim '//trim(dname))
+    call nc_check(trim(fname), nf90_close(ncid), 'get_dim :: close')
 
     return
   end subroutine nc_get_dim
@@ -370,10 +358,10 @@ contains
     character(len=*), intent(in)  :: fname
     character(len=*), intent(out) :: timeunit
 
-    call checkdbg(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "get_timeunit :: open")
-    call checkdbg(trim(fname), nf90_inq_varid(ncid, "time", varid), "get_timeunit :: inq_var_id 'time'")
-    call checkdbg(trim(fname), nf90_get_att(ncid, varid, 'units', timeunit), "get_timeunit :: get_attr 'units'")
-    call checkdbg(trim(fname), nf90_close(ncid), 'get_timeunit :: close')
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "get_timeunit :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, "time", varid), "get_timeunit :: inq_var_id 'time'")
+    call nc_check(trim(fname), nf90_get_att(ncid, varid, 'units', timeunit), "get_timeunit :: get_attr 'units'")
+    call nc_check(trim(fname), nf90_close(ncid), 'get_timeunit :: close')
 
     return
   end subroutine nc_get_timeunit
@@ -385,23 +373,24 @@ contains
     integer                      :: ncid, varid
 
     nc_var_exists = .true.
-    call checkdbg(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_var_exists :: open")
-    if (nf90_inq_varid(ncid, trim(vname), varid) /= 0) nc_var_exists = .false.
-    call checkdbg(trim(fname), nf90_close(ncid), 'nc_var_exists :: close')
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_var_exists :: open")
+    if (nf90_inq_varid(ncid, trim(vname), varid) == nf90_enotvar) nc_var_exists = .false.
+    call nc_check(trim(fname), nf90_close(ncid), 'nc_var_exists :: close')
 
   end function nc_var_exists
   !===========================================
-  subroutine checkdbg(fname, status, code)
+  subroutine nc_check(fname, status, code)
 
     integer, intent(in) :: status
     character(len=*)    :: fname, code
 
-    if (status /= 0) then
+    if (status /= nf90_noerr) then
       ERROR, "NETCDF: Stopped at "//trim(code)//" with ", status
+      ERROR, trim(nf90_strerror(status))
       ERROR, "NETCDF: File name: "//trim(fname)
       stop
     end if
 
-  end subroutine checkdbg
+  end subroutine nc_check
 
 end module nc_manager

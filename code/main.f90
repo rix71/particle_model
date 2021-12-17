@@ -2,8 +2,9 @@
 program main
   use precdefs
 #ifdef WRITESTDOUT
-  use run_params, only: runid
+  use run_params, only: runid, dry_run
 #endif
+  use run_params, only: dry_run
   use initialise, only: init_run, init_model
   use loop_particle, only: loop
   use output, only: init_output, open_beach_bdy_files, close_beach_bdy_files
@@ -16,11 +17,15 @@ program main
 #endif
   call init_model
   call init_output
-  call open_beach_bdy_files
   !---------------------------------------------
-  call loop
+  if (.not. dry_run) then
+    ! call open_beach_bdy_files
+    call loop
+    ! call close_beach_bdy_files
+  else
+    FMT1, LINE; FMT1, "Will not loop!"; FMT1, LINE
+  end if
   !---------------------------------------------
-  call close_beach_bdy_files
   FMT1, "FINISHED"
 #ifdef WRITESTDOUT
   close (STDOUT)

@@ -1,12 +1,6 @@
-!#define NETCDFOUTPUT
-!#define WRITESTDOUT
-!---------------------------------------------
-! Data types
-!#define REALTYPE real(kind=selected_real_kind(8))
-!#define LONGINT integer(kind=selected_real_kind(8))
 !---------------------------------------------
 ! For printing
-#define PROGRESSINFO 1
+#define PROGRESSINFO 300
 #define LINE '--------------------------'
 #define STAR '**************************'
 
@@ -21,7 +15,6 @@
 
 #ifdef WRITESTDOUT
 #define STDOUT 6
-!#define STDOUTFILE 'model.stdout'
 #define FMT1 write(STDOUT,*) '  '
 #define FMT2 write(STDOUT,*) '      '
 #define FMT3 write(STDOUT,*) '          '
@@ -29,6 +22,9 @@
 #define WARNING write(STDOUT,*) '  WARNING: '
 #define DBG write(STDOUT,*) '  DBG: '
 #endif
+
+#define var2val(name) "name = ", name
+#define var2val_char(name) "name = ", trim(name)
 
 #define dbghead(name) DBG, STAR; DBG, "*** Entering name ***"
 #define dbgtail(name) DBG, "*** Leaving name ***"; DBG, STAR

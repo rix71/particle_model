@@ -14,10 +14,10 @@ module loop_particle
                        nc_itime, nc_itime_next, ncNTimes, pvelu, pvelunew, &
                        pvelv, pvelvnew, pvelw, pvelwnew
   use particle_type, only: particle
-  use particle_vars, only: nInitParticles, runparts, inputstep, initCoords, particles, max_age, kill_beached, kill_boundary
+  use particle_vars, only: nInitParticles, runparts, inputstep, initCoords, particles, max_age
   use time_vars, only: theDate, run_end_dt, dt, nc_timestep, nTimes
   use domain, only: lonlat2xy, xy2lonlat
-  use domain_vars, only: x0, y0, dx, dy, dz, dx_m, dy_m, nx, ny, lons, lats, depdata, seamask
+  use domain_vars, only: x0, y0, dx, dy, dz, dx_m, dy_m, nx, ny, lons, lats, depdata
   use field_vars, only: nlevels, has_subdomains, run_3d, &
                         uspeed, vspeed, wspeed, &
                         uspeednew, vspeednew, wspeednew, &
@@ -48,9 +48,8 @@ module loop_particle
 contains
   !===========================================
   subroutine loop
-    logical :: read_first = .false., interp_first = .false. ! This should avoid reading the fields twice
+    logical :: read_first = .false., interp_first = .false.! This should avoid reading the fields twice
     integer :: ipart, itime = 0, itime_interp = 0, n_adjust_dt = 0
-    integer :: ig_prev, jg_prev
     real(rk) :: dt_orig, dt_interp_1, dt_interp_2
 
     dbghead(loop)
@@ -198,9 +197,7 @@ contains
                                                    originNum=initCoords(ipart, 3), &
                                                    beachingtime=initCoords(ipart, 4), &
                                                    rho=initCoords(ipart, 5), &
-                                                   radius=initCoords(ipart, 6), &
-                                                   kill_bch=kill_beached, &
-                                                   kill_bdy=kill_boundary)
+                                                   radius=initCoords(ipart, 6))
           end do
           runparts = runparts + nInitParticles
           FMT2, runparts, "particles"
@@ -254,19 +251,19 @@ contains
           n_adjust_dt = 1
         end if
         if (.not. interp_first) then
-          call timeinterp(udata, udatanew, udata_interp, dt_interp_1, nc_timestep, nx, ny, nlevels, 1)
-          call timeinterp(vdata, vdatanew, vdata_interp, dt_interp_1, nc_timestep, nx, ny, nlevels, 1)
+          call timeinterp(udata, udatanew, udata_interp, dt_interp_1, nc_timestep, nx, ny, nlevels, 0)
+          call timeinterp(vdata, vdatanew, vdata_interp, dt_interp_1, nc_timestep, nx, ny, nlevels, 0)
           if (run_3d) then
-            call timeinterp(wdata, wdatanew, wdata_interp, dt_interp_1, nc_timestep, nx, ny, nlevels, 1)
-            call timeinterp(zaxdata, zaxdatanew, zaxdata_interp, dt_interp_1, nc_timestep, nx, ny, nlevels, 1)
+            call timeinterp(wdata, wdatanew, wdata_interp, dt_interp_1, nc_timestep, nx, ny, nlevels, 0)
+            call timeinterp(zaxdata, zaxdatanew, zaxdata_interp, dt_interp_1, nc_timestep, nx, ny, nlevels, 0)
           end if
           interp_first = .true.
         end if
-        call timeinterp(udata, udatanew, udatanew_interp, min(dt_interp_2, nc_timestep), nc_timestep, nx, ny, nlevels, 1)
-        call timeinterp(vdata, vdatanew, vdatanew_interp, min(dt_interp_2, nc_timestep), nc_timestep, nx, ny, nlevels, 1)
+        call timeinterp(udata, udatanew, udatanew_interp, min(dt_interp_2, nc_timestep), nc_timestep, nx, ny, nlevels, 0)
+        call timeinterp(vdata, vdatanew, vdatanew_interp, min(dt_interp_2, nc_timestep), nc_timestep, nx, ny, nlevels, 0)
         if (run_3d) then
-          call timeinterp(wdata, wdatanew, wdatanew_interp, min(dt_interp_2, nc_timestep), nc_timestep, nx, ny, nlevels, 1)
-          call timeinterp(zaxdata, zaxdatanew, zaxdatanew_interp, min(dt_interp_2, nc_timestep), nc_timestep, nx, ny, nlevels, 1)
+          call timeinterp(wdata, wdatanew, wdatanew_interp, min(dt_interp_2, nc_timestep), nc_timestep, nx, ny, nlevels, 0)
+          call timeinterp(zaxdata, zaxdatanew, zaxdatanew_interp, min(dt_interp_2, nc_timestep), nc_timestep, nx, ny, nlevels, 0)
         end if
         !---------------------------------------------
         ! Start particle loop
@@ -283,103 +280,99 @@ contains
           xnow = particles(ipart)%xPos; ynow = particles(ipart)%yPos
           znow = particles(ipart)%zPos
           !---------------------------------------------
-          ! Advect only if the particle is alive (isActive=.true.) and active (state=0)
-          if (particles(ipart)%state .eq. 0) then
-            !---------------------------------------------
-            ! Cartesian coordinates
-            call lonlat2xy(xnow, ynow, x0, y0, cartx, carty)
-            !---------------------------------------------
-            ! Global i and j indices
-            call get_indices2d(xnow, ynow, x0, y0, dx, dy, ig, jg)
-            ig_prev = ig; jg_prev = jg
-            !---------------------------------------------
-            ! If particle hovers, set the depth to sealevel
-            if (run_3d) then
-              ! Use interpolated values? Probably...
-              if (znow > zaxdata(ig, jg, nlevels)) then
-                DBG, "Setting particle to sealevel"
-                znow = zaxdata(ig, jg, nlevels)
-              end if
+          ! Cartesian coordinates
+          call lonlat2xy(xnow, ynow, x0, y0, cartx, carty)
+          !---------------------------------------------
+          ! Global i and j indices
+          call get_indices2d(xnow, ynow, x0, y0, dx, dy, ig, jg)
+          !---------------------------------------------
+          ! If particle hovers, set the depth to sealevel
+          if (run_3d) then
+            ! Use interpolated values? Probably...
+            if (znow > zaxdata(ig, jg, nlevels)) then
+              DBG, "Setting particle to sealevel"
+              znow = zaxdata(ig, jg, nlevels)
             end if
+          end if
+          !---------------------------------------------
+          ! Particle should not be on land
+          if (depdata(ig, jg) .lt. 0.0d0) then
             !---------------------------------------------
-            ! Particle should not be on land
-            if (depdata(ig, jg) .lt. 0.0d0) then
-              !---------------------------------------------
-              ! If depdata is -10.0 then there will be NaNs. Skip the particle.
-              ! call throw_warning("Loop", "Particle is on land! Skipping.")
-              ! particles(ipart)%warnings = particles(ipart)%warnings + 1
-              ! if (particles(ipart)%warnings .ge. 3) particles(ipart)%isActive = .false.
-              ! cycle
-            end if
+            ! If depdata is -10.0 then there will be NaNs. Skip the particle.
+            call throw_warning("Loop", "Particle is on land! Skipping.")
+            particles(ipart)%warnings = particles(ipart)%warnings + 1
+            if (particles(ipart)%warnings .ge. 3) particles(ipart)%isActive = .false.
+            cycle
+          end if
+          !---------------------------------------------
+          ! Get current speed at particle location
+          select case (run_3d)
+          case (.true.)
+            call get_current_speed(xloc=xnow, yloc=ynow, zloc=znow, &
+                                   uarr=udata_interp, varr=vdata_interp, warr=wdata_interp, zaxarr=zaxdata_interp, &
+                                   uspeedout=uspeed, vspeedout=vspeed, wspeedout=wspeed)
+            DBG, "Speeds 3D:"
+            debug(uspeed); debug(vspeed); debug(wspeed)
+          case (.false.)
+            call get_current_speed(xloc=xnow, yloc=ynow, &
+                                   uarr=udata_interp, varr=vdata_interp, &
+                                   uspeedout=uspeed, vspeedout=vspeed)
+            DBG, "Speeds 2D:"
+            debug(uspeed); debug(vspeed)
+          end select
+          !---------------------------------------------
+          ! Particle velocity
+          select case (do_velocity)
+          case (.true.)
             !---------------------------------------------
-            ! Get current speed at particle location
-            select case (run_3d)
-            case (.true.)
-              call get_current_speed(xloc=xnow, yloc=ynow, zloc=znow, &
-                                     uarr=udata_interp, varr=vdata_interp, warr=wdata_interp, zaxarr=zaxdata_interp, &
-                                     uspeedout=uspeed, vspeedout=vspeed, wspeedout=wspeed)
-              DBG, "Speeds 3D:"
-              debug(uspeed); debug(vspeed); debug(wspeed)
-            case (.false.)
-              call get_current_speed(xloc=xnow, yloc=ynow, &
-                                     uarr=udata_interp, varr=vdata_interp, &
-                                     uspeedout=uspeed, vspeedout=vspeed)
-              DBG, "Speeds 2D:"
-              debug(uspeed); debug(vspeed)
-            end select
+            ! Get seawater density
+            call get_seawater_density(ig, jg, kg, znow, nc_itime, rho_sea, thisPath)
+            debug(rho_sea)
             !---------------------------------------------
-            ! Particle velocity
-            select case (do_velocity)
-            case (.true.)
-              !---------------------------------------------
-              ! Get seawater density
-              call get_seawater_density(ig, jg, kg, znow, nc_itime, rho_sea, thisPath)
-              debug(rho_sea)
-              !---------------------------------------------
-              ! Get seawater viscosity
-              call get_seawater_viscosity(ig, jg, kg, nc_itime, viscosity, thisPath)
-              debug(viscosity)
-              !---------------------------------------------
+            ! Get seawater viscosity
+            call get_seawater_viscosity(ig, jg, kg, nc_itime, viscosity, thisPath)
+            debug(viscosity)
+            !---------------------------------------------
          pvelu = velocity(xnow, ynow, particles(ipart)%u, particles(ipart)%rho, particles(ipart)%radius, uspeed, rho_sea, viscosity)
          pvelv = velocity(xnow, ynow, particles(ipart)%v, particles(ipart)%rho, particles(ipart)%radius, vspeed, rho_sea, viscosity)
-              if (run_3d) pvelw = vertical_velocity(particles(ipart)%rho, particles(ipart)%radius, rho_sea)
-            case (.false.)
-              pvelu = uspeed
-              pvelv = vspeed
-              pvelw = wspeed
-            end select
-            DBG, "Particle velocity:"
-            debug(pvelu); debug(pvelv); debug(pvelw)
-            !---------------------------------------------
-            ! Advect particle (first)
-            cartx_new = cartx + pvelu * dt
-            carty_new = carty + pvelv * dt
-            if (run_3d) then
-              znew = znow + pvelw * dt ! TODO: Don't let the particle jump out of water
-              if (znew .gt. 0.0d0) then
-                DBG, "Setting znew to 0"; debug(znew)
-                znew = 0.0d0 ! TODO: Which way is up???
-              end if
+            if (run_3d) pvelw = vertical_velocity(particles(ipart)%rho, particles(ipart)%radius, rho_sea)
+          case (.false.)
+            pvelu = uspeed
+            pvelv = vspeed
+            pvelw = wspeed
+          end select
+          DBG, "Particle velocity:"
+          debug(pvelu); debug(pvelv); debug(pvelw)
+          !---------------------------------------------
+          ! Advect particle (first)
+          cartx_new = cartx + pvelu * dt
+          carty_new = carty + pvelv * dt
+          if (run_3d) then
+            znew = znow + pvelw * dt ! TODO: Don't let the particle jump out of water
+            if (znew .gt. 0.0d0) then
+              DBG, "Setting znew to 0"; debug(znew)
+              znew = 0.0d0 ! TODO: Which way is up???
             end if
+          end if
+          !---------------------------------------------
+          ! New coordinates and indices
+          call xy2lonlat(cartx_new, carty_new, x0, y0, xnew, ynew)
+          debug(xnow); debug(ynow); debug(znow)
+          debug(xnew); debug(ynew); debug(znew)
+          call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
+          debug(ig); debug(jg)
+          if (ig .gt. nx) xnew = lons(nx) ! TODO: These checks should go somewhere else
+          if (jg .gt. ny) ynew = lats(ny) !       Is this even legal?
+          !---------------------------------------------
+          ! Particle should not be on land
+          if (depdata(ig, jg) .lt. 0.0d0) then
             !---------------------------------------------
-            ! New coordinates and indices
-            call xy2lonlat(cartx_new, carty_new, x0, y0, xnew, ynew)
-            debug(xnow); debug(ynow); debug(znow)
-            debug(xnew); debug(ynew); debug(znew)
-            call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
-            debug(ig); debug(jg)
-            if (ig .gt. nx) xnew = lons(nx) ! TODO: These checks should go somewhere else
-            if (jg .gt. ny) ynew = lats(ny) !       Is this even legal?
-            !---------------------------------------------
-            ! Particle should not be on land
-            if (depdata(ig, jg) .lt. 0.0d0) then
-              !---------------------------------------------
-              ! No point skipping now. Just keep old position
-              ! TODO: Should try to decide if the particle has beached
-              ! Still skip actually...
+            ! No point skipping now. Just keep old position
+            ! TODO: Should try to decide if the particle has beached
+            ! Still skip actually...
 
-              ! call throw_warning("Loop", &
-              !                    "New location of particle is on land! Keeping old position.")
+            ! call throw_warning("Loop", &
+            !                    "New location of particle is on land! Keeping old position.")
 
 ! #ifdef DEBUG
 !             call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg, igr, jgr)
@@ -396,133 +389,80 @@ contains
 !             debug(xnew); debug(ynew); debug(znew)
 ! #endif
 
-              ! particles(ipart)%warnings = particles(ipart)%warnings + 1
-              ! if (particles(ipart)%warnings .ge. 3) particles(ipart)%isActive = .false.
-              ! cycle
-
-              !---------------------------------------------
-              ! Trying a different approach
-              DBG, "Bouncing"
-              debug(seamask(ig_prev, jg_prev))
-              debug(seamask(ig, jg))
-              if (ig .ne. ig_prev) then
-                ! Particle has moved to the left or right box
-                cartx_new = cartx - pvelu * dt
-              end if
-              if (jg .ne. jg_prev) then
-                ! Particle has moved to the up or down
-                carty_new = carty - pvelv * dt
-              end if
-              call xy2lonlat(cartx_new, carty_new, x0, y0, xnew, ynew)
-              debug(xnow); debug(ynow); debug(znow)
-              debug(xnew); debug(ynew); debug(znew)
-              call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
-              ig_prev = ig; jg_prev = jg
-
-            end if
-            !---------------------------------------------
-            ! Get current speed at particle location
-            select case (run_3d)
-            case (.true.)
-              call get_current_speed(xloc=xnew, yloc=ynew, zloc=znew, &
-                                     uarr=udatanew_interp, varr=vdatanew, warr=wdatanew_interp, zaxarr=zaxdatanew_interp, &
-                                     uspeedout=uspeednew, vspeedout=vspeednew, wspeedout=wspeednew)
-              DBG, "Speeds 3D new:"
-              debug(uspeednew); debug(vspeednew); debug(wspeednew)
-            case (.false.)
-              call get_current_speed(xloc=xnew, yloc=ynew, &
-                                     uarr=udatanew_interp, varr=vdatanew, &
-                                     uspeedout=uspeednew, vspeedout=vspeednew)
-              DBG, "Speeds 2D new:"
-              debug(uspeednew); debug(vspeednew)
-
-            end select
-            !---------------------------------------------
-            ! Particle velocity
-            select case (do_velocity)
-            case (.true.)
-              !---------------------------------------------
-              ! Get seawater density
-              call get_seawater_density(ig, jg, kg, znew, nc_itime_next, rho_sea, thisPath)
-              !---------------------------------------------
-              ! Get seawater viscosity
-              call get_seawater_viscosity(ig, jg, kg, nc_itime_next, viscosity, thisPath)
-              debug(viscosity)
-              !---------------------------------------------
-              pvelunew = velocity(xnew, ynew, pvelu, particles(ipart)%rho, particles(ipart)%radius, uspeednew, rho_sea, viscosity)
-              pvelvnew = velocity(xnew, ynew, pvelv, particles(ipart)%rho, particles(ipart)%radius, vspeednew, rho_sea, viscosity)
-              if (run_3d) pvelwnew = vertical_velocity(particles(ipart)%rho, particles(ipart)%radius, rho_sea)
-            case (.false.)
-              pvelunew = uspeednew
-              pvelvnew = vspeednew
-              pvelwnew = wspeednew
-            end select
-            DBG, "Particle velocity new:"
-            debug(pvelunew); debug(pvelvnew); debug(pvelwnew)
-            !---------------------------------------------
-            ! Advect particle (second)
-            cartx_new = cartx + 0.5 * (pvelu + pvelunew) * dt
-            carty_new = carty + 0.5 * (pvelv + pvelvnew) * dt
-            if (run_3d) then
-              znew = znow + 0.5 * (pvelw + pvelwnew) * dt ! TODO: Don't let the particle jump out of water
-              if (znew .gt. 0.0d0) then
-                DBG, "Setting znew to 0 again"; debug(znew)
-                znew = 0.0d0
-              end if
-            end if
-            !---------------------------------------------
-            ! Particle should not be on land
-            call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
-            if (depdata(ig, jg) .lt. 0.0d0) then
-              !---------------------------------------------
-              ! Trying a different approach
-              DBG, "Bouncing again"
-              debug(seamask(ig_prev, jg_prev))
-              debug(seamask(ig, jg))
-              if (ig .ne. ig_prev) then
-                ! Particle has moved to the left or right box
-                cartx_new = cartx - 0.5 * (pvelu + pvelunew) * dt
-              end if
-              if (jg .ne. jg_prev) then
-                ! Particle has moved to the up or down
-                carty_new = carty - 0.5 * (pvelv + pvelvnew) * dt
-              end if
-              call xy2lonlat(cartx_new, carty_new, x0, y0, xnew, ynew)
-              debug(xnow); debug(ynow); debug(znow)
-              debug(xnew); debug(ynew); debug(znew)
-              ! call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
-              ! ig_prev = ig; jg_prev = jg
-            end if
-            !---------------------------------------------
-            ! Diffuse
-            if (do_diffusion) call diffuse(cartx_new, carty_new, znew)
-            !---------------------------------------------
-            ! New coordinates and indices
-            call xy2lonlat(cartx_new, carty_new, x0, y0, xnew, ynew)
-            call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
-            if (ig .gt. nx) xnew = lons(nx) ! TODO: These checks should go somewhere else
-            if (jg .gt. ny) ynew = lats(ny) !       Is this even legal?
-            DBG, "Old positions 2: ", xnow, ynow, znow
-            DBG, "New positions out: ", xnew, ynew, znew
-          else
-            !---------------------------------------------
-            ! Don't move if the particle is alive, but not active
-            xnew = xnow
-            ynew = ynow
-            pvelu = 0.
-            pvelv = 0.
-            pvelunew = 0.
-            pvelvnew = 0.
+            particles(ipart)%warnings = particles(ipart)%warnings + 1
+            if (particles(ipart)%warnings .ge. 3) particles(ipart)%isActive = .false.
+            cycle
           end if
+          !---------------------------------------------
+          ! Get current speed at particle location
+          select case (run_3d)
+          case (.true.)
+            call get_current_speed(xloc=xnew, yloc=ynew, zloc=znew, &
+                                   uarr=udatanew_interp, varr=vdatanew, warr=wdatanew_interp, zaxarr=zaxdatanew_interp, &
+                                   uspeedout=uspeednew, vspeedout=vspeednew, wspeedout=wspeednew)
+            DBG, "Speeds 3D new:"
+            debug(uspeednew); debug(vspeednew); debug(wspeednew)
+          case (.false.)
+            call get_current_speed(xloc=xnew, yloc=ynew, &
+                                   uarr=udatanew_interp, varr=vdatanew, &
+                                   uspeedout=uspeednew, vspeedout=vspeednew)
+            DBG, "Speeds 2D new:"
+            debug(uspeednew); debug(vspeednew)
+
+          end select
+          !---------------------------------------------
+          ! Particle velocity
+          select case (do_velocity)
+          case (.true.)
+            !---------------------------------------------
+            ! Get seawater density
+            call get_seawater_density(ig, jg, kg, znew, nc_itime_next, rho_sea, thisPath)
+            !---------------------------------------------
+            ! Get seawater viscosity
+            call get_seawater_viscosity(ig, jg, kg, nc_itime_next, viscosity, thisPath)
+            debug(viscosity)
+            !---------------------------------------------
+            pvelunew = velocity(xnew, ynew, pvelu, particles(ipart)%rho, particles(ipart)%radius, uspeednew, rho_sea, viscosity)
+            pvelvnew = velocity(xnew, ynew, pvelv, particles(ipart)%rho, particles(ipart)%radius, vspeednew, rho_sea, viscosity)
+            if (run_3d) pvelwnew = vertical_velocity(particles(ipart)%rho, particles(ipart)%radius, rho_sea)
+          case (.false.)
+            pvelunew = uspeednew
+            pvelvnew = vspeednew
+            pvelwnew = wspeednew
+          end select
+          DBG, "Particle velocity new:"
+          debug(pvelunew); debug(pvelvnew); debug(pvelwnew)
+          !---------------------------------------------
+          ! Advect particle (second)
+          cartx_new = cartx + 0.5 * (pvelu + pvelunew) * dt
+          carty_new = carty + 0.5 * (pvelv + pvelvnew) * dt
+          if (run_3d) then
+            znew = znow + 0.5 * (pvelw + pvelwnew) * dt ! TODO: Don't let the particle jump out of water
+            if (znew .gt. 0.0d0) then
+              DBG, "Setting znew to 0 again"; debug(znew)
+              znew = 0.0d0
+            end if
+          end if
+          !---------------------------------------------
+          ! Diffuse
+          if (do_diffusion) call diffuse(cartx_new, carty_new, znew)
+          !---------------------------------------------
+          ! New coordinates and indices
+          call xy2lonlat(cartx_new, carty_new, x0, y0, xnew, ynew)
+          call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
+          if (ig .gt. nx) xnew = lons(nx) ! TODO: These checks should go somewhere else
+          if (jg .gt. ny) ynew = lats(ny) !       Is this even legal?
+          DBG, "Old positions 2: ", xnow, ynow, znow
+          DBG, "New positions out: ", xnew, ynew, znew
           !---------------------------------------------
           ! Update particles
           call particles(ipart)%update
           !---------------------------------------------
           ! Check if particle has beached or reached the boundary
           call particles(ipart)%check_beached_bdy
-          ! if (particles(ipart)%state .eq. 1.) call write_beached(particles(ipart)) ! Temporary!!
-          ! if (particles(ipart)%state .eq. 2.) call write_boundary(particles(ipart))
-          if (particles(ipart)%age == max_age) call write_data_snapshot(particles(ipart), ipart)
+          if (particles(ipart)%state .eq. 1.) call write_beached(particles(ipart))
+          if (particles(ipart)%state .eq. 2.) call write_boundary(particles(ipart))
+          if (particles(ipart)%age == max_age) call write_data_snapshot(particles(ipart), ipart, itime)
           !---------------------------------------------
           ! Check if the particle is still alive
           if (max_age > 0) call particles(ipart)%check_age(max_age)
@@ -531,8 +471,8 @@ contains
         !---------------------------------------------
         ! Write output
         if ((mod(itime, outputstep) .eq. 0) .and. (runparts .gt. 0)) then
-          if (write_all_particles) call write_data(runparts)
-          if (write_active_particles) call write_data_only_active(runparts)
+          if (write_all_particles) call write_data(itime, runparts)
+          if (write_active_particles) call write_data_only_active(itime, runparts)
         end if
         !---------------------------------------------
         ! Update time

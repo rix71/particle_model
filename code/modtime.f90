@@ -276,23 +276,26 @@ contains
     call this%isLeap
     yearday = sum(daysInMonth(1:this%month - 1))
     yearday = yearday + this%day
+    debug(yearday)
     call reset_DIM
 
   end function yearday
   !===========================================
   real(rk) function date2num(this)
     !---------------------------------------------
-    ! Gives date as 'seconds from 0001-01-01 00:00:00'
+    ! Gives date as 'seconds from 1900-01-01 00:00:00'
     ! TODO: !!! I don't think it does... !!!
     !---------------------------------------------
     integer                     :: year
     class(datetime), intent(in) :: this
 
+    dbghead(date2num)
+    debug(this%shortDate(.true.))
+
     date2num = 0
     do year = 1900, this%year - 1
       date2num = date2num + daysInYear(year) * d2s
     end do
-    debug(date2num)
 
     !date2num = date2num + this%yearday() + &
     !           this%hour/24. + this%minute/(24.*60.) + &
@@ -300,9 +303,10 @@ contains
 
     date2num = date2num + float(this%yearday()) * d2s + &
                float(this%hour) * h2s + float(this%minute) * min2s + &
-               float(this%second)
+               float(this%second) - d2s ! Why is it off by one day?
     debug(date2num)
 
+    dbgtail(date2num)
   end function date2num
   !===========================================
   real(rk) function dateDiff(dateStart, dateEnd)
@@ -314,10 +318,11 @@ contains
     real(rk)                   :: datenumStart, datenumEnd
 
     datenumStart = dateStart%date2num()
-    debug(datenumStart)
     datenumEnd = dateEnd%date2num()
-    debug(datenumEnd)
     dateDiff = datenumEnd - datenumStart
+
+    debug(datenumStart)
+    debug(datenumEnd)
     debug(dateDiff)
 
   end function dateDiff

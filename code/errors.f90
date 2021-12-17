@@ -17,7 +17,10 @@ contains
     integer, intent(in), optional :: code
 
     ERROR, trim(func)//": "//trim(msg)
-    if (present(code)) ERROR, "err ", code
+    if (present(code)) then
+      call perror("   ERROR: "//trim(func))
+      ERROR, "err ", code
+    end if
     stop
 
     return

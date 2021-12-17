@@ -5,6 +5,7 @@ module run_params
   !----------------------------------------------------------------
 
   character(len=128) :: runid
+  logical            :: dry_run
 
 end module run_params
 !===================================================
@@ -33,7 +34,6 @@ module loop_vars
   use precdefs
   use modtime, only: datetime
 
-  integer            :: ipart, itime = 0
   integer            :: pnum                 ! Processor/subdomain number
   integer            :: ig, jg, kg           ! Global indices
   integer            :: il, jl, kl           ! Local indices (subdomain) TODO: Probably won't need local k indices...
@@ -41,6 +41,8 @@ module loop_vars
   integer            :: nc_itime             ! Time index in netCDF
   integer            :: nc_itime_next        ! Next time index in netCDF
   type(datetime)     :: dateThis, dateNext   ! Temporary date variables, first date of netCDF files
+  type(datetime)     :: dateThisNcTimestep   ! Date of current timestep in netCDF
+  type(datetime)     :: dateNextNcTimestep   ! Date of next timestep in netCDF
   character(len=256) :: thisPath, nextPath   ! Temporary path to data
   real(rk)           :: ilr, jlr, klr        ! Local real indices for interpolation
   real(rk)           :: igr, jgr, kgr        ! Global real indices for interpolation
@@ -101,7 +103,6 @@ module field_vars
 
   logical               :: has_subdomains                    ! Is the data in multiple files (true) or one file (false)?
   logical               :: run_3d                            ! 2D or 3D
-  logical               :: read_first = .false.              ! This should avoid reading the fields twice
   integer               :: startlevel, nlevels
   integer               :: zax_style                         ! Depth values (1) or layer thickness (2)
   character(len=32)     :: uvarname, vvarname, wvarname      ! Names of the variables. Necessary?
@@ -113,9 +114,12 @@ module field_vars
   real(rk)              :: uspeed, vspeed, wspeed            ! Speed at the location of the particle
   real(rk)              :: uspeednew, vspeednew, wspeednew
   real(rk), allocatable :: udata(:, :, :), vdata(:, :, :)        ! The full current field of the (sub)domain
-  real(rk), allocatable :: wdata(:, :, :)                      ! The full current field of the (sub)domain
+  real(rk), allocatable :: wdata(:, :, :)                        ! The full current field of the (sub)domain
   real(rk), allocatable :: udatanew(:, :, :), vdatanew(:, :, :)  ! Same thing, but at the next timestep
-  real(rk), allocatable :: wdatanew(:, :, :)                   ! Same thing, but at the next timestep
+  real(rk), allocatable :: wdatanew(:, :, :)                     ! Same thing, but at the next timestep
   real(rk), allocatable :: zaxdata(:, :, :), zaxdatanew(:, :, :) ! Layer thickness or depth (TODO: should distinguish the two!!!)
+  real(rk), allocatable :: udata_interp(:, :, :), vdata_interp(:, :, :), wdata_interp(:, :, :)
+  real(rk), allocatable :: udatanew_interp(:, :, :), vdatanew_interp(:, :, :), wdatanew_interp(:, :, :)
+  real(rk), allocatable :: zaxdata_interp(:, :, :), zaxdatanew_interp(:, :, :)
 
 end module field_vars

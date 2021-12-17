@@ -5,6 +5,7 @@ module particle_type
   !----------------------------------------------------------------
   use precdefs
   use domain_vars, only: x0, y0, dx, dy, seamask
+  ! Pass loop vars into functions rather than import?
   use loop_vars, only: ig, jg, igr, jgr, xnew, ynew, znew, &
                        pvelu, pvelunew, pvelv, pvelvnew, pvelw, pvelwnew
   use time_vars, only: dt
@@ -21,6 +22,7 @@ module particle_type
   ! Particle type
   type particle
     logical           :: isActive = .true.     ! Skip particle in loop if isActive == .false.
+    logical           :: kill_bch, kill_bdy    ! Set isActive=.false. if beached or on boundary?
     integer           :: warnings = 0
     real              :: state = 0.            ! 0 - active, 1 - beached, 2 - on boundary
     character(len=64) :: originName = 'NoName' ! Origin of particle, e.g. city/country name
@@ -42,6 +44,7 @@ module particle_type
     procedure :: print_particle_info
     procedure :: update
     procedure :: check_beached_bdy
+    procedure :: check_age
   end type particle
 
   !===================================================
@@ -88,6 +91,17 @@ contains
     return
   end subroutine update
   !===========================================
+  subroutine check_age(this, max_age)
+
+    class(particle), intent(inout)  :: this
+    real(rk), intent(in)            :: max_age
+
+    if (this%age > max_age) then
+      this%isActive = .false.
+    end if
+
+  end subroutine check_age
+  !===========================================
   subroutine check_beached_bdy(this)
 
     class(particle), intent(inout) :: this
@@ -104,13 +118,12 @@ contains
     !---------------------------------------------
     ! Change state if beaching time exceeded or on boundary
     if (this%timeOnBeach .ge. this%beachingtime) then
-      this%isActive = .false.
+      if (this%kill_bch) this%isActive = .false.
       this%state = 1.
     end if
     ! TODO: Check boundary from seamask
-    if (ig .lt. 10) then
-      DBG, "Setting isActive=.false."
-      this%isActive = .false.
+    if (seamask(ig, jg) .eq. 4) then
+      if (this%kill_bdy) this%isActive = .false.
       this%state = 2.
     end if
 
@@ -129,12 +142,14 @@ module particle_vars
   use precdefs
   use particle_type
 
-  integer                     :: inputstep       ! How often are particles released?
-  integer                     :: nParticles      ! Number of particles
-  integer                     :: nInitParticles  ! Number of particles released every "inputstep"
-  integer                     :: runparts = 0    ! Number of particles to loop over
-  character(len=256)          :: coordfile       ! File containing particle locations at init.
-  type(particle), allocatable :: particles(:)    ! Array of particles
-  real(rk), allocatable       :: initCoords(:, :) ! Array of initial coordinates
+  logical                     :: kill_beached, kill_boundary ! Set isActive=.false. if beached or on boundary?
+  integer                     :: inputstep                   ! How often are particles released?
+  integer                     :: nParticles                  ! Number of particles
+  integer                     :: nInitParticles              ! Number of particles released every "inputstep"
+  integer                     :: runparts = 0                ! Number of particles to loop over
+  real(rk)                    :: max_age                     ! Lifetime (for all particles) in timesteps
+  character(len=256)          :: coordfile                   ! File containing particle locations at init.
+  type(particle), allocatable :: particles(:)                ! Array of particles
+  real(rk), allocatable       :: initCoords(:, :)            ! Array of initial coordinates
 
 end module particle_vars

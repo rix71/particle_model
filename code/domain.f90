@@ -21,6 +21,10 @@ contains
     ! Initialize the global longitude/latitude
     ! and seamask
     !---------------------------------------------
+#if defined(NETCDFOUTPUT) && defined(DEBUG)
+    use nc_manager
+    integer :: nc_x_dimid, nc_y_dimid
+#endif
 
     integer :: ii, jj
 
@@ -37,10 +41,14 @@ contains
 
     y0 = lats(1); y1 = lats(ny); dy = lats(2) - lats(1); dy_m = dy * 60.*1852.
     x0 = lons(1); x1 = lons(nx); dx = lons(2) - lons(1); dx_m = dx * 60.*1852.*cos(0.5 * (y0 + y1) * pi / 180.)
-    debug(y0); debug(y1); debug(dy); 
-    debug(dy_m)
-    debug(x0); debug(x1); debug(dx); 
-    debug(dx_m)
+
+    FMT2, LINE
+    FMT2, "Coordinates:"
+    FMT3, var2val(y0), "[deg N], ", var2val(y1), "[deg N]"
+    FMT3, var2val(x0), "[deg E], ", var2val(x1), "[deg E]"
+    FMT2, "Cell size:"
+    FMT3, var2val(dy), "[deg], ", var2val(dy_m), "[m]"
+    FMT3, var2val(dx), "[deg], ", var2val(dx_m), "[m]"
 
     allocate (depdata(nx, ny), seamask(nx, ny))
 
@@ -67,9 +75,51 @@ contains
         end if
       end do
     end do
-    seamask(1, :) = 1
-    seamask(nx, :) = 1
-    seamask(:, 1) = 1
+    do ii = 1, nx
+      if (depdata(ii, 1) .gt. 0.0d0) then
+        seamask(ii, 1) = 4
+      else
+        seamask(ii, 1) = 1
+      end if
+      if (depdata(ii, ny) .gt. 0.0d0) then
+        seamask(ii, ny) = 4
+      else
+        seamask(ii, ny) = 1
+      end if
+    end do
+    do jj = 1, ny
+      if (depdata(1, jj) .gt. 0.0d0) then
+        seamask(1, jj) = 4
+      else
+        seamask(1, jj) = 1
+      end if
+      if (depdata(nx, jj) .gt. 0.0d0) then
+        seamask(nx, jj) = 4
+      else
+        seamask(nx, jj) = 1
+      end if
+    end do
+
+    FMT2, sum(seamask, mask=seamask == 1), " land points"
+    FMT2, sum(seamask, mask=seamask == 2) / 2, " sea points"
+    FMT2, sum(seamask, mask=seamask == 3) / 3, " beach points"
+    FMT2, sum(seamask, mask=seamask == 4) / 4, " boundary points"
+    FMT2, nx * ny, " total points"
+
+#if defined(NETCDFOUTPUT) && defined(DEBUG)
+#define FNAME "seamask.nc"
+    DBG, "Saving seamask"
+    call nc_initialise(FNAME)
+    call nc_add_dimension(FNAME, "lon", nc_x_dimid, nx)
+    call nc_add_dimension(FNAME, "lat", nc_y_dimid, ny)
+    call nc_add_variable(FNAME, "seamask", "int", 2, [nc_x_dimid, nc_y_dimid])
+    call nc_add_variable(FNAME, "lon", "float", 1, [nc_x_dimid])
+    call nc_add_variable(FNAME, "lat", "float", 1, [nc_y_dimid])
+    call nc_write(FNAME, seamask, "seamask", nx, ny)
+    call nc_write(FNAME, lons, "lon", nx)
+    call nc_write(FNAME, lats, "lat", ny)
+#undef FNAME
+#endif
 
     FMT2, "Finished init_domain"
 

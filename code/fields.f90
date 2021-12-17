@@ -55,9 +55,9 @@ contains
     integer :: idir
 
     FMT1, "======== Init dirlist ========"
-#ifndef NOSYSCALLS
     inquire (file=trim(dirinfile), exist=dirlist_exists)
     if (.not. dirlist_exists) then
+#ifndef NOSYSCALLS
       select case (has_subdomains)
       case (.true.)
         FMT2, "Getting directory list..."
@@ -73,8 +73,11 @@ contains
                     //'*.nc | xargs -n 1 basename ) > '//trim(dirinfile), status=ierr)
         if (ierr .ne. 0) call throw_error("init_dirlist", "Could not get file list from "//trim(GETMPATH), ierr)
       end select
-    end if
+#else
+      call throw_error("init_dirlist", "File/directory list ("//trim(dirinfile)//") does not exist!")
 #endif
+    end if
+
     open (DIRFILE, file=trim(dirinfile), action='read', iostat=ierr)
     if (ierr .ne. 0) call throw_error("init_dirlist", "Failed to open "//trim(dirinfile), ierr)
     read (DIRFILE, *) nentries
@@ -192,9 +195,17 @@ contains
     FMT2, "Allocating fields of size (nx, ny, nz): (", nx, ", ", ny, ", ", nlevels, ")"
     allocate (udata(nx, ny, nlevels), vdata(nx, ny, nlevels), &
               udatanew(nx, ny, nlevels), vdatanew(nx, ny, nlevels))
+    udata = 0; vdata = 0; udatanew = 0; vdatanew = 0; 
+    allocate (udata_interp(nx, ny, nlevels), vdata_interp(nx, ny, nlevels), &
+              udatanew_interp(nx, ny, nlevels), vdatanew_interp(nx, ny, nlevels))
+    udata_interp = 0; vdata_interp = 0; udatanew_interp = 0; vdatanew_interp = 0; 
     if (run_3d) then
       allocate (wdata(nx, ny, nlevels), wdatanew(nx, ny, nlevels), &
                 zaxdata(nx, ny, nlevels), zaxdatanew(nx, ny, nlevels))
+      wdata = 0; wdatanew = 0; zaxdata = 0; zaxdatanew = 0; 
+      allocate (wdata_interp(nx, ny, nlevels), wdatanew_interp(nx, ny, nlevels), &
+                zaxdata_interp(nx, ny, nlevels), zaxdatanew_interp(nx, ny, nlevels))
+      wdata_interp = 0; wdatanew_interp = 0; zaxdata_interp = 0; zaxdatanew_interp = 0; 
     end if
 
     if (has_subdomains) call get_proc_mask
@@ -234,9 +245,11 @@ contains
     dbghead(find_folder)
 
     NCall = NCall + 1
+#ifdef DEBUG
     debug(NCall)
     DBG, "Date in:"
     call date%print_short_date()
+#endif
 
     YYYYMMDD = date%shortDate(.false.)
 
@@ -301,27 +314,39 @@ contains
     type(datetime)                  :: testdate
     character(len=256), intent(out) :: thefile
 
+    dbghead(find_file)
+
     NCall = NCall + 1
+#ifdef DEBUG
+    debug(NCall)
+    DBG, "Date in:"
+    call date%print_short_date()
+#endif
 
     if (nentries == 1) then
       write (thefile, '(a)') trim(GETMPATH)//'/'//trim(filelist(1))
       testdate = init_datetime_from_netcdf(trim(thefile), 1)
+#ifdef DEBUG
       DBG, "Test date:"; call testdate%print_short_date()
-      if ((NCall == 1) .and. (date < init_datetime_from_netcdf(trim(thefile), 1))) then
+#endif
+      if ((NCall == 1) .and. (date < testdate)) then
         call throw_error("find_file", "The date is earlier than first date in data file")
       end if
+      dbgtail(find_file)
       return
     end if
 
     do i = 1, nentries
       if (date < init_datetime_from_netcdf(trim(GETMPATH)//'/'//trim(filelist(i)), 1)) then
         write (thefile, '(a)') trim(GETMPATH)//'/'//trim(filelist(i - 1))
+        dbgtail(find_file)
         return
       end if
     end do
     ! If we reach here, just return the last file and hope for the best
     write (thefile, '(a)') trim(GETMPATH)//'/'//trim(filelist(nentries))
 
+    dbgtail(find_file)
     return
   end subroutine find_file
   !===========================================
@@ -499,14 +524,14 @@ contains
       if (run_3d) kread = zloc !call get_indices_vert(zin=zloc, i=iloc, j=jloc, k=kread)
       write (filename, '(a)') trim(path)
     end select
-    if (nc_var_exists(trim(filename), "num")) then
-      DBG, "reading 'num' at [", iread, jread, kread, timeindex, "]"
-      call nc_read4d(trim(filename), "num", [iread, jread, kread, timeindex], [1, 1, 1, 1], visc_buffer)
+    if (nc_var_exists(trim(filename), "nuh")) then
+      DBG, "reading 'nuh' at [", iread, jread, kread, timeindex, "]"
+      call nc_read4d(trim(filename), "nuh", [iread, jread, kread, timeindex], [1, 1, 1, 1], visc_buffer)
       visc_out = visc_buffer(1, 1, 1, 1)
       dbgtail(get_seawater_viscosity)
       return
     end if
-    call throw_warning("get_seawater_viscosity", "Could not read viscosity ('num') from data!") ! Delete this later!
+    ! call throw_warning("get_seawater_viscosity", "Could not read viscosity ('nuh') from data!") ! Delete this later!
     visc_out = mu
 
     dbgtail(get_seawater_viscosity)
@@ -539,13 +564,11 @@ contains
     case (.true.)
       kread = nlevels ! Surface by default
       call find_proc(iloc, jloc, iread, jread, pnum)
-      !DBG, "get_seawater_density(): calling get_indices_vert"
-      if (run_3d) kread = zloc !call get_indices_vert(zin=zloc, i=iloc, j=jloc, k=kread)
+      if (run_3d) kread = zloc
       write (filename, '(a,i0.4, a)') trim(path)//"/"//trim(file_prefix), pnum, trim(file_suffix)//".nc"
     case (.false.)
       iread = iloc; jread = jloc; kread = nlevels
-      !DBG, "get_seawater_density(): calling get_indices_vert"
-      if (run_3d) kread = zloc !call get_indices_vert(zin=zloc, i=iloc, j=jloc, k=kread)
+      if (run_3d) kread = zloc
       write (filename, '(a)') trim(path)
     end select
     if (nc_var_exists(trim(filename), "rho")) then
@@ -632,11 +655,13 @@ contains
           jstart = 1
         end if
 
+#ifdef DEBUG
         if (mod(iproc, 50) .eq. 0) then
           debug(trim(sdfilename))
           debug(start)
           debug(count)
         end if
+#endif
 
         allocate (ubuffer(count(1), count(2), count(3), count(4)), &
                   vbuffer(count(1), count(2), count(3), count(4)))
@@ -661,6 +686,9 @@ contains
       write (sdfilename, '(a)') trim(path)
       start = [1, 1, startlevel, timeindex]
       count = [nx, ny, nlevels, 1]
+
+      debug(start)
+      debug(count)
 
       call nc_read4d(trim(sdfilename), trim(uvarname), start, count, datau)
       call nc_read4d(trim(sdfilename), trim(vvarname), start, count, datav)

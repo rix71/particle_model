@@ -8,7 +8,7 @@ module interp
   private
   !===================================================
   !---------------------------------------------
-  public :: bilinearinterp, trilinearinterp
+  public :: bilinearinterp, trilinearinterp, timeinterp
   !===================================================
 contains
   !===========================================
@@ -88,4 +88,21 @@ contains
     dbgtail(trilinearinterp)
     return
   end subroutine trilinearinterp
+  !===========================================
+  subroutine timeinterp(arr_t1, arr_t2, arr_out, dt, dt_arr, nx, ny, nz, method)
+    integer, intent(in)   :: nx, ny, nz
+    integer, intent(in)   :: method
+    real(rk), intent(in)  :: arr_t1(nx, ny, nz)
+    real(rk), intent(in)  :: arr_t2(nx, ny, nz)
+    real(rk), intent(in)  :: dt, dt_arr
+    real(rk), intent(out) :: arr_out(nx, ny, nz)
+
+    select case(method)
+    case(0)
+      arr_out = arr_t1
+    case(1)
+      arr_out = arr_t1 + (arr_t2 - arr_t1) / dt_arr * dt
+    end select
+
+  end subroutine timeinterp
 end module interp
