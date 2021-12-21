@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Fri Dec 17 15:39:42 2021
+# Make data base, printed on Tue Dec 21 09:35:36 2021
 
 # Variables
 
@@ -35,8 +35,6 @@ CURDIR := /mnt/c/Users/enrik/OneDrive - TalTech/Documents/particle_model
 # makefile
 SHELL = /bin/sh
 # environment
-VTE_VERSION = 6003
-# environment
 VSCODE_NLS_CONFIG = {"locale":"en","availableLanguages":{}}
 # environment
 _ = /mnt/c/Users/enrik/AppData/Local/Programs/Microsoft VS Code/bin/code
@@ -49,19 +47,17 @@ XDG_DATA_DIRS = /usr/local/share:/usr/share:/var/lib/snapd/desktop
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-TERMINATOR_UUID = urn:uuid:466de46e-3236-49fd-9d89-387655acca3c
-# environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # environment
 VSCODE_CWD = /mnt/c/Users/enrik/AppData/Local/Programs/Microsoft VS Code
 # default
 MAKE_HOST := x86_64-pc-linux-gnu
 # environment
-PATH = /home/enriko/.vscode-server/bin/7db1a2b88f7557e0a43fec75b6ba7e50b3e9f77e/bin:/home/enriko/bin:/home/enriko/.local/bin:/home/enriko/bin:/home/enriko/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Users/enrik/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/enrik/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/enrik/AppData/Local/Programs/MiKTeX/miktex/bin/x64/:/snap/bin
+PATH = /home/enriko/.vscode-server/bin/899d46d82c4c95423fb7e10e68eba52050e30ba3/bin:/home/enriko/.local/bin:/home/enriko/bin:/home/enriko/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Users/enrik/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/enrik/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/enrik/AppData/Local/Programs/MiKTeX/miktex/bin/x64/:/snap/bin
 # environment
 VSCODE_LOG_STACK = false
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-f8052e64-efce-475f-a01f-710592d4c0ff.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-5c373ba9-6164-47f5-b886-69bf2e69024a.sock
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -77,9 +73,9 @@ PWD = /mnt/c/Users/enrik/OneDrive - TalTech/Documents/particle_model
 # default
 .LOADED := 
 # environment
-WSL_INTEROP = /run/WSL/8_interop
+WSL_INTEROP = /run/WSL/18400_interop
 # environment
-WT_SESSION = 2a11cd9c-3f49-49e7-95fa-bf6146fc6fdc
+WT_SESSION = bdfa9a6d-cd92-49ec-9a0b-2290612f5a03
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/server/remoteExtensionHostProcess
 # environment
@@ -96,14 +92,12 @@ VSCODE_HANDLES_UNCAUGHT_ERRORS = true
 ^D = $(patsubst %/,%,$(dir $^))
 # environment
 MAKELEVEL := 0
-# environment
-COLORTERM = truecolor
 # default
 MAKE = $(MAKE_COMMAND)
 # default
 MAKECMDGOALS := all
 # environment
-SHLVL = 2
+SHLVL = 1
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -118,8 +112,6 @@ NAME = Code
 VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/enrik/.vscode/extensions/ms-vscode-remote.remote-wsl-0.63.13
 # default
 MAKE_COMMAND := make
-# environment
-TERMINATOR_DBUS_PATH = /net/tenshu/Terminator2
 # default
 .VARIABLES := 
 # automatic
@@ -153,7 +145,7 @@ SUFFIXES :=
 # default
 .INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
 # environment
-VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH = /home/enriko/.vscode-server/bin/7db1a2b88f7557e0a43fec75b6ba7e50b3e9f77e/remote/node_modules
+VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH = /home/enriko/.vscode-server/bin/899d46d82c4c95423fb7e10e68eba52050e30ba3/remote/node_modules
 # default
 .RECIPEPREFIX := 
 # environment
@@ -161,13 +153,13 @@ LANG = C
 # environment
 TERM = xterm-256color
 # environment
-TERMINATOR_DBUS_NAME = net.tenshu.Terminator21ff8a7b5dc7a7d1f0ed65aaa29c04b1e
-# environment
 VSCODE_EXTHOST_WILL_SEND_SOCKET = true
 # environment
 WSL_DISTRO_NAME = Ubuntu-20.04
+# environment
+MOTD_SHOWN = update-motd
 # variable set hash-table stats:
-# Load=77/1024=8%, Rehash=0, Collisions=4/99=4%
+# Load=73/1024=7%, Rehash=0, Collisions=4/95=4%
 
 # Pattern-specific Variable Values
 
@@ -233,6 +225,6 @@ GNUmakefile:
 # strcache performance: lookups = 28 / hit rate = 10%
 # hash-table stats:
 # Load=25/8192=0%, Rehash=0, Collisions=2/28=7%
-# Finished Make data base on Fri Dec 17 15:39:42 2021
+# Finished Make data base on Tue Dec 21 09:35:36 2021
 
  
