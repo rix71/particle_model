@@ -5,12 +5,12 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
+ 
 
-# Make data base, printed on Mon Nov 15 23:35:29 2021
+# Make data base, printed on Tue Dec 21 15:06:25 2021
 
 # Variables
 
- 
 # automatic
 <D = $(patsubst %/,%,$(dir $<))
 # automatic
@@ -19,7 +19,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 WSLENV = ELECTRON_RUN_AS_NODE/w:WT_SESSION::WT_PROFILE_ID
 # default
 .SHELLFLAGS := -c
-# makefile (from 'Makefile', line 9)
+# makefile (from 'Makefile', line 12)
 OBJ = ./obj
 # environment
 VSCODE_AGENT_FOLDER = /home/enriko/.vscode-server
@@ -35,10 +35,8 @@ VSCODE_LOG_NATIVE = false
 CURDIR := /mnt/d/particle_model/code
 # makefile
 SHELL = /bin/sh
-# makefile (from 'Makefile', line 10)
+# makefile (from 'Makefile', line 13)
 BIN = ../bin
-# environment
-VTE_VERSION = 6003
 # environment
 VSCODE_NLS_CONFIG = {"locale":"en","availableLanguages":{}}
 # environment
@@ -51,10 +49,8 @@ GNUMAKEFLAGS :=
 XDG_DATA_DIRS = /usr/local/share:/usr/share:/var/lib/snapd/desktop
 # environment
 VSCODE_VERBOSE_LOGGING = true
-# makefile (from 'Makefile', line 24)
+# makefile (from 'Makefile', line 27)
 OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
-# environment
-TERMINATOR_UUID = urn:uuid:e4e39251-8e8b-49c3-834b-577e4e4ce170
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # environment
@@ -62,17 +58,17 @@ VSCODE_CWD = /mnt/c/Users/enrik/AppData/Local/Programs/Microsoft VS Code
 # default
 MAKE_HOST := x86_64-pc-linux-gnu
 # environment
-PATH = /home/enriko/.vscode-server/bin/3a6960b964327f0e3882ce18fcebd07ed191b316/bin:/home/enriko/bin:/home/enriko/.local/bin:/home/enriko/bin:/home/enriko/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Users/enrik/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/enrik/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/enrik/AppData/Local/Programs/MiKTeX/miktex/bin/x64/:/snap/bin
-# makefile (from 'Makefile', line 16)
-FFLAGS = -O3 -cpp -ffree-line-length-none -Wall -Wline-truncation -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large -DWRITESTDOUT -DDEBUG $(NETCDF_INC)
-# makefile (from 'Makefile', line 8)
+PATH = /home/enriko/.vscode-server/bin/899d46d82c4c95423fb7e10e68eba52050e30ba3/bin:/home/enriko/.local/bin:/home/enriko/bin:/home/enriko/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Users/enrik/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/enrik/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/enrik/AppData/Local/Programs/MiKTeX/miktex/bin/x64/:/snap/bin
+# makefile (from 'Makefile', line 19)
+FFLAGS = -O3 -cpp -ffree-line-length-none -Wall -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large -DWRITESTDOUT -DDEBUG -DNETCDFOUTPUT $(NETCDF_INC)
+# makefile (from 'Makefile', line 11)
 MOD = ./mod
-# makefile (from 'Makefile', line 12)
+# makefile (from 'Makefile', line 15)
 NETCDF_DIR = `nf-config --prefix`
 # environment
 VSCODE_LOG_STACK = false
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-ad0c04ee-c58a-4358-86a4-7ba9c6202e4f.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-5df306fb-5c03-4e5b-8c68-a411c3ef8001.sock
 # default
 .FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
 # environment
@@ -80,19 +76,19 @@ LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:
 # automatic
 %F = $(notdir $%)
 # environment
-DISPLAY = 172.25.240.1:0.0
+DISPLAY = 172.20.128.1:0.0
 # environment
 VSCODE_PIPE_LOGGING = true
-# makefile (from 'Makefile', line 14)
+# makefile (from 'Makefile', line 17)
 NETCDF_LIB = -L${NETCDF_DIR}/lib
 # environment
 PWD = /mnt/d/particle_model/code
 # default
 .LOADED := 
 # environment
-WSL_INTEROP = /run/WSL/9_interop
+WSL_INTEROP = /run/WSL/930_interop
 # environment
-WT_SESSION = 4284c306-4185-41c1-a998-3f155cf52044
+WT_SESSION = 8a39d74a-29c6-467c-8f4f-5fd7087504ac
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/server/remoteExtensionHostProcess
 # environment
@@ -109,16 +105,14 @@ VSCODE_HANDLES_UNCAUGHT_ERRORS = true
 ^D = $(patsubst %/,%,$(dir $^))
 # environment
 MAKELEVEL := 0
-# environment
-COLORTERM = truecolor
 # default
 MAKE = $(MAKE_COMMAND)
 # default
 MAKECMDGOALS := all
-# makefile (from 'Makefile', line 20)
-SRCS = precdefs.f90 errors.f90 interp.f90 nc_manager.f90 modtime.f90 vars.f90 physics.f90 domain.f90 fields.f90 particle.f90 output.f90 init.f90 loop_particle.f90 main.f90 
+# makefile (from 'Makefile', line 23)
+SRCS = precdefs.f90 errors.f90 interp.f90 nc_manager.f90 modtime.f90 vars.f90 physics.f90 domain.f90 fields.f90 particle.f90 output.f90 init.f90 loop_particle.f90 postprocessing.f90 main.f90 
 # environment
-SHLVL = 2
+SHLVL = 1
 # default
 MAKE_VERSION := 4.2.1
 # environment
@@ -129,21 +123,19 @@ FC = gfortran
 .DEFAULT_GOAL := all
 # environment
 NAME = Code
-# makefile (from 'Makefile', line 13)
+# makefile (from 'Makefile', line 16)
 NETCDF_INC = -I${NETCDF_DIR}/include
 # automatic
 %D = $(patsubst %/,%,$(dir $%))
 # environment
-VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/enrik/.vscode/extensions/ms-vscode-remote.remote-wsl-0.58.5
+VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/enrik/.vscode/extensions/ms-vscode-remote.remote-wsl-0.63.13
 # default
 MAKE_COMMAND := make
-# environment
-TERMINATOR_DBUS_PATH = /net/tenshu/Terminator2
 # default
 .VARIABLES := 
 # automatic
 *F = $(notdir $*)
-# makefile (from 'Makefile', line 26)
+# makefile (from 'Makefile', line 29)
 PROGRAM = $(BIN)/main
 # makefile
 MAKEFLAGS = pqrR
@@ -167,7 +159,7 @@ LIBGL_ALWAYS_INDIRECT = 1
 LC_ALL = C
 # environment
 HOSTTYPE = x86_64
-# makefile (from 'Makefile', line 18)
+# makefile (from 'Makefile', line 21)
 LIBS = ${NETCDF_LIB} -lnetcdff -lnetcdf
 # automatic
 ^F = $(notdir $^)
@@ -176,7 +168,7 @@ SUFFIXES :=
 # default
 .INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
 # environment
-VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH = /home/enriko/.vscode-server/bin/3a6960b964327f0e3882ce18fcebd07ed191b316/remote/node_modules
+VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH = /home/enriko/.vscode-server/bin/899d46d82c4c95423fb7e10e68eba52050e30ba3/remote/node_modules
 # default
 .RECIPEPREFIX := 
 # environment
@@ -184,15 +176,11 @@ LANG = C
 # environment
 TERM = xterm-256color
 # environment
-TERMINATOR_DBUS_NAME = net.tenshu.Terminator21ff8a7b5dc7a7d1f0ed65aaa29c04b1e
-# environment
 VSCODE_EXTHOST_WILL_SEND_SOCKET = true
 # environment
 WSL_DISTRO_NAME = Ubuntu-20.04
-# environment
-MOTD_SHOWN = update-motd
 # variable set hash-table stats:
-# Load=90/1024=9%, Rehash=0, Collisions=17/141=12%
+# Load=84/1024=8%, Rehash=0, Collisions=17/139=12%
 
 # Pattern-specific Variable Values
 
@@ -200,14 +188,14 @@ MOTD_SHOWN = update-motd
 
 # Directories
 
-# . (device 47, inode 147654575458): 39 files, no impossibilities.
+# . (device 47, inode 147654575458): 42 files, no impossibilities.
 
-# 39 files, no impossibilities in 1 directories.
+# 42 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
 obj/%.o: %.f90 | obj
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 # 1 implicit rules, 0 (0.0%) terminal.
@@ -217,35 +205,42 @@ obj/%.o: %.f90 | obj
 # Not a target:
 nc_manager.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-15 22:30:56
+#  Last modified 2021-12-21 15:00:00
 #  File has been updated.
 #  Successfully updated.
 
-../bin/main: obj/precdefs.o obj/errors.o obj/interp.o obj/nc_manager.o obj/modtime.o obj/vars.o obj/physics.o obj/domain.o obj/fields.o obj/particle.o obj/output.o obj/init.o obj/loop_particle.o obj/main.o | ../bin
+../bin/main: obj/precdefs.o obj/errors.o obj/interp.o obj/nc_manager.o obj/modtime.o obj/vars.o obj/physics.o obj/domain.o obj/fields.o obj/particle.o obj/output.o obj/init.o obj/loop_particle.o obj/postprocessing.o obj/main.o | ../bin
 #  Implicit rule search has not been done.
-#  Last modified 2021-11-15 22:31:14
+#  Last modified 2021-12-21 15:00:06
 #  File has been updated.
 #  Needs to be updated (-q is set).
 # variable set hash-table stats:
 # Load=0/32=0%, Rehash=0, Collisions=0/10=0%
-#  recipe to execute (from 'Makefile', line 31):
+#  recipe to execute (from 'Makefile', line 34):
 	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
 
 # Not a target:
 physics.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-15 23:01:36
+#  Last modified 2021-12-21 11:14:18
 #  File has been updated.
 #  Successfully updated.
 
 obj/output.o: output.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'output'
-#  Last modified 2021-11-15 23:26:10
+#  Last modified 2021-12-21 15:00:06
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
+
+# Not a target:
+postprocessing.f90:
+#  Implicit rule search has been done.
+#  Last modified 2021-12-21 15:05:08
+#  File has been updated.
+#  Successfully updated.
 
 all: ../bin/main
 #  Command line target.
@@ -259,54 +254,54 @@ all: ../bin/main
 # Not a target:
 errors.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-10-08 16:27:58
+#  Last modified 2021-12-21 11:12:34
 #  File has been updated.
 #  Successfully updated.
 
 obj/precdefs.o: precdefs.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'precdefs'
-#  Last modified 2021-11-15 23:26:08
+#  Last modified 2021-12-21 14:02:00
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 obj/particle.o: particle.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'particle'
-#  Last modified 2021-11-15 23:26:10
+#  Last modified 2021-12-21 14:02:02
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 obj/errors.o: errors.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'errors'
-#  Last modified 2021-11-15 23:26:08
+#  Last modified 2021-12-21 14:02:00
 #  File has been updated.
- 
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+ 
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 obj/fields.o: fields.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'fields'
-#  Last modified 2021-11-15 23:26:10
+#  Last modified 2021-12-21 14:02:02
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 obj/modtime.o: modtime.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'modtime'
-#  Last modified 2021-11-15 23:26:08
+#  Last modified 2021-12-21 14:02:00
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 # Not a target:
@@ -318,7 +313,7 @@ obj/main.o:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-15 23:35:22
+#  Last modified 2021-12-21 12:29:24
 #  File has been updated.
 #  Successfully updated.
 
@@ -326,72 +321,54 @@ Makefile:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 37):
+#  recipe to execute (from 'Makefile', line 40):
 	mkdir $@
 
 obj/loop_particle.o: loop_particle.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'loop_particle'
-#  File does not exist.
+#  Last modified 2021-12-21 14:02:06
 #  File has been updated.
-#  Needs to be updated (-q is set).
-# automatic
-# @ := obj/loop_particle.o
-# automatic
-# % := 
-# automatic
-# * := loop_particle
-# automatic
-# + := loop_particle.f90
-# automatic
-# | := obj
-# automatic
-# < := loop_particle.f90
-# automatic
-# ^ := loop_particle.f90
-# automatic
-# ? := loop_particle.f90
-# variable set hash-table stats:
-# Load=8/32=25%, Rehash=0, Collisions=1/20=5%
-#  recipe to execute (from 'Makefile', line 34):
+#  Successfully updated.
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 # Not a target:
 vars.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-15 23:24:54
+#  Last modified 2021-12-21 11:13:30
 #  File has been updated.
 #  Successfully updated.
 
 obj:
 #  Implicit rule search has not been done.
-#  Last modified 2021-11-15 23:26:06.84
+#  Last modified 2021-12-21 14:01:58.56
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 37):
+#  recipe to execute (from 'Makefile', line 40):
 	mkdir $@
 
 # Not a target:
 precdefs.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-05 17:30:34
+#  Last modified 2021-12-21 11:12:34
 #  File has been updated.
 #  Successfully updated.
 
 # Not a target:
 particle.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-10-08 19:35:10
+#  Last modified 2021-12-21 11:14:32
 #  File has been updated.
 #  Successfully updated.
 
 obj/nc_manager.o: nc_manager.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'nc_manager'
-#  Last modified 2021-11-15 23:26:08
+#  Last modified 2021-12-21 15:00:04
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 # Not a target:
@@ -403,119 +380,146 @@ obj/nc_manager.o: nc_manager.f90 | obj
 # Not a target:
 init.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-01 19:21:12
+#  Last modified 2021-12-21 11:25:20
 #  File has been updated.
 #  Successfully updated.
 
 obj/physics.o: physics.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'physics'
-#  Last modified 2021-11-15 23:26:08
+#  Last modified 2021-12-21 14:02:00
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 clean:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 40):
+#  recipe to execute (from 'Makefile', line 43):
 	rm -rf ./obj
 	rm *.mod
 
 # Not a target:
 modtime.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-05 17:40:50
+#  Last modified 2021-12-21 11:13:26
 #  File has been updated.
 #  Successfully updated.
 
 obj/init.o: init.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'init'
-#  Last modified 2021-11-15 23:26:10
+#  Last modified 2021-12-21 14:02:04
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 # Not a target:
 domain.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-01 16:53:40
+#  Last modified 2021-12-21 11:14:42
 #  File has been updated.
 #  Successfully updated.
+
+obj/postprocessing.o: postprocessing.f90 | obj
+#  Implicit rule search has been done.
+#  Implicit/static pattern stem: 'postprocessing'
+#  Last modified 2021-12-21 14:54:12
+#  File has been updated.
+#  Needs to be updated (-q is set).
+# automatic
+# @ := obj/postprocessing.o
+# automatic
+# % := 
+# automatic
+# * := postprocessing
+# automatic
+# + := postprocessing.f90
+# automatic
+# | := obj
+# automatic
+# < := postprocessing.f90
+# automatic
+# ^ := postprocessing.f90
+# automatic
+# ? := postprocessing.f90
+# variable set hash-table stats:
+# Load=8/32=25%, Rehash=0, Collisions=1/20=5%
+#  recipe to execute (from 'Makefile', line 37):
+	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 # Not a target:
 output.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-10-08 19:35:14
+#  Last modified 2021-12-21 15:00:02
 #  File has been updated.
 #  Successfully updated.
 
 # Not a target:
 fields.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-10 15:23:40
+#  Last modified 2021-12-21 12:04:28
 #  File has been updated.
 #  Successfully updated.
 
 # Not a target:
 loop_particle.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-15 23:22:36
+#  Last modified 2021-12-21 11:30:38
 #  File has been updated.
 #  Successfully updated.
 
 # Not a target:
 interp.f90:
 #  Implicit rule search has been done.
-#  Last modified 2021-11-05 18:21:10
+#  Last modified 2021-12-21 11:12:34
 #  File has been updated.
 #  Successfully updated.
 
 obj/interp.o: interp.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'interp'
-#  Last modified 2021-11-15 23:26:08
+#  Last modified 2021-12-21 14:02:00
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 obj/vars.o: vars.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'vars'
-#  Last modified 2021-11-15 23:26:08
+#  Last modified 2021-12-21 14:02:00
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 obj/domain.o: domain.f90 | obj
 #  Implicit rule search has been done.
 #  Implicit/static pattern stem: 'domain'
-#  Last modified 2021-11-15 23:26:10
+#  Last modified 2021-12-21 14:02:02
 #  File has been updated.
 #  Successfully updated.
-#  recipe to execute (from 'Makefile', line 34):
+#  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 # files hash-table stats:
-# Load=35/1024=3%, Rehash=0, Collisions=2/129=2%
+# Load=37/1024=4%, Rehash=0, Collisions=2/137=1%
 # VPATH Search Paths
 
 # No 'vpath' search paths.
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 76 / storage = 851 B / avg = 11 B
-# current buf: size = 8162 B / used = 851 B / count = 76 / avg = 11 B
+# strcache buffers: 1 (0) / strings = 81 / storage = 949 B / avg = 11 B
+# current buf: size = 8162 B / used = 949 B / count = 81 / avg = 11 B
 
-# strcache performance: lookups = 142 / hit rate = 46%
+# strcache performance: lookups = 151 / hit rate = 46%
 # hash-table stats:
-# Load=76/8192=1%, Rehash=0, Collisions=4/142=3%
-# Finished Make data base on Mon Nov 15 23:35:29 2021
+# Load=81/8192=1%, Rehash=0, Collisions=4/151=3%
+# Finished Make data base on Tue Dec 21 15:06:25 2021
 
  

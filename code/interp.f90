@@ -97,10 +97,10 @@ contains
     real(rk), intent(in)  :: dt, dt_arr
     real(rk), intent(out) :: arr_out(nx, ny, nz)
 
-    select case(method)
-    case(0)
+    select case (method)
+    case (0)
       arr_out = arr_t1
-    case(1)
+    case (1)
       arr_out = arr_t1 + (arr_t2 - arr_t1) / dt_arr * dt
     end select
 

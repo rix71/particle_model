@@ -618,7 +618,7 @@ contains
     !---------------------------------------------
 
     logical                                        :: opts_present
-    integer                                        :: iproc
+  integer                                        :: iproc
     integer                                        :: ioff, joff
     integer                                        :: istart, jstart
     integer                                        :: start(4), count(4)

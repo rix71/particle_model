@@ -219,7 +219,8 @@ contains
 
     rz0 = (((((R060 * tt + R150 * ss + R050) * tt + (R240 * ss + R140) * ss + R040) * tt &
            + ((R330 * ss + R230) * ss + R130) * ss + R030) * tt + (((R420 * ss + R320) * ss + R220) * ss + R120) * ss + R020) * tt &
-          + ((((R510 * ss+R410) * ss+R310) * ss+R210) * ss+R110) * ss+R010) * tt +(((((R600 * ss+R500) * ss+R400) * ss+R300) * ss+R200) * ss+R100) * ss+R000
+           + ((((R510 * ss + R410) * ss + R310) * ss + R210) * ss + R110) * ss + R010) * tt &
+          + (((((R600 * ss + R500) * ss + R400) * ss + R300) * ss + R200) * ss + R100) * ss + R000
 
     seawater_density_from_temp_and_salt = ((rz3 * zz + rz2) * zz + rz1) * zz + rz0
 

@@ -11,7 +11,10 @@ module output
   use time_vars, only: theDate, nTimes, dt
   use field_vars, only: run_3d
   use netcdf
-  use nc_manager, only: nc_initialise, nc_add_dimension, nc_add_variable, nc_add_attr, nc_check, FILLVALUE_BIG
+  use nc_manager, only: nc_write, nc_initialise, &
+                        nc_add_dimension, nc_add_variable, &
+                        nc_add_attr, nc_check, &
+                        FILLVALUE_BIG
   implicit none
   private
   !===================================================
@@ -20,7 +23,7 @@ module output
             close_beach_bdy_files, write_data, &
             write_beached, write_boundary, write_data_only_active, &
             write_all_particles, write_active_particles, &
-            write_data_snapshot
+            write_data_snapshot, outDir
   !---------------------------------------------
   integer                     :: outputstep
   character(len=512)          :: outDir
@@ -122,7 +125,6 @@ contains
 
     call nc_add_variable(file_name, "trajectory", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "trajectory", "units", "m")
-
 
   end subroutine init_nc_output
   !===========================================

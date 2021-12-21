@@ -138,8 +138,10 @@ contains
       ! Date of the next timestep
       select case (has_subdomains)
       case (.true.)
-        dateThisNcTimestep = init_datetime_from_netcdf(trim(thisPath)//PROC0, nc_itime)
-        dateNextNcTimestep = init_datetime_from_netcdf(trim(nextPath)//PROC0, nc_itime_next)
+        dateThisNcTimestep = init_datetime_from_netcdf(trim(thisPath)//PROC0, &
+                                                       nc_itime)
+        dateNextNcTimestep = init_datetime_from_netcdf(trim(nextPath)//PROC0, &
+                                                       nc_itime_next)
       case (.false.)
         dateThisNcTimestep = init_datetime_from_netcdf(trim(thisPath), nc_itime)
         dateNextNcTimestep = init_datetime_from_netcdf(trim(nextPath), nc_itime_next)
@@ -565,7 +567,7 @@ contains
         end if
       end if
 
-    end do ! End of nc(t) - nc(t+1) time loop
+    end do ! End of nc(t) -> nc(t+1) time loop
     DBG, "End of time loop"
 
     call print_loop_end(itime)

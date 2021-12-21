@@ -179,7 +179,8 @@ contains
     do ipart = 1, nInitParticles
       if (initCoords(ipart, 1) < lons(1) .or. initCoords(ipart, 1) > lons(nx) .or. &
           initCoords(ipart, 2) < lats(1) .or. initCoords(ipart, 2) > lats(ny)) then
-        ERROR, "Particle", ipart, ":", initCoords(ipart, 1), initCoords(ipart, 2)
+        ERROR, "Particle", ipart, ":", &
+        initCoords(ipart, 1), initCoords(ipart, 2)
         call throw_error("init_particles_from_coordfile", "Particle initialized outside of domain")
       end if
     end do

@@ -102,6 +102,9 @@ contains
       end if
     case ('int')
       call nc_check(trim(FILE_NAME), nf90_def_var(ncid, varname, nf90_int, dimids, varid), "add var :: def "//trim(varname))
+      if (present(missing_val)) then
+      call nc_check(trim(FILE_NAME), nf90_put_att(ncid, varid, "missing_value", int(missing_val)), "add var :: def "//trim(varname))
+      end if
     end select
     call nc_check(trim(FILE_NAME), nf90_enddef(ncid), "add var :: end def")
     call nc_check(trim(FILE_NAME), nf90_close(ncid), "add var :: close")

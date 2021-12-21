@@ -1,5 +1,5 @@
 FC = gfortran
-FFLAGS = -O3 -cpp -ffree-line-length-none -Wall -Wline-truncation \
+FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 	 -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
@@ -22,7 +22,7 @@ LIBS = ${NETCDF_LIB} -lnetcdff -lnetcdf
 
 SRCS = precdefs.f90 errors.f90 interp.f90 nc_manager.f90 modtime.f90 vars.f90 \
        physics.f90 domain.f90 fields.f90 particle.f90 output.f90 \
-       init.f90 loop_particle.f90 main.f90 
+       init.f90 loop_particle.f90 postprocessing.f90 main.f90 
 
 OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
 #--------------------------------------------------

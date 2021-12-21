@@ -8,6 +8,7 @@ program main
   use initialise, only: init_run, init_model
   use loop_particle, only: loop
   use output, only: init_output, open_beach_bdy_files, close_beach_bdy_files
+  use postprocessing, only: postprocess
   implicit none
   !===================================================
   call init_run
@@ -22,6 +23,7 @@ program main
     ! call open_beach_bdy_files
     call loop
     ! call close_beach_bdy_files
+    call postprocess
   else
     FMT1, LINE; FMT1, "Will not loop!"; FMT1, LINE
   end if
