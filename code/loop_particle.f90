@@ -7,7 +7,7 @@ module loop_particle
   use errors
   use interp
   use params, only: do_diffusion, do_velocity
-  use physics, only: diffuse, velocity, vertical_velocity
+  use physics, only: diffuse, velocity, vertical_velocity, seawater_density_from_temp_and_salt
   use loop_vars, only: dateThis, dateNext, dateThisNcTimestep, dateNextNcTimestep, thisPath, nextPath, &
                        xnow, xnew, ynow, ynew, znow, znew, cartx, cartx_new, &
                        carty, carty_new, ig, jg, kg, igr, jgr, kgr, &
@@ -18,7 +18,7 @@ module loop_particle
   use time_vars, only: theDate, run_end_dt, dt, nc_timestep, nTimes
   use domain, only: lonlat2xy, xy2lonlat
   use domain_vars, only: x0, y0, dx, dy, dz, dx_m, dy_m, nx, ny, lons, lats, depdata, seamask
-  use field_vars, only: nlevels, has_subdomains, run_3d, &
+  use field_vars, only: nlevels, has_subdomains, has_viscosity, has_density, run_3d, &
                         uspeed, vspeed, wspeed, &
                         uspeednew, vspeednew, wspeednew, &
                         udata, vdata, wdata, &
@@ -26,10 +26,12 @@ module loop_particle
                         udata_interp, vdata_interp, wdata_interp, &
                         udatanew_interp, vdatanew_interp, wdatanew_interp, &
                         zaxdata, zaxdatanew, zaxdata_interp, zaxdatanew_interp, &
+                        density, densitynew, temp, tempnew, salt, saltnew, visc, viscnew, &
                         rho_sea, viscosity, file_prefix, file_suffix
   use fields, only: find_folder, find_file, get_indices2d, &
                     get_indices_vert, read_fields_full_domain, &
-                    get_seawater_density, get_seawater_viscosity
+                    get_seawater_density, get_seawater_viscosity, &
+                    sealevel
   use nc_manager, only: nc_get_dim
   use modtime
   use output, only: outputstep, write_data, &
@@ -156,39 +158,19 @@ contains
       ! Read in currents
       ! Does this even make sense???
       if (.not. read_first) then
-        select case (run_3d)
-        case (.true.)
-          call read_fields_full_domain(datau=udata, datav=vdata, &
-                                       dataw=wdata, datazax=zaxdata, &
-                                       timeindex=nc_itime, path=thisPath)
-          call read_fields_full_domain(datau=udatanew, datav=vdatanew, &
-                                       dataw=wdatanew, datazax=zaxdatanew, &
-                                       timeindex=nc_itime_next, path=nextPath)
-
-          read_first = .true.
-        case (.false.)
-          call read_fields_full_domain(datau=udata, datav=vdata, &
-                                       timeindex=nc_itime, path=thisPath)
-          call read_fields_full_domain(datau=udatanew, datav=vdatanew, &
-                                       timeindex=nc_itime_next, path=nextPath)
-          read_first = .true.
-        end select
+        call read_fields_full_domain(nc_itime, thisPath, read_first)
+        read_first = .true.
+        call read_fields_full_domain(nc_itime_next, nextPath, read_first)
       else
-        select case (run_3d)
-        case (.true.)
-          call read_fields_full_domain(datau=udatanew, datav=vdatanew, &
-                                       dataw=wdatanew, datazax=zaxdatanew, &
-                                       timeindex=nc_itime_next, path=nextPath)
-        case (.false.)
-          call read_fields_full_domain(datau=udatanew, datav=vdatanew, &
-                                       timeindex=nc_itime_next, path=nextPath)
-        end select
+        call read_fields_full_domain(nc_itime_next, nextPath, read_first)
       end if
 
       itime_interp = 0
       !---------------------------------------------
       ! Start interpolated time loop
       do while (theDate < dateNextNcTimestep)
+        !---------------------------------------------
+        if (itime >= nTimes) exit
         !---------------------------------------------
         ! Release particles
         ! TODO: Do this only in case of continuous release (particle_method ?)
@@ -208,6 +190,7 @@ contains
           FMT2, runparts, "particles"
         end if
         !---------------------------------------------
+#ifndef SAYLESS
         if (mod(itime, PROGRESSINFO) .eq. 0) then
           call theDate%print_short_date
           call date_and_time(date=d, time=t)
@@ -227,6 +210,7 @@ contains
             FMT2, inactive_particles, " inactive particles"
           end if
         end if
+#endif
         !---------------------------------------------
         ! Interpolate between timesteps
         if (dt .ne. dt_orig) then
@@ -298,9 +282,10 @@ contains
             ! If particle hovers, set the depth to sealevel
             if (run_3d) then
               ! Use interpolated values? Probably...
-              if (znow > zaxdata(ig, jg, nlevels)) then
+              if (znow > sealevel(zaxdata(ig, jg, nlevels), ig, jg)) then
                 DBG, "Setting particle to sealevel"
-                znow = zaxdata(ig, jg, nlevels)
+                ! znow = zaxdata(ig, jg, nlevels)
+                znow = sealevel(zaxdata(ig, jg, nlevels), ig, jg)
               end if
             end if
             !---------------------------------------------
@@ -335,11 +320,26 @@ contains
             case (.true.)
               !---------------------------------------------
               ! Get seawater density
-              call get_seawater_density(ig, jg, kg, znow, nc_itime, rho_sea, thisPath)
+              ! call get_seawater_density(ig, jg, kg, znow, nc_itime, rho_sea, thisPath)
+              select case (has_density)
+              case (0)
+                ! Use some default value
+                rho_sea = 1000.0d0
+              case (1)
+                rho_sea = density(ig, jg, kg)
+              case (2)
+                rho_sea = seawater_density_from_temp_and_salt(temp(ig, jg, kg), salt(ig, jg, kg), znow)
+              end select
               debug(rho_sea)
               !---------------------------------------------
               ! Get seawater viscosity
-              call get_seawater_viscosity(ig, jg, kg, nc_itime, viscosity, thisPath)
+              ! call get_seawater_viscosity(ig, jg, kg, nc_itime, viscosity, thisPath)
+              select case (has_viscosity)
+              case (.false.)
+                ! Use some default value
+              case (.true.)
+                viscosity = visc(ig, jg, kg)
+              end select
               debug(viscosity)
               !---------------------------------------------
          pvelu = velocity(xnow, ynow, particles(ipart)%u, particles(ipart)%rho, particles(ipart)%radius, uspeed, rho_sea, viscosity)
@@ -412,7 +412,7 @@ contains
                 cartx_new = cartx - pvelu * dt
               end if
               if (jg .ne. jg_prev) then
-                ! Particle has moved to the up or down
+                ! Particle has moved up or down
                 carty_new = carty - pvelv * dt
               end if
               call xy2lonlat(cartx_new, carty_new, x0, y0, xnew, ynew)
@@ -445,10 +445,25 @@ contains
             case (.true.)
               !---------------------------------------------
               ! Get seawater density
-              call get_seawater_density(ig, jg, kg, znew, nc_itime_next, rho_sea, thisPath)
+              ! call get_seawater_density(ig, jg, kg, znew, nc_itime_next, rho_sea, thisPath)
+              select case (has_density)
+              case (0)
+                ! Use some default value
+                rho_sea = 1000.0d0
+              case (1)
+                rho_sea = densitynew(ig, jg, kg)
+              case (2)
+                rho_sea = seawater_density_from_temp_and_salt(tempnew(ig, jg, kg), saltnew(ig, jg, kg), znew)
+              end select
               !---------------------------------------------
               ! Get seawater viscosity
-              call get_seawater_viscosity(ig, jg, kg, nc_itime_next, viscosity, thisPath)
+              ! call get_seawater_viscosity(ig, jg, kg, nc_itime_next, viscosity, thisPath)
+              select case (has_viscosity)
+              case (.false.)
+                ! Use some default value
+              case (.true.)
+                viscosity = viscnew(ig, jg, kg)
+              end select
               debug(viscosity)
               !---------------------------------------------
               pvelunew = velocity(xnew, ynew, pvelu, particles(ipart)%rho, particles(ipart)%radius, uspeednew, rho_sea, viscosity)
@@ -511,10 +526,13 @@ contains
             ! Don't move if the particle is alive, but not active
             xnew = xnow
             ynew = ynow
+            znew = znow
             pvelu = 0.
             pvelv = 0.
+            pvelw = 0.
             pvelunew = 0.
             pvelvnew = 0.
+            pvelwnew = 0.
           end if
           !---------------------------------------------
           ! Update particles
@@ -561,10 +579,24 @@ contains
       if (read_first) then
         udata = udatanew
         vdata = vdatanew
+
         if (run_3d) then
           wdata = wdatanew
           zaxdata = zaxdatanew
         end if
+
+        if (has_viscosity) then
+          visc = viscnew
+        end if
+
+        select case (has_density)
+        case (1)
+          density = densitynew
+        case (2)
+          temp = tempnew
+          salt = saltnew
+        end select
+
       end if
 
     end do ! End of nc(t) -> nc(t+1) time loop

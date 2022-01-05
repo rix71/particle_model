@@ -452,7 +452,6 @@ contains
   end function date_le
   !===========================================
   subroutine reset_DIM()
-    implicit none
 
     daysInMonth(2) = 28
 

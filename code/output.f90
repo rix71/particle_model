@@ -39,7 +39,7 @@ contains
   subroutine init_output
 
     logical :: dirExists
-    integer :: nfiles = 0
+    ! integer :: nfiles = 0
 
     FMT1, "======== Init output ========"
 
@@ -60,13 +60,13 @@ contains
 #endif
     end if
 
-    if (write_all_particles) nfiles = nfiles + 1
-    if (write_active_particles) nfiles = nfiles + 1
+    ! if (write_all_particles) nfiles = nfiles + 1
+    ! if (write_active_particles) nfiles = nfiles + 1
 
     FMT2, var2val(write_all_particles)
     FMT2, var2val(write_active_particles)
     FMT2, "Writing output every ", outputstep, " timesteps, or ", (outputstep * dt) / 3600., "hours"
-    FMT2, "This will result in ", nfiles * nTimes / outputstep, " files"
+    FMT2, "Saving ", nTimes / outputstep, " timesteps"
 
     if (write_all_particles) then
       nc_fileout_all = trim(outDir)//'/'//trim(runid)//'.all.nc'
@@ -90,11 +90,16 @@ contains
     call nc_add_variable(nc_fileout_snap, "y", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(nc_fileout_snap, "y", "units", "degrees north")
 
+    call nc_add_variable(nc_fileout_snap, "z", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(nc_fileout_snap, "z", "units", "m")
+    call nc_add_attr(nc_fileout_snap, "z", "name", "depth")
+
     call nc_add_variable(nc_fileout_snap, "age", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(nc_fileout_snap, "age", "units", "s")
 
     call nc_add_variable(nc_fileout_snap, "trajectory", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(nc_fileout_snap, "trajectory", "units", "m")
+    call nc_add_attr(nc_fileout_snap, "trajectory", "name", "distance travelled")
 
     call nc_add_variable(nc_fileout_snap, "particle_num", "int", 1, [nc_p_dimid])
 
@@ -120,11 +125,16 @@ contains
     call nc_add_variable(file_name, "y", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "y", "units", "degrees north")
 
+    call nc_add_variable(file_name, "z", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "z", "units", "m")
+    call nc_add_attr(file_name, "z", "name", "depth")
+
     call nc_add_variable(file_name, "age", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "age", "units", "s")
 
     call nc_add_variable(file_name, "trajectory", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "trajectory", "units", "m")
+    call nc_add_attr(file_name, "trajectory", "name", "distance travelled")
 
   end subroutine init_nc_output
   !===========================================
@@ -211,6 +221,12 @@ contains
                     nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
 
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "z", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%zPos
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+
       call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "age", varid), "write_data :: inq varid")
       var2d = particles(ipart)%age
       call nc_check(trim(nc_fileout_all), &
@@ -285,6 +301,12 @@ contains
                       nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                       "write_data_active :: put var")
 
+        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "z", varid), "write_data_active :: inq varid")
+        var2d = particles(ipart)%zPos
+        call nc_check(trim(nc_fileout_active), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data_active :: put var")
+
         call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "age", varid), "write_data_active :: inq varid")
         var2d = particles(ipart)%age
         call nc_check(trim(nc_fileout_active), &
@@ -351,6 +373,12 @@ contains
 
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "y", varid), "write_data_active :: inq varid")
     var1d = p%yPos
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_active :: put var")
+
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "z", varid), "write_data_active :: inq varid")
+    var1d = p%zPos
     call nc_check(trim(nc_fileout_snap), &
                   nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
                   "write_data_active :: put var")

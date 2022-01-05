@@ -1,10 +1,10 @@
 !---------------------------------------------
 ! For printing
-#define PROGRESSINFO 300
+#define PROGRESSINFO 1
 #define LINE '--------------------------'
 #define STAR '**************************'
 
-#ifndef WRITESTDOUT
+#ifndef WRITESTDOUT 
 #define FMT1 print *, '  '
 #define FMT2 print *, '      '
 #define FMT3 print *, '          '

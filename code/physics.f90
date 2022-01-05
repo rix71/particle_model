@@ -105,10 +105,10 @@ contains
     ! Needs condition delta_rho > 0? WRONG ORDER???
     if (delta_rho > 0.0d0) then
       DBG, "delta_rho > 0"; debug(delta_rho / rho_env)
-      vertical_velocity = ((delta_rho / rho_env)*-1.0 * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
+      vertical_velocity = -1.0 * ((delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
     else
       DBG, "delta_rho < 0"; debug(delta_rho / rho_env)
-      vertical_velocity = -1.0 * (-1.0 * (delta_rho / rho_env)*-1.0 * g * w_star * kin_visc)**(1./3.)
+      vertical_velocity = (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
     end if
 
     dbgtail(vertical_velocity)

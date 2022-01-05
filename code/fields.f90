@@ -9,10 +9,11 @@ module fields
   !----------------------------------------------------------------
   use precdefs
   use errors
-  use params, only: mu
+  use params, only: mu, do_velocity
   use domain_vars, only: nx, ny, depdata, x0, y0, dx, dy
   use field_vars
   use modtime
+  use time_vars, only: run_start_dt
   use nc_manager, only: nc_read4d, nc_var_exists
   use physics, only: seawater_density_from_temp_and_salt
   implicit none
@@ -21,7 +22,8 @@ module fields
   !---------------------------------------------
   public :: init_dirlist, return_pmap, init_fields, find_folder, find_file, &
             get_indices2d, get_indices_vert, get_dz, find_proc, &
-            get_seawater_density, get_seawater_viscosity, read_fields_full_domain
+            get_seawater_density, get_seawater_viscosity, read_fields_full_domain, &
+            sealevel
   !---------------------------------------------
   ! Directories
   character(len=*), parameter     :: dirinfile = 'dirlist.dat' ! List the dirs into this file
@@ -188,9 +190,13 @@ contains
     ! EDIT: Only full domain is used, even when the data is in chunks,
     !       since reading into subdomains is not ready yet.
     !---------------------------------------------
+    character(len=256) :: initPath
+    character(len=516) :: filename
 
     FMT1, "======== Init fields ========"
 
+    !---------------------------------------------
+    ! Arrays for h. velocity
     FMT2, "Using full domain"
     FMT2, "Allocating fields of size (nx, ny, nz): (", nx, ", ", ny, ", ", nlevels, ")"
     allocate (udata(nx, ny, nlevels), vdata(nx, ny, nlevels), &
@@ -199,6 +205,8 @@ contains
     allocate (udata_interp(nx, ny, nlevels), vdata_interp(nx, ny, nlevels), &
               udatanew_interp(nx, ny, nlevels), vdatanew_interp(nx, ny, nlevels))
     udata_interp = 0; vdata_interp = 0; udatanew_interp = 0; vdatanew_interp = 0; 
+    !---------------------------------------------
+    ! Arrays for v. velocity
     if (run_3d) then
       allocate (wdata(nx, ny, nlevels), wdatanew(nx, ny, nlevels), &
                 zaxdata(nx, ny, nlevels), zaxdatanew(nx, ny, nlevels))
@@ -207,7 +215,48 @@ contains
                 zaxdata_interp(nx, ny, nlevels), zaxdatanew_interp(nx, ny, nlevels))
       wdata_interp = 0; wdatanew_interp = 0; zaxdata_interp = 0; zaxdatanew_interp = 0; 
     end if
-
+    !---------------------------------------------
+    if (do_velocity) then
+      !---------------------------------------------
+      ! Arrays for density
+      select case (has_subdomains)
+      case (.true.)
+        call find_folder(run_start_dt, initPath)
+        write (filename, '(a)') trim(initPath)//PROC0
+      case (.false.)
+        call find_file(run_start_dt, initPath)
+        write (filename, '(a)') trim(initPath)
+      end select
+      if (nc_var_exists(trim(filename), "rho")) then
+        allocate (density(nx, ny, nlevels), densitynew(nx, ny, nlevels))
+        density = 0; densitynew = 0
+        has_density = 1
+      else
+        call throw_warning("init_fields", "Could not find density ('rho') in "//trim(filename))
+        if (nc_var_exists(trim(filename), "temp") .and. &
+            nc_var_exists(trim(filename), "salt")) then
+          allocate (temp(nx, ny, nlevels), tempnew(nx, ny, nlevels))
+          temp = 0; tempnew = 0
+          allocate (salt(nx, ny, nlevels), saltnew(nx, ny, nlevels))
+          salt = 0; saltnew = 0
+          has_density = 2
+        else
+          call throw_warning("init_fields", "Could not find temperature or salinity ('temp'/'salt') in "//trim(filename)// &
+                             ". Using default density.")
+        end if
+      end if
+      !---------------------------------------------
+      ! Arrays for viscosity
+      if (nc_var_exists(trim(filename), "nuh")) then
+        allocate (visc(nx, ny, nlevels), viscnew(nx, ny, nlevels))
+        visc = 0; viscnew = 0
+        has_viscosity = .true.
+      else
+        call throw_warning("init_fields", "Could not find viscosity ('nuh') in "//trim(filename)// &
+                           ". Using default viscosity.")
+      end if
+    end if
+    !---------------------------------------------
     if (has_subdomains) call get_proc_mask
 
     FMT2, "Fields allocated"
@@ -401,7 +450,7 @@ contains
     !  kr = krt
     !end if
 
-    ! debug(zin)
+    debug(zin)
     ! debug(zaxarr(i, j, :))
 
     select case (zax_style)
@@ -416,10 +465,10 @@ contains
       do ik = 2, nlevels
         tmp_zax(ik) = tmp_zax(ik - 1) + zaxarr(i, j, ik)
       end do
-      ! debug(tmp_zax)
     case default
       call throw_error("get_indices_vert", "Z - axis style unknown: zax_style = 1 or 2")
     end select
+    debug(tmp_zax)
 
     do ik = 1, nlevels - 1
       if (tmp_zax(ik + 1) .ge. zin) then
@@ -443,6 +492,40 @@ contains
     dbgtail(get_indices_vert)
     return
   end subroutine get_indices_vert
+  !===========================================
+  real(rk) function sealevel(zaxarr, i, j) result(res)
+
+    integer, intent(in)  :: i, j
+    integer              :: ik
+    real(rk), intent(in) :: zaxarr(nlevels)
+    real(rk)             :: tmp_zax(nlevels)
+
+    dbghead(sealevel)
+
+    debug(zaxarr)
+
+    select case (zax_style)
+    case (DEPTH_VALUES)
+      DBG, "Using depth values"
+      tmp_zax = zaxarr
+    case (LAYER_THICKNESS)
+      DBG, "Using layer thickness"
+      tmp_zax = zaxarr
+      where (tmp_zax <= -5.0d0) tmp_zax = 0.0
+      tmp_zax(1) = -1.0 * depdata(i, j)
+      do ik = 2, nlevels
+        tmp_zax(ik) = tmp_zax(ik - 1) + zaxarr(ik)
+      end do
+      debug(tmp_zax)
+    case default
+      call throw_error("sealevel", "Z - axis style unknown: zax_style = 1 or 2")
+    end select
+    res = tmp_zax(nlevels)
+    debug(res)
+
+    dbgtail(sealevel)
+    return
+  end function sealevel
   !===========================================
   subroutine get_dz(xin, yin, oldnew, dzout)
     !---------------------------------------------
@@ -596,7 +679,7 @@ contains
     return
   end subroutine get_seawater_density
   !===========================================
-  subroutine read_fields_full_domain(datau, datav, dataw, datazax, timeindex, path)
+  subroutine read_fields_full_domain(timeindex, path, read_first)
     !---------------------------------------------
     ! Just thinking out loud here... Since I want
     ! the velocity field to be the same size as
@@ -617,35 +700,68 @@ contains
     !       but is seems to be much slower this way...
     !---------------------------------------------
 
-    logical                                        :: opts_present
-  integer                                        :: iproc
-    integer                                        :: ioff, joff
-    integer                                        :: istart, jstart
-    integer                                        :: start(4), count(4)
-    integer                                        :: ii, jj
-    integer, intent(in)                            :: timeindex
-    character(len=256), intent(in)                 :: path
-    character(len=516)                             :: sdfilename
-    real(rk), intent(inout)                        :: datau(nx, ny, nlevels), datav(nx, ny, nlevels)
-    real(rk), intent(inout), optional              :: dataw(nx, ny, nlevels)
-    real(rk), intent(inout), optional              :: datazax(nx, ny, nlevels)
-    real(rk), allocatable                          :: ubuffer(:, :, :, :), vbuffer(:, :, :, :)
-    real(rk), allocatable                          :: wbuffer(:, :, :, :)
-    real(rk), allocatable                          :: zaxbuffer(:, :, :, :)
+    logical                               :: vertical_read = .false., &
+                                             density_read = .false., &
+                                             temp_salt_read = .false., &
+                                             viscosity_read = .false.
+    logical, intent(in)                   :: read_first
+    integer                               :: iproc, &
+                                             ioff, joff, &
+                                             istart, jstart, &
+                                             start(4), count(4), &
+                                             ii, jj
+    integer, intent(in)                   :: timeindex
+    character(len=256), intent(in)        :: path
+    character(len=516)                    :: subdom_filename
+    real(rk), dimension(:, :, :), pointer :: arr_u, arr_v, &
+                                             arr_w, &
+                                             arr_zax, &
+                                             arr_density, &
+                                             arr_temp, &
+                                             arr_salt, &
+                                             arr_viscosity
+    real(rk), allocatable                 :: buffer(:, :, :, :)
 
     dbghead(read_fields_full_domain)
     debug(has_subdomains)
 
-    opts_present = present(dataw) .and. present(datazax) !.and.(run_3d)
+    vertical_read = run_3d
+    viscosity_read = has_viscosity
+    select case (has_density)
+    case (1)
+      density_read = .true.
+    case (2)
+      temp_salt_read = .true.
+    end select
+
+    if (.not. read_first) then
+      arr_u => udata
+      arr_v => vdata
+      arr_w => wdata
+      arr_zax => zaxdata
+      arr_density => density
+      arr_temp => temp
+      arr_salt => salt
+      arr_viscosity => visc
+    else
+      arr_u => udatanew
+      arr_v => vdatanew
+      arr_w => wdatanew
+      arr_zax => zaxdatanew
+      arr_density => densitynew
+      arr_temp => tempnew
+      arr_salt => saltnew
+      arr_viscosity => viscnew
+    end if
 
     select case (has_subdomains)
     case (.true.)
       do iproc = 0, nproc - 1
-        write (sdfilename, "(a,i0.4,a)") trim(path)//"/"//trim(file_prefix), iproc, trim(file_suffix)//".nc"
+        write (subdom_filename, "(a,i0.4,a)") trim(path)//"/"//trim(file_prefix), iproc, trim(file_suffix)//".nc"
         ioff = pmap(iproc + 1, 1); joff = pmap(iproc + 1, 2)
         istart = 1 + ioff; jstart = 1 + joff
-        start = (/1, 1, startlevel, timeindex/)
-        count = (/nxp, nyp, nlevels, 1/)
+        start = [1, 1, startlevel, timeindex]
+        count = [nxp, nyp, nlevels, 1]
         if (ioff .lt. 0) then
           count(1) = nxp - abs(ioff)
           istart = 1
@@ -657,57 +773,100 @@ contains
 
 #ifdef DEBUG
         if (mod(iproc, 50) .eq. 0) then
-          debug(trim(sdfilename))
+          debug(trim(subdom_filename))
           debug(start)
           debug(count)
         end if
 #endif
 
-        allocate (ubuffer(count(1), count(2), count(3), count(4)), &
-                  vbuffer(count(1), count(2), count(3), count(4)))
+        allocate (buffer(count(1), count(2), count(3), count(4)))
 
-        call nc_read4d(trim(sdfilename), trim(uvarname), start, count, ubuffer)
-        call nc_read4d(trim(sdfilename), trim(vvarname), start, count, vbuffer)
-        datau(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = ubuffer(:, :, :, 1)
-        datav(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = vbuffer(:, :, :, 1)
-        deallocate (ubuffer, vbuffer)
+        call nc_read4d(trim(subdom_filename), trim(uvarname), start, count, buffer)
+        arr_u(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
+        call nc_read4d(trim(subdom_filename), trim(vvarname), start, count, buffer)
+        arr_v(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
 
-        if (opts_present) then
-          allocate (wbuffer(count(1), count(2), count(3), count(4)), &
-                    zaxbuffer(count(1), count(2), count(3), count(4)))
-          call nc_read4d(trim(sdfilename), trim(wvarname), start, count, wbuffer)
-          call nc_read4d(trim(sdfilename), trim(zaxvarname), start, count, zaxbuffer)
-          dataw(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = wbuffer(:, :, :, 1)
-          datazax(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = zaxbuffer(:, :, :, 1)
-          deallocate (wbuffer, zaxbuffer)
+        if (vertical_read) then
+          call nc_read4d(trim(subdom_filename), trim(wvarname), start, count, buffer)
+          arr_w(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
+          call nc_read4d(trim(subdom_filename), trim(zaxvarname), start, count, buffer)
+          arr_zax(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
         end if
+
+        if (density_read) then
+          call nc_read4d(trim(subdom_filename), "rho", start, count, buffer)
+          arr_density(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
+        end if
+
+        if (temp_salt_read) then
+          call nc_read4d(trim(subdom_filename), "temp", start, count, buffer)
+          arr_temp(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
+          call nc_read4d(trim(subdom_filename), "salt", start, count, buffer)
+          arr_salt(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
+        end if
+
+        if (viscosity_read) then
+          call nc_read4d(trim(subdom_filename), "nuh", start, count, buffer)
+          arr_viscosity(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
+        end if
+
+        deallocate (buffer)
       end do
     case (.false.)
-      write (sdfilename, '(a)') trim(path)
+      write (subdom_filename, '(a)') trim(path)
       start = [1, 1, startlevel, timeindex]
       count = [nx, ny, nlevels, 1]
 
       debug(start)
       debug(count)
 
-      call nc_read4d(trim(sdfilename), trim(uvarname), start, count, datau)
-      call nc_read4d(trim(sdfilename), trim(vvarname), start, count, datav)
+      call nc_read4d(trim(subdom_filename), trim(uvarname), start, count, arr_u)
+      call nc_read4d(trim(subdom_filename), trim(vvarname), start, count, arr_v)
 
-      if (opts_present) then
-        call nc_read4d(trim(sdfilename), trim(wvarname), start, count, dataw)
-        call nc_read4d(trim(sdfilename), trim(zaxvarname), start, count, datazax)
+      if (vertical_read) then
+        call nc_read4d(trim(subdom_filename), trim(wvarname), start, count, arr_w)
+        call nc_read4d(trim(subdom_filename), trim(zaxvarname), start, count, arr_zax)
       end if
+
+      if (density_read) then
+        call nc_read4d(trim(subdom_filename), "rho", start, count, arr_density)
+      end if
+
+      if (temp_salt_read) then
+        call nc_read4d(trim(subdom_filename), "temp", start, count, arr_temp)
+        call nc_read4d(trim(subdom_filename), "salt", start, count, arr_salt)
+      end if
+
+      if (viscosity_read) then
+        call nc_read4d(trim(subdom_filename), "nuh", start, count, arr_viscosity)
+      end if
+
     end select
 
     do ii = 1, nx
       do jj = 1, ny
         if (depdata(ii, jj) .lt. 0.0d0) then
-          datau(ii, jj, :) = 0.0d0
-          datav(ii, jj, :) = 0.0d0
-          if (opts_present) then
-            dataw(ii, jj, :) = 0.0d0
-            datazax(ii, jj, :) = 0.0d0
+          arr_u(ii, jj, :) = 0.0d0
+          arr_v(ii, jj, :) = 0.0d0
+
+          if (vertical_read) then
+            arr_w(ii, jj, :) = 0.0d0
+            arr_zax(ii, jj, :) = 0.0d0
           end if
+
+          if (density_read) then
+            arr_density(ii, jj, :) = 0.0d0
+          end if
+
+          if (temp_salt_read) then
+            arr_temp(ii, jj, :) = 0.0d0
+            arr_salt(ii, jj, :) = 0.0d0
+          end if
+
+          if (viscosity_read) then
+            arr_viscosity(ii, jj, :) = 0.0d0
+          end if
+
         end if
       end do
     end do

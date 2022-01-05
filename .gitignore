@@ -17,3 +17,4 @@ update.log
 code/*.mod
 ./.vscode
 code/loop_particle.bkp.f90
+do_backup.py
