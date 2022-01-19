@@ -12,10 +12,12 @@ Particle animations/anim_quick.gif
 Particle animations/randnormtest.png
 Particle animations/test_1000m_anim.gif
 Particle animations/timeres_test_lo_anim.gif
-./backup
+backup
 update.log
 code/*.mod
-./.vscode
+.vscode
+code/.vscode
 code/loop_particle.bkp.f90
 do_backup.py
 code/obj
+bin
