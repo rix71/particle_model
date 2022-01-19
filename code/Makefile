@@ -5,7 +5,6 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 
 FFLAGS += -DWRITESTDOUT
 FFLAGS += -DDEBUG
-FFLAGS += -DNETCDFOUTPUT
 # FFLAGS += -DNOSYSCALLS
 
 MOD=./mod
