@@ -230,7 +230,7 @@ contains
       if (nc_var_exists(trim(filename), "rho")) then
         allocate (density(nx, ny, nlevels), densitynew(nx, ny, nlevels))
         density = 0; densitynew = 0
-        has_density = 1
+        has_density = DENSITY
       else
         call throw_warning("init_fields", "Could not find density ('rho') in "//trim(filename))
         if (nc_var_exists(trim(filename), "temp") .and. &
@@ -239,10 +239,11 @@ contains
           temp = 0; tempnew = 0
           allocate (salt(nx, ny, nlevels), saltnew(nx, ny, nlevels))
           salt = 0; saltnew = 0
-          has_density = 2
+          has_density = TEMP_SALT
         else
           call throw_warning("init_fields", "Could not find temperature or salinity ('temp'/'salt') in "//trim(filename)// &
                              ". Using default density.")
+          has_density = DEFAULT_DENSITY
         end if
       end if
       !---------------------------------------------
@@ -410,6 +411,7 @@ contains
 
     i = int(irt); j = int(jrt)
 
+    ! TODO: Throw an error instead?
     if (i .lt. 1) i = 1
     if (j .lt. 1) j = 1
 
@@ -460,6 +462,7 @@ contains
     case (LAYER_THICKNESS)
       DBG, "Using layer thickness"
       tmp_zax = zaxarr(i, j, :)
+      debug(tmp_zax)
       where (tmp_zax <= -5.0d0) tmp_zax = 0.0
       tmp_zax(1) = -1.0 * depdata(i, j)
       do ik = 2, nlevels
@@ -497,24 +500,25 @@ contains
 
     integer, intent(in)  :: i, j
     integer              :: ik
-    real(rk), intent(in) :: zaxarr(nlevels)
+    real(rk), intent(in) :: zaxarr(nx, ny, nlevels)
     real(rk)             :: tmp_zax(nlevels)
 
     dbghead(sealevel)
 
-    debug(zaxarr)
+    ! debug(zaxarr)
+    debug(shape(zaxarr))
 
     select case (zax_style)
     case (DEPTH_VALUES)
       DBG, "Using depth values"
-      tmp_zax = zaxarr
+      tmp_zax = zaxarr(i, j, :)
     case (LAYER_THICKNESS)
       DBG, "Using layer thickness"
-      tmp_zax = zaxarr
+      tmp_zax = zaxarr(i, j, :)
       where (tmp_zax <= -5.0d0) tmp_zax = 0.0
       tmp_zax(1) = -1.0 * depdata(i, j)
       do ik = 2, nlevels
-        tmp_zax(ik) = tmp_zax(ik - 1) + zaxarr(ik)
+        tmp_zax(ik) = tmp_zax(ik - 1) + zaxarr(i, j, ik)
       end do
       debug(tmp_zax)
     case default
@@ -728,9 +732,9 @@ contains
     vertical_read = run_3d
     viscosity_read = has_viscosity
     select case (has_density)
-    case (1)
+    case (DENSITY)
       density_read = .true.
-    case (2)
+    case (TEMP_SALT)
       temp_salt_read = .true.
     end select
 
@@ -870,6 +874,19 @@ contains
         end if
       end do
     end do
+
+    where (arr_u <= MISSING_VAL) arr_u = 0.0d0
+    where (arr_v <= MISSING_VAL) arr_v = 0.0d0
+    if (vertical_read) then
+      where (arr_w <= MISSING_VAL) arr_w = 0.0d0
+      where (arr_zax <= MISSING_VAL) arr_zax = 0.0d0
+    end if
+    if (density_read) where (arr_density <= MISSING_VAL) arr_density = 0.0d0
+    if (temp_salt_read) then
+      where (arr_temp <= MISSING_VAL) arr_temp = 0.0d0
+      where (arr_salt <= MISSING_VAL) arr_salt = 0.0d0
+    end if
+    if (viscosity_read) where (arr_viscosity <= MISSING_VAL) arr_viscosity = 0.0d0
 
     dbgtail(read_fields_full_domain)
     return
