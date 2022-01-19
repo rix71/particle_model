@@ -77,7 +77,7 @@ contains
     block
       integer  :: counts(nx, ny)
       real(rk) :: mean_age(nx, ny), mean_distance(nx, ny)
-      
+
       call process_all_particles(counts, mean_age, mean_distance)
 
       call nc_add_variable(trim(nc_fileout_post), "lon", "float", 1, [nc_x_dimid])
