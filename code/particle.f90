@@ -4,15 +4,15 @@ module particle_type
   ! This is the particle type definition
   !----------------------------------------------------------------
   use precdefs
-  use domain_vars, only: x0, y0, dx, dy, seamask
+  use domain_vars, only: x0, y0, dx, dy, seamask, depdata, nx, ny
   ! Pass loop vars into functions rather than import?
   use loop_vars, only: ig, jg, igr, jgr, xnew, ynew, znew, &
                        pvelu, pvelunew, pvelv, pvelvnew, pvelw, pvelwnew
   use time_vars, only: dt
-  use field_vars, only: uspeed, vspeed, wspeed, &
+  use field_vars, only: nlevels, uspeed, vspeed, wspeed, &
                         uspeednew, vspeednew, wspeednew, &
                         run_3d
-  use fields, only: get_indices2d
+  use fields, only: get_indices2d, sealevel
   implicit none
   private
   !===================================================
@@ -24,7 +24,7 @@ module particle_type
     logical           :: isActive = .true.     ! Skip particle in loop if isActive == .false.
     logical           :: kill_bch, kill_bdy    ! Set isActive=.false. if beached or on boundary?
     integer           :: warnings = 0
-    real              :: state = 0.            ! 0 - active, 1 - beached, 2 - on boundary
+    real              :: state = 0.            ! 0 - active, 1 - beached, 2 - on boundary, 3 - bottom
     character(len=64) :: originName = 'NoName' ! Origin of particle, e.g. city/country name
     real(rk)          :: xPos = 0.0d0          ! Particle position
     real(rk)          :: yPos = 0.0d0          ! Particle position
@@ -45,6 +45,7 @@ module particle_type
     procedure :: update
     procedure :: check_beached_bdy
     procedure :: check_age
+    procedure :: check_depth
   end type particle
 
   !===================================================
@@ -101,6 +102,32 @@ contains
     end if
 
   end subroutine check_age
+  !===========================================
+  subroutine check_depth(this, zaxarr, i, j, zval, change_state)
+
+    class(particle), intent(inout) :: this
+    logical, intent(in)            :: change_state
+    integer, intent(in)            :: i, j
+    real(rk), intent(in)           :: zaxarr(nx, ny, nlevels)
+    real(rk)                       :: elev
+    real(rk), intent(inout)        :: zval
+
+    ! Use interpolated values? Probably...
+    elev = sealevel(zaxarr, ig, jg)
+    if (zval > elev) then
+      DBG, "Setting particle to sealevel"
+      zval = elev
+    end if
+    if (zval < -1.0 * depdata(i, j)) then
+      DBG, "Setting particle to bottom depth"
+      zval = -1.0 * depdata(i, j)
+      if (change_state) then
+        this%state = 3
+        if (this%kill_bdy) this%isActive = .false.
+      end if
+    end if
+
+  end subroutine check_depth
   !===========================================
   subroutine check_beached_bdy(this)
 
