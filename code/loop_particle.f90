@@ -30,8 +30,7 @@ module loop_particle
                         rho_sea, viscosity, file_prefix, file_suffix
   use fields, only: find_folder, find_file, get_indices2d, &
                     get_indices_vert, read_fields_full_domain, &
-                    get_seawater_density, get_seawater_viscosity, &
-                    sealevel
+                    get_seawater_density, get_seawater_viscosity
   use nc_manager, only: nc_get_dim
   use modtime
   use output, only: outputstep, write_data, &
@@ -281,12 +280,14 @@ contains
             !---------------------------------------------
             ! If particle hovers, set the depth to sealevel
             if (run_3d) then
-              ! Use interpolated values? Probably...
-              if (znow > sealevel(zaxdata(ig, jg, nlevels), ig, jg)) then
-                DBG, "Setting particle to sealevel"
-                ! znow = zaxdata(ig, jg, nlevels)
-                znow = sealevel(zaxdata(ig, jg, nlevels), ig, jg)
-              end if
+              ! call particles(ipart)%check_depth(zaxdata_interp, ig, jg, znow)
+              ! ! Use interpolated values? Probably...
+              ! elev = sealevel(zaxdata_interp, ig, jg)
+              ! if (znow > elev) then
+              !   DBG, "Setting particle to sealevel"
+              !   ! znow = zaxdata(ig, jg, nlevels)
+              !   znow = elev
+              ! end if
             end if
             !---------------------------------------------
             ! Particle should not be on land
@@ -322,12 +323,12 @@ contains
               ! Get seawater density
               ! call get_seawater_density(ig, jg, kg, znow, nc_itime, rho_sea, thisPath)
               select case (has_density)
-              case (0)
+              case (DEFAULT_DENSITY)
                 ! Use some default value
                 rho_sea = 1000.0d0
-              case (1)
+              case (DENSITY)
                 rho_sea = density(ig, jg, kg)
-              case (2)
+              case (TEMP_SALT)
                 rho_sea = seawater_density_from_temp_and_salt(temp(ig, jg, kg), salt(ig, jg, kg), znow)
               end select
               debug(rho_sea)
@@ -358,10 +359,12 @@ contains
             carty_new = carty + pvelv * dt
             if (run_3d) then
               znew = znow + pvelw * dt ! TODO: Don't let the particle jump out of water
-              if (znew .gt. 0.0d0) then
-                DBG, "Setting znew to 0"; debug(znew)
-                znew = 0.0d0 ! TODO: Which way is up???
-              end if
+
+              ! Moved this check after the bounce
+              ! if (znew .gt. 0.0d0) then
+              !   DBG, "Setting znew to 0"; debug(znew)
+              !   znew = 0.0d0 ! TODO: Which way is up???
+              ! end if
             end if
             !---------------------------------------------
             ! New coordinates and indices
@@ -375,33 +378,6 @@ contains
             !---------------------------------------------
             ! Particle should not be on land
             if (depdata(ig, jg) .lt. 0.0d0) then
-              !---------------------------------------------
-              ! No point skipping now. Just keep old position
-              ! TODO: Should try to decide if the particle has beached
-              ! Still skip actually...
-
-              ! call throw_warning("Loop", &
-              !                    "New location of particle is on land! Keeping old position.")
-
-! #ifdef DEBUG
-!             call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg, igr, jgr)
-!             debug(ig); debug(jg); debug(igr); debug(jgr)
-!             DBG, "Going other way..."
-!             if (pvelu > pvelv) then
-!               cartx_new = cartx - (pvelu * dt)
-!             else
-!               carty_new = carty - (pvelv * dt)
-!             end if
-!             call xy2lonlat(cartx_new, carty_new, x0, y0, xnew, ynew)
-!             call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
-!             debug(ig); debug(jg); debug(igr); debug(jgr)
-!             debug(xnew); debug(ynew); debug(znew)
-! #endif
-
-              ! particles(ipart)%warnings = particles(ipart)%warnings + 1
-              ! if (particles(ipart)%warnings .ge. 3) particles(ipart)%isActive = .false.
-              ! cycle
-
               !---------------------------------------------
               ! Trying a different approach
               DBG, "Bouncing"
@@ -422,6 +398,8 @@ contains
               ig_prev = ig; jg_prev = jg
 
             end if
+            !---------------------------------------------
+            call particles(ipart)%check_depth(zaxdatanew_interp, ig, jg, znew, .false.)
             !---------------------------------------------
             ! Get current speed at particle location
             select case (run_3d)
@@ -447,12 +425,12 @@ contains
               ! Get seawater density
               ! call get_seawater_density(ig, jg, kg, znew, nc_itime_next, rho_sea, thisPath)
               select case (has_density)
-              case (0)
+              case (DEFAULT_DENSITY)
                 ! Use some default value
                 rho_sea = 1000.0d0
-              case (1)
+              case (DENSITY)
                 rho_sea = densitynew(ig, jg, kg)
-              case (2)
+              case (TEMP_SALT)
                 rho_sea = seawater_density_from_temp_and_salt(tempnew(ig, jg, kg), saltnew(ig, jg, kg), znew)
               end select
               !---------------------------------------------
@@ -519,6 +497,7 @@ contains
             call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
             if (ig .gt. nx) xnew = lons(nx) ! TODO: These checks should go somewhere else
             if (jg .gt. ny) ynew = lats(ny) !       Is this even legal?
+            if (run_3d) call particles(ipart)%check_depth(zaxdatanew_interp, ig, jg, znew, .true.)
             DBG, "Old positions 2: ", xnow, ynow, znow
             DBG, "New positions out: ", xnew, ynew, znew
           else
@@ -590,9 +569,9 @@ contains
         end if
 
         select case (has_density)
-        case (1)
+        case (DENSITY)
           density = densitynew
-        case (2)
+        case (TEMP_SALT)
           temp = tempnew
           salt = saltnew
         end select
@@ -634,6 +613,7 @@ contains
 
     return
   end subroutine print_loop_end
+
   !===========================================
   subroutine get_current_speed(xloc, yloc, zloc, uarr, varr, warr, zaxarr, uspeedout, vspeedout, wspeedout)
     !---------------------------------------------
