@@ -78,7 +78,6 @@ contains
   subroutine nc_add_variable(FILE_NAME, varname, dType, nDims, dimids, missing_val)
     !---------------------------------------------
     ! Add variables to output file
-    ! This is pretty useless I have dimID-s..
     !---------------------------------------------
 
     character(len=*), intent(in)   :: FILE_NAME
@@ -325,7 +324,7 @@ contains
   subroutine nc_read_time_val(fname, n, timeval)
 
     integer                      :: ncid, varid
-    integer, intent(in)          :: n ! How to read the n-th value?
+    integer, intent(in)          :: n
     character(len=*), intent(in) :: fname
     real(rk), intent(out)        :: timeval
     real(rk)                     :: tmpval(1)

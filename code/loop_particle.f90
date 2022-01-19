@@ -29,8 +29,7 @@ module loop_particle
                         density, densitynew, temp, tempnew, salt, saltnew, visc, viscnew, &
                         rho_sea, viscosity, file_prefix, file_suffix
   use fields, only: find_folder, find_file, get_indices2d, &
-                    get_indices_vert, read_fields_full_domain, &
-                    get_seawater_density, get_seawater_viscosity
+                    get_indices_vert, read_fields_full_domain
   use nc_manager, only: nc_get_dim
   use modtime
   use output, only: outputstep, write_data, &
@@ -278,28 +277,6 @@ contains
             call get_indices2d(xnow, ynow, x0, y0, dx, dy, ig, jg)
             ig_prev = ig; jg_prev = jg
             !---------------------------------------------
-            ! If particle hovers, set the depth to sealevel
-            if (run_3d) then
-              ! call particles(ipart)%check_depth(zaxdata_interp, ig, jg, znow)
-              ! ! Use interpolated values? Probably...
-              ! elev = sealevel(zaxdata_interp, ig, jg)
-              ! if (znow > elev) then
-              !   DBG, "Setting particle to sealevel"
-              !   ! znow = zaxdata(ig, jg, nlevels)
-              !   znow = elev
-              ! end if
-            end if
-            !---------------------------------------------
-            ! Particle should not be on land
-            if (depdata(ig, jg) .lt. 0.0d0) then
-              !---------------------------------------------
-              ! If depdata is -10.0 then there will be NaNs. Skip the particle.
-              ! call throw_warning("Loop", "Particle is on land! Skipping.")
-              ! particles(ipart)%warnings = particles(ipart)%warnings + 1
-              ! if (particles(ipart)%warnings .ge. 3) particles(ipart)%isActive = .false.
-              ! cycle
-            end if
-            !---------------------------------------------
             ! Get current speed at particle location
             select case (run_3d)
             case (.true.)
@@ -321,7 +298,6 @@ contains
             case (.true.)
               !---------------------------------------------
               ! Get seawater density
-              ! call get_seawater_density(ig, jg, kg, znow, nc_itime, rho_sea, thisPath)
               select case (has_density)
               case (DEFAULT_DENSITY)
                 ! Use some default value
@@ -334,7 +310,6 @@ contains
               debug(rho_sea)
               !---------------------------------------------
               ! Get seawater viscosity
-              ! call get_seawater_viscosity(ig, jg, kg, nc_itime, viscosity, thisPath)
               select case (has_viscosity)
               case (.false.)
                 ! Use some default value
@@ -358,13 +333,7 @@ contains
             cartx_new = cartx + pvelu * dt
             carty_new = carty + pvelv * dt
             if (run_3d) then
-              znew = znow + pvelw * dt ! TODO: Don't let the particle jump out of water
-
-              ! Moved this check after the bounce
-              ! if (znew .gt. 0.0d0) then
-              !   DBG, "Setting znew to 0"; debug(znew)
-              !   znew = 0.0d0 ! TODO: Which way is up???
-              ! end if
+              znew = znow + pvelw * dt 
             end if
             !---------------------------------------------
             ! New coordinates and indices
@@ -396,7 +365,6 @@ contains
               debug(xnew); debug(ynew); debug(znew)
               call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
               ig_prev = ig; jg_prev = jg
-
             end if
             !---------------------------------------------
             call particles(ipart)%check_depth(zaxdatanew_interp, ig, jg, znew, .false.)
@@ -423,7 +391,6 @@ contains
             case (.true.)
               !---------------------------------------------
               ! Get seawater density
-              ! call get_seawater_density(ig, jg, kg, znew, nc_itime_next, rho_sea, thisPath)
               select case (has_density)
               case (DEFAULT_DENSITY)
                 ! Use some default value
@@ -435,7 +402,6 @@ contains
               end select
               !---------------------------------------------
               ! Get seawater viscosity
-              ! call get_seawater_viscosity(ig, jg, kg, nc_itime_next, viscosity, thisPath)
               select case (has_viscosity)
               case (.false.)
                 ! Use some default value
@@ -485,8 +451,6 @@ contains
               call xy2lonlat(cartx_new, carty_new, x0, y0, xnew, ynew)
               debug(xnow); debug(ynow); debug(znow)
               debug(xnew); debug(ynew); debug(znew)
-              ! call get_indices2d(xnew, ynew, x0, y0, dx, dy, ig, jg)
-              ! ig_prev = ig; jg_prev = jg
             end if
             !---------------------------------------------
             ! Diffuse
@@ -519,8 +483,6 @@ contains
           !---------------------------------------------
           ! Check if particle has beached or reached the boundary
           call particles(ipart)%check_beached_bdy
-          ! if (particles(ipart)%state .eq. 1.) call write_beached(particles(ipart)) ! Temporary!!
-          ! if (particles(ipart)%state .eq. 2.) call write_boundary(particles(ipart))
           if (particles(ipart)%age == max_age) call write_data_snapshot(particles(ipart), ipart)
           !---------------------------------------------
           ! Check if the particle is still alive
@@ -590,12 +552,6 @@ contains
 
     call date_and_time(date=d, time=t)
     FMT1, "======== Starting time loop ========"
-    ! FMT2, LINE
-    ! FMT2, "Date and time now: "
-    ! FMT3, d(1:4), "-", d(5:6), "-", d(7:8)
-    ! FMT3, t(1:2), ":", t(3:4), ":", t(5:10)
-    ! FMT2, "There should be ", nTimes, "iterations"
-    ! FMT2, LINE
 
     return
   end subroutine print_loop_start
@@ -606,9 +562,6 @@ contains
     call date_and_time(date=d, time=t)
     FMT2, LINE
     FMT2, "Finished all time steps (", itime, ")"
-    ! FMT2, "Date and time now: "
-    ! FMT3, d(1:4), "-", d(5:6), "-", d(7:8)
-    ! FMT3, t(1:2), ":", t(3:4), ":", t(5:10)
     FMT2, LINE
 
     return

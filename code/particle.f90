@@ -37,8 +37,8 @@ module particle_type
     real(rk)          :: age = 0.0d0           ! Particle age
     real(rk)          :: trajLen = 0.0d0       ! Particle trajectory length
     real(rk)          :: timeOnBeach = 0.0d0   ! Time spent in the beach area
-    real(rk)          :: beachingtime        ! Different particles may essentialy have different beaching times
-    real(rk)          :: originNum           ! Origin of particle, number
+    real(rk)          :: beachingtime          ! Different particles may essentialy have different beaching times
+    real(rk)          :: originNum             ! Origin of particle, number
 
   contains
     procedure :: print_particle_info
@@ -112,7 +112,6 @@ contains
     real(rk)                       :: elev
     real(rk), intent(inout)        :: zval
 
-    ! Use interpolated values? Probably...
     elev = sealevel(zaxarr, ig, jg)
     if (zval > elev) then
       DBG, "Setting particle to sealevel"
@@ -148,7 +147,7 @@ contains
       if (this%kill_bch) this%isActive = .false.
       this%state = 1.
     end if
-    ! TODO: Check boundary from seamask
+
     if (seamask(ig, jg) .eq. 4) then
       if (this%kill_bdy) this%isActive = .false.
       this%state = 2.
@@ -165,6 +164,7 @@ module particle_vars
   ! This module includes variables related to particles:
   ! - number of particles, initial locations or something (maybe)...
   ! - anything else?
+  ! TODO: Initial coordinates from netCDF
   !----------------------------------------------------------------
   use precdefs
   use particle_type

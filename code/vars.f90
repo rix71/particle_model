@@ -28,15 +28,12 @@ end module params
 module loop_vars
   !----------------------------------------------------------------
   ! This module contains temporary variables used in the loop
-  ! ??? Is this even necessary? ???
-  ! As it turns out, yes.
   !----------------------------------------------------------------
   use precdefs
   use modtime, only: datetime
 
   integer            :: pnum, &               ! Processor/subdomain number
                         ig, jg, kg, &         ! Global indices
-                        il, jl, kl, &         ! Local indices (subdomain) TODO: Probably won't need local k indices...
                         ncNTimes, &           ! Number of timesteps in nc file
                         nc_itime, &           ! Time index in netCDF
                         nc_itime_next         ! Next time index in netCDF
@@ -44,8 +41,7 @@ module loop_vars
                         dateThisNcTimestep, & ! Date of current timestep in netCDF
                         dateNextNcTimestep    ! Date of next timestep in netCDF
   character(len=256) :: thisPath, nextPath    ! Temporary path to data
-  real(rk)           :: ilr, jlr, klr, &      ! Local real indices for interpolation
-                        igr, jgr, kgr, &      ! Global real indices for interpolation
+  real(rk)           :: igr, jgr, kgr, &      ! Global real indices for interpolation
                         xnow, xnew, &         ! Temporary location in lon, lat
                         ynow, ynew, &
                         znow, znew, &         ! Vertical position

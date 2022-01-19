@@ -47,7 +47,6 @@ contains
   subroutine init_namelist
     !---------------------------------------------
     ! Namelists
-    ! TODO: Is run_3d in the right place? (Run options, maybe?)
     !---------------------------------------------
     namelist /params/ do_diffusion, do_velocity, Ah, kv
     namelist /domain_vars/ TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny

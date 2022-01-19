@@ -21,8 +21,8 @@ module fields
   !===================================================
   !---------------------------------------------
   public :: init_dirlist, return_pmap, init_fields, find_folder, find_file, &
-            get_indices2d, get_indices_vert, get_dz, find_proc, &
-            get_seawater_density, get_seawater_viscosity, read_fields_full_domain, &
+            get_indices2d, get_indices_vert, find_proc, &
+            read_fields_full_domain, &
             sealevel
   !---------------------------------------------
   ! Directories
@@ -434,26 +434,14 @@ contains
     integer, intent(in)             :: i, j
     integer, intent(out)            :: k
     integer                         :: ik
-    real(rk), intent(in)            :: zin !, z0in, dzin
-    real(rk), intent(in)            :: zaxarr(nx, ny, nlevels) !, z0in, dzin
+    real(rk), intent(in)            :: zin
+    real(rk), intent(in)            :: zaxarr(nx, ny, nlevels) 
     real(rk), intent(out), optional :: kr, dzout
     real(rk)                        :: tmp_zax(nlevels)
-    !real(rk)                        :: krt
 
     dbghead(get_indices_vert)
-    !krt = (z0in - zin)/dzin
-
-    !k = int(krt)
-
-    !if (k.lt.1) k = 1
-    !if (k.ge.nlevels) k = nlevels - 1 ! That's just not right, is it?
-
-    !if (present(kr)) then
-    !  kr = krt
-    !end if
 
     debug(zin)
-    ! debug(zaxarr(i, j, :))
 
     select case (zax_style)
     case (DEPTH_VALUES)
@@ -504,8 +492,6 @@ contains
     real(rk)             :: tmp_zax(nlevels)
 
     dbghead(sealevel)
-
-    ! debug(zaxarr)
     debug(shape(zaxarr))
 
     select case (zax_style)
@@ -531,40 +517,6 @@ contains
     return
   end function sealevel
   !===========================================
-  subroutine get_dz(xin, yin, oldnew, dzout)
-    !---------------------------------------------
-    ! Calculates average dz.
-    ! TODO: This is not good! Layer thickness may vary!
-    ! NOT USED!
-    !---------------------------------------------
-
-    integer                      :: xindex, yindex, zindex
-    character(len=3), intent(in) :: oldnew ! Which array to use
-    real(rk), intent(in)         :: xin, yin
-    real(rk), intent(out)        :: dzout
-
-    dbghead(get_dz)
-    dzout = 0.0d0
-    call get_indices2d(xin, yin, x0, y0, dx, dy, xindex, yindex)
-    select case (oldnew)
-    case ("old")
-      !dzout = abs(zaxdata(xindex, yindex, 1) - zaxdata(xindex, yindex, 2))
-      do zindex = 2, nlevels
-        dzout = dzout + abs(zaxdata(xindex, yindex, zindex) - zaxdata(xindex, yindex, zindex - 1))
-      end do
-    case ("new")
-      !dzout = abs(zaxdatanew(xindex, yindex, 1) - zaxdatanew(xindex, yindex, 2))
-      do zindex = 2, nlevels
-        dzout = dzout + abs(zaxdatanew(xindex, yindex, zindex) - zaxdatanew(xindex, yindex, zindex - 1))
-      end do
-    end select
-    dzout = dzout / (nlevels - 1)
-    debug(dzout)
-
-    dbgtail(get_dz)
-    return
-  end subroutine get_dz
-  !===========================================
   subroutine find_proc(iglobal, jglobal, ilocal, jlocal, pnum)
     !---------------------------------------------
     ! Get the processor number and local indices
@@ -583,105 +535,6 @@ contains
 
     return
   end subroutine find_proc
-  !===========================================
-  subroutine get_seawater_viscosity(iloc, jloc, zloc, timeindex, visc_out, path)
-
-    integer, intent(in)            :: iloc, jloc, zloc
-    integer, intent(in)            :: timeindex
-    integer                        :: pnum
-    integer                        :: iread, jread, kread
-    character(len=256), intent(in) :: path
-    character(len=516)             :: filename
-    !real(rk), intent(in)           :: zloc
-    real(rk), intent(out)          :: visc_out
-    real(rk)                       :: visc_buffer(1, 1, 1, 1)
-
-    dbghead(get_seawater_viscosity)
-
-    !---------------------------------------------
-    ! Check for viscosity in data
-    select case (has_subdomains)
-    case (.true.)
-      kread = nlevels ! Surface by default
-      call find_proc(iloc, jloc, iread, jread, pnum)
-      if (run_3d) kread = zloc !call get_indices_vert(zin=zloc, i=iloc, j=jloc, k=kread)
-      write (filename, '(a,i0.4, a)') trim(path)//"/"//trim(file_prefix), pnum, trim(file_suffix)//".nc"
-    case (.false.)
-      iread = iloc; jread = jloc; kread = nlevels
-      if (run_3d) kread = zloc !call get_indices_vert(zin=zloc, i=iloc, j=jloc, k=kread)
-      write (filename, '(a)') trim(path)
-    end select
-    if (nc_var_exists(trim(filename), "nuh")) then
-      DBG, "reading 'nuh' at [", iread, jread, kread, timeindex, "]"
-      call nc_read4d(trim(filename), "nuh", [iread, jread, kread, timeindex], [1, 1, 1, 1], visc_buffer)
-      visc_out = visc_buffer(1, 1, 1, 1)
-      dbgtail(get_seawater_viscosity)
-      return
-    end if
-    ! call throw_warning("get_seawater_viscosity", "Could not read viscosity ('nuh') from data!") ! Delete this later!
-    visc_out = mu
-
-    dbgtail(get_seawater_viscosity)
-    return
-  end subroutine get_seawater_viscosity
-  !===========================================
-  subroutine get_seawater_density(iloc, jloc, zloc, depth, timeindex, dens_out, path)
-    !---------------------------------------------
-    ! Check if the data includes density. If not, try to
-    ! calculate from temperature and and salinity.
-    ! When this is also not possible, return some reference value
-    !---------------------------------------------
-
-    integer, intent(in)            :: iloc, jloc, zloc
-    integer, intent(in)            :: timeindex
-    integer                        :: pnum
-    integer                        :: iread, jread, kread
-    character(len=256), intent(in) :: path
-    character(len=516)             :: filename
-    real(rk), intent(in)           :: depth
-    real(rk), intent(out)          :: dens_out
-    real(rk)                       :: rho_buffer(1, 1, 1, 1)
-    real(rk)                       :: salt_buffer(1, 1, 1, 1), temp_buffer(1, 1, 1, 1)
-
-    dbghead(get_seawater_density)
-
-    !---------------------------------------------
-    ! Check for density in data
-    select case (has_subdomains)
-    case (.true.)
-      kread = nlevels ! Surface by default
-      call find_proc(iloc, jloc, iread, jread, pnum)
-      if (run_3d) kread = zloc
-      write (filename, '(a,i0.4, a)') trim(path)//"/"//trim(file_prefix), pnum, trim(file_suffix)//".nc"
-    case (.false.)
-      iread = iloc; jread = jloc; kread = nlevels
-      if (run_3d) kread = zloc
-      write (filename, '(a)') trim(path)
-    end select
-    if (nc_var_exists(trim(filename), "rho")) then
-      DBG, "reading 'rho' at [", iread, jread, kread, timeindex, "]"
-      call nc_read4d(trim(filename), "rho", [iread, jread, kread, timeindex], [1, 1, 1, 1], rho_buffer)
-      dens_out = rho_buffer(1, 1, 1, 1)
-      dbgtail(get_seawater_density)
-      return
-    else if (nc_var_exists(trim(filename), "temp") .and. &
-             nc_var_exists(trim(filename), "salt")) then
-      DBG, "reading 'temp' and 'salt' at [", iread, jread, kread, timeindex, "]"
-      call nc_read4d(trim(filename), "temp", [iread, jread, kread, timeindex], [1, 1, 1, 1], temp_buffer)
-      call nc_read4d(trim(filename), "salt", [iread, jread, kread, timeindex], [1, 1, 1, 1], salt_buffer)
-      dens_out = seawater_density_from_temp_and_salt(temp_buffer(1, 1, 1, 1), salt_buffer(1, 1, 1, 1), depth)
-      dbgtail(get_seawater_density)
-      return
-    end if
-
-    !---------------------------------------------
-    ! If none of the above works
-    DBG, "returning 1000"
-    dens_out = 1000.0d0
-
-    dbgtail(get_seawater_density)
-    return
-  end subroutine get_seawater_density
   !===========================================
   subroutine read_fields_full_domain(timeindex, path, read_first)
     !---------------------------------------------

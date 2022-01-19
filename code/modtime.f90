@@ -94,10 +94,6 @@ contains
       call throw_error("datetime", &
                        "Wrong date format: "//trim(date_str)// &
                        " Accepted date formats are 'yyyy-mm-dd' or 'yyyy-mm-dd HH:MM:SS'")
-      !ERROR, "Wrong date format: ", date_str
-      !ERROR, "Accepted date formats are 'yyyy-mm-dd' or 'yyyy-mm-dd HH:MM:SS'"
-      !ERROR, "Exiting..."
-      !stop
     end if
 
   end function datetime_construct
@@ -107,7 +103,6 @@ contains
     ! Reads the time unit from netCDF and returns a datetime
     ! datetime instance. Time unit date if no 'n', first date
     ! in netCDF if 'n' is specified.
-    ! TODO: get n-th time from netCDF
     !---------------------------------------------
 
     integer                       :: year, month, day
@@ -144,15 +139,6 @@ contains
 
     class(datetime), intent(in) :: this
 
-    !print "(5x,a)", "============================="
-    !print "(6x,a4,1x,a16,1x,a4)", '----', this%dtName, '----'
-    !print "(6x,a5,2x,i4)", "Year: ", this%year
-    !print "(6x,a6,3x,i2)", "Month: ", this%month
-    !print "(6x,a4,5x,i2)", "Day: ", this%day
-    !print "(6x,a5,4x,i2)", "Hour: ", this%hour
-    !print "(6x,a7,2x,i2)", "Minute: ", this%minute
-    !print "(6x,a7,2x,i2)", "Second: ", this%second
-    !print "(5x,a)", "============================="
     FMT1, "============================="
     FMT1, '----', this%dtName, '----'
     FMT1, "Year: ", this%year
@@ -174,7 +160,6 @@ contains
     write (datestr, "(i4,a,i2.2,a,i2.2,1x,i2.2,a,i2.2,a,i2.2)") &
       this%year, "-", this%month, "-", this%day, &
       this%hour, ":", this%minute, ":", this%second
-    !print "(6x,a,1x,a)", datestr
     FMT1, datestr
 
   end subroutine print_short_date
@@ -284,7 +269,6 @@ contains
   real(rk) function date2num(this)
     !---------------------------------------------
     ! Gives date as 'seconds from 1900-01-01 00:00:00'
-    ! TODO: !!! I don't think it does... !!!
     !---------------------------------------------
     integer                     :: year
     class(datetime), intent(in) :: this
@@ -297,10 +281,6 @@ contains
       date2num = date2num + daysInYear(year) * d2s
     end do
 
-    !date2num = date2num + this%yearday() + &
-    !           this%hour/24. + this%minute/(24.*60.) + &
-    !           this%second/(24.*3600.)
-
     date2num = date2num + float(this%yearday()) * d2s + &
                float(this%hour) * h2s + float(this%minute) * min2s + &
                float(this%second) - d2s ! Why is it off by one day?
@@ -312,7 +292,6 @@ contains
   real(rk) function dateDiff(dateStart, dateEnd)
     !---------------------------------------------
     ! Gives the difference between two dates in seconds
-    ! TODO: !!! I don't think it does... Bit off? !!!
     !---------------------------------------------
     type(datetime), intent(in) :: dateStart, dateEnd
     real(rk)                   :: datenumStart, datenumEnd

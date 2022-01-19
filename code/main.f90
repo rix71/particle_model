@@ -13,16 +13,13 @@ program main
   !===================================================
   call init_run
 #ifdef WRITESTDOUT
-  !open(STDOUT, file=STDOUTFILE)
   open (STDOUT, file=trim(runid)//".stdout")
 #endif
   call init_model
   call init_output
   !---------------------------------------------
   if (.not. dry_run) then
-    ! call open_beach_bdy_files
     call loop
-    ! call close_beach_bdy_files
     call postprocess
   else
     FMT1, LINE; FMT1, "Will not loop!"; FMT1, LINE

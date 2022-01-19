@@ -53,8 +53,6 @@ contains
     ! mass_p = rho_p * (4./3.) * pi * rad_p**3
     ! if (mass_p <= 0.0d0) call throw_warning("velocity", "Particle mass is 0 or negative.")
 
-    ! debug(u_p); debug(rho_p); debug(rad_p); debug(u_env); debug(rho_env); debug(visc_env)
-
     ! velocity = (fdrag(u_env, u_p, rad_p, rho_env, visc_env) &
     !             ! + other forces &
     !             ) / (mass_p) * dt
@@ -102,7 +100,6 @@ contains
 
     debug(d_star); debug(w_star)
 
-    ! Needs condition delta_rho > 0? WRONG ORDER???
     if (delta_rho > 0.0d0) then
       DBG, "delta_rho > 0"; debug(delta_rho / rho_env)
       vertical_velocity = -1.0 * ((delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
@@ -227,41 +224,6 @@ contains
     dbgtail(seawater_density_from_temp_and_salt)
     return
   end function seawater_density_from_temp_and_salt
-  !===========================================
-  ! real(rk) function seawater_density_from_temp_and_salt(T, S)
-  !   !---------------------------------------------
-  !   ! Density of seawater at one atmosphere pressure
-  !   ! Reference:  N.P. Fofonoff and R.C. Millard Jr.,1983,
-  !   !             Unesco technical papers in marine science no. 44.
-  !   !---------------------------------------------
-
-  !   real(rk), intent(in) :: T, S
-  !   real(rk)             :: R1, R2, R3, R4
-  !   real(rk)             :: DR350
-  !   real(rk)             :: SIG
-
-  !   dbghead(seawater_density_from_temp_and_salt)
-
-  !   debug(T); debug(S)
-
-  !   R1 = ((((6.536332E-09 * T - 1.120083E-06) * T + 1.001685E-04) * &
-  !          T - 9.095290E-03) * T + 6.793952E-02) * T - 28.263737
-
-  !   R2 = (((5.3875E-09 * T - 8.2467E-07) * T + 7.6438E-05) * &
-  !         T - 4.0899E-03) * T + 8.24493E-01
-
-  !   R3 = (-1.6546E-06 * T + 1.0227E-04) * T - 5.72466E-03
-
-  !   R4 = 4.8314E-04
-  !   DR350 = 28.106331
-
-  !   SIG = (R4 * S + R3 * sqrt(S) + R1) * S + R1
-
-  !   seawater_density_from_temp_and_salt = SIG + DR350 + 1000.0d0
-
-  !   dbgtail(seawater_density_from_temp_and_salt)
-  !   return
-  ! end function seawater_density_from_temp_and_salt
   !===========================================
   real(rk) function normal_random() result(r)
     !---------------------------------------------
