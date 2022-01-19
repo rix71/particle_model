@@ -21,7 +21,7 @@ contains
     ! Initialize the global longitude/latitude
     ! and seamask
     !---------------------------------------------
-#if defined(NETCDFOUTPUT) && defined(DEBUG)
+#ifdef DEBUG
     use nc_manager
     integer :: nc_x_dimid, nc_y_dimid
 #endif
@@ -106,7 +106,7 @@ contains
     FMT2, sum(seamask, mask=seamask == 4) / 4, " boundary points"
     FMT2, nx * ny, " total points"
 
-#if defined(NETCDFOUTPUT) && defined(DEBUG)
+#ifdef DEBUG
 #define FNAME "seamask.nc"
     DBG, "Saving seamask"
     call nc_initialise(FNAME)
