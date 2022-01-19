@@ -2,7 +2,7 @@
 program main
   use precdefs
 #ifdef WRITESTDOUT
-  use run_params, only: runid, dry_run
+  use run_params, only: runid
 #endif
   use run_params, only: dry_run
   use initialise, only: init_run, init_model
