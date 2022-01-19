@@ -56,6 +56,17 @@
 ! Some shortcuts
 #define PROC0 "/"//trim(file_prefix)//"0000"//trim(file_suffix)//".nc"
 #define NMLFILENAME 'input.inp'
+! GETM usually fills with -9999., could be different in other models...
+#define MISSING_VAL -99.0d0
+!---------------------------------------------
+! Enumerations
+!--------------
+! zax_style
 #define DEPTH_VALUES 1
 #define LAYER_THICKNESS 2
+!--------------
+! has_density
+#define DEFAULT_DENSITY 0
+#define DENSITY 1
+#define TEMP_SALT 2
 
