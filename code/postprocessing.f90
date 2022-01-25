@@ -5,7 +5,7 @@ module postprocessing
   use particle_vars, only: particles, runparts
   use domain_vars, only: nx, ny, x0, y0, dx, dy, seamask, lons, lats
   use fields, only: get_indices2d
-  use output, only: outDir
+  use output, only: outDir, write_active_particles
   use run_params, only: runid
   use nc_manager
   implicit none
@@ -143,35 +143,37 @@ contains
       call nc_write(trim(nc_fileout_post), mean_distance, "mean_distance", nx, ny)
     end block final_state
 
-    active: block
-      character(len=512)    :: timeunit
-      integer               :: counts(nx, ny), ntimes
-      integer, allocatable  :: counts_time(:, :, :)
-      real(rk), allocatable :: timevals(:), mean_age_time(:, :, :)
+    if (write_active_particles) then
+      active: block
+        character(len=512)    :: timeunit
+        integer               :: counts(nx, ny), ntimes
+        integer, allocatable  :: counts_time(:, :, :)
+        real(rk), allocatable :: timevals(:), mean_age_time(:, :, :)
 
-      call process_active_file(counts, counts_time, ntimes, timevals, timeunit, mean_age_time)
+        call process_active_file(counts, counts_time, ntimes, timevals, timeunit, mean_age_time)
 
-      call nc_add_dimension(trim(nc_fileout_post), "time", nc_t_dimid, ntimes)
+        call nc_add_dimension(trim(nc_fileout_post), "time", nc_t_dimid, ntimes)
 
-      call nc_add_variable(trim(nc_fileout_post), "time", "float", 1, [nc_t_dimid])
-      call nc_add_attr(trim(nc_fileout_post), "time", "units", timeunit)
-      call nc_write(trim(nc_fileout_post), timevals, "time", ntimes)
+        call nc_add_variable(trim(nc_fileout_post), "time", "float", 1, [nc_t_dimid])
+        call nc_add_attr(trim(nc_fileout_post), "time", "units", timeunit)
+        call nc_write(trim(nc_fileout_post), timevals, "time", ntimes)
 
-      call nc_add_variable(trim(nc_fileout_post), "counts_active", "int", 2, [nc_x_dimid, nc_y_dimid], FILLVALUE_BIG)
-      call nc_add_attr(trim(nc_fileout_post), "counts_active", "units", "particles")
-      call nc_write(trim(nc_fileout_post), counts, "counts_active", nx, ny)
+        call nc_add_variable(trim(nc_fileout_post), "counts_active", "int", 2, [nc_x_dimid, nc_y_dimid], FILLVALUE_BIG)
+        call nc_add_attr(trim(nc_fileout_post), "counts_active", "units", "particles")
+        call nc_write(trim(nc_fileout_post), counts, "counts_active", nx, ny)
 
-      call nc_add_variable(trim(nc_fileout_post), "counts_time_active", "int", 3, &
-                           [nc_x_dimid, nc_y_dimid, nc_t_dimid], FILLVALUE_BIG)
-      call nc_add_attr(trim(nc_fileout_post), "counts_time_active", "units", "particles")
-      call nc_write(trim(nc_fileout_post), counts_time, "counts_time_active", nx, ny, ntimes)
+        call nc_add_variable(trim(nc_fileout_post), "counts_time_active", "int", 3, &
+                             [nc_x_dimid, nc_y_dimid, nc_t_dimid], FILLVALUE_BIG)
+        call nc_add_attr(trim(nc_fileout_post), "counts_time_active", "units", "particles")
+        call nc_write(trim(nc_fileout_post), counts_time, "counts_time_active", nx, ny, ntimes)
 
-      call nc_add_variable(trim(nc_fileout_post), "mean_age_time_active", "int", 3, &
-                           [nc_x_dimid, nc_y_dimid, nc_t_dimid], FILLVALUE_BIG)
-      call nc_add_attr(trim(nc_fileout_post), "mean_age_time_active", "units", "s")
-      call nc_write(trim(nc_fileout_post), mean_age_time, "mean_age_time_active", nx, ny, ntimes)
+        call nc_add_variable(trim(nc_fileout_post), "mean_age_time_active", "int", 3, &
+                             [nc_x_dimid, nc_y_dimid, nc_t_dimid], FILLVALUE_BIG)
+        call nc_add_attr(trim(nc_fileout_post), "mean_age_time_active", "units", "s")
+        call nc_write(trim(nc_fileout_post), mean_age_time, "mean_age_time_active", nx, ny, ntimes)
 
-    end block active
+      end block active
+    end if
 
     dbgtail(postprocess)
   end subroutine postprocess
