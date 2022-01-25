@@ -29,6 +29,8 @@ module nc_manager
     module procedure nc_write_int_2d_const
     module procedure nc_write_real_2d_const
     module procedure nc_write_real_3d
+    module procedure nc_write_int_3d_const
+    module procedure nc_write_real_3d_const
     module procedure nc_write_real_4d
   end interface nc_write
   !===================================================
@@ -244,6 +246,60 @@ contains
 
     return
   end subroutine nc_write_real_3d
+  !===========================================
+  subroutine nc_write_int_3d_const(FILE_NAME, datain, varname, nx, ny, ntime)
+    !---------------------------------------------
+    ! Write 3D real data (output will be 3D)
+    !---------------------------------------------
+
+    integer, intent(in)          :: nx, ny, ntime
+    integer, parameter           :: nDims = 3
+    integer                      :: ncid, varid, start(nDims), count(nDims)
+    character(len=*), intent(in) :: FILE_NAME
+    character(len=*), intent(in) :: varname
+    integer, intent(in)          :: datain(nx, ny, ntime)
+
+    FMT1, "======== Write netCDF variable ========"
+    FMT2, "Writing variable ", trim(varname), " to ", trim(FILE_NAME)
+
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
+    call nc_check(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
+    start = [1, 1, 1]
+    count = [nx, ny, ntime]
+    call nc_check(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "write :: close")
+
+    FMT2, trim(varname), " written successfully"
+
+    return
+  end subroutine nc_write_int_3d_const
+  !===========================================
+  subroutine nc_write_real_3d_const(FILE_NAME, datain, varname, nx, ny, ntime)
+    !---------------------------------------------
+    ! Write 3D real data (output will be 3D)
+    !---------------------------------------------
+
+    integer, intent(in)          :: nx, ny, ntime
+    integer, parameter           :: nDims = 3
+    integer                      :: ncid, varid, start(nDims), count(nDims)
+    character(len=*), intent(in) :: FILE_NAME
+    character(len=*), intent(in) :: varname
+    real(rk), intent(in)         :: datain(nx, ny, ntime)
+
+    FMT1, "======== Write netCDF variable ========"
+    FMT2, "Writing variable ", trim(varname), " to ", trim(FILE_NAME)
+
+    call nc_check(trim(FILE_NAME), nf90_open(trim(FILE_NAME), nf90_write, ncid), "write :: open")
+    call nc_check(trim(FILE_NAME), nf90_inq_varid(ncid, trim(varname), varid), "write :: inq varid")
+    start = [1, 1, 1]
+    count = [nx, ny, ntime]
+    call nc_check(trim(FILE_NAME), nf90_put_var(ncid, varid, datain, start=start, count=count), "write :: put var")
+    call nc_check(trim(FILE_NAME), nf90_close(ncid), "write :: close")
+
+    FMT2, trim(varname), " written successfully"
+
+    return
+  end subroutine nc_write_real_3d_const
   !===========================================
   subroutine nc_write_real_4d(FILE_NAME, datain, varname, nx, ny, nz, itime)
     !---------------------------------------------
