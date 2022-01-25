@@ -45,6 +45,8 @@
 ! Particle variables
 !-------------------------------
 ! inputstep     - [int] Interval at which particles will be released
+! init_method   - [int] 1 - initialise from text file
+!                       2 - initialise from netCDF
 ! coordfile     - [char] Particle initialisation file
 ! max_age       - [float] Life time of (all) particles in timesteps
 !                     -1 to achieve immortality!
@@ -53,6 +55,7 @@
 !===============================
 &particle_vars
   inputstep = 1800
+  particle_init_method = 1
   coordfile = 'particle_coords.dat'
   max_age = -1
   kill_beached = .true.
@@ -108,14 +111,18 @@
 !===============================
 ! Output variables
 !-------------------------------
-! outDir     - [char] Where do I save the data?
-! outputstep - [int] How often to save the data?
-! write_all_particles - [bool] Write all (active and inactive) particles
+! outDir                 - [char] Where do I save the data?
+! outputstep             - [int] How often to save the data?
+! snap_interval          - [float] Snapshot interval (in seconds)
+! write_all_particles    - [bool] Write all (active and inactive) particles
 ! write_active_particles - [bool] Write only active particles
+! write_snapshot         - [bool] Save a particle by age (in intervals of snap_interval)
 !===============================
 &output_vars
   outDir = './'
   outputstep = 1
+  snap_interval = 86400.
   write_all_particles = .false.
   write_active_particles = .true.
+  write_snapshot = .true.
 /

@@ -3,8 +3,8 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 	 -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
-FFLAGS += -DWRITESTDOUT
-FFLAGS += -DDEBUG
+# FFLAGS += -DWRITESTDOUT
+# FFLAGS += -DDEBUG
 # FFLAGS += -DNOSYSCALLS
 
 MOD=./mod
