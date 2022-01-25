@@ -85,7 +85,7 @@ contains
     debug(mu); debug(kin_visc); 
     debug(delta_rho)
 
-    d_star = (delta_rho*-1.0 * g * (2.*rad_p)**3.) / (rho_env * (kin_visc**2.)) ! g negative?
+    d_star = (delta_rho * g * (2.*rad_p)**3.) / (rho_env * (kin_visc**2.)) ! g negative?
     if (d_star < 0.05) then
       DBG, "d_star < 0.05"
       w_star = 1.74e-4 * (d_star**2)
@@ -107,6 +107,8 @@ contains
       DBG, "delta_rho < 0"; debug(delta_rho / rho_env)
       vertical_velocity = (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
     end if
+
+    debug(vertical_velocity)
 
     dbgtail(vertical_velocity)
     return
