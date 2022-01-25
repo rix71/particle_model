@@ -14,9 +14,10 @@ module initialise
   use domain, only: init_domain
   use fields, only: init_dirlist, init_fields, find_file, find_folder
   use nc_manager, only: nc_read_time_val
-  use particle_vars, only: inputstep, coordfile, nParticles, &
+  use particle_vars, only: inputstep, particle_init_method, coordfile, nParticles, &
                            nInitParticles, initCoords, particles, max_age, &
-                           kill_beached, kill_boundary
+                           kill_beached, kill_boundary, &
+                           init_particles_from_netcdf, init_particles_from_coordfile
   use time_vars
   use modtime
   use params, only: do_diffusion, do_velocity, Ah, kv
@@ -50,7 +51,7 @@ contains
     !---------------------------------------------
     namelist /params/ do_diffusion, do_velocity, Ah, kv
     namelist /domain_vars/ TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny
-    namelist /particle_vars/ inputstep, coordfile, max_age, kill_beached, kill_boundary
+    namelist /particle_vars/ inputstep, particle_init_method, coordfile, max_age, kill_beached, kill_boundary
     namelist /time_vars/ run_start, run_end, dt
     namelist /field_vars/ GETMPATH, PMAPFILE, has_subdomains, &
       file_prefix, file_suffix, startlevel, nlevels, &
@@ -85,6 +86,7 @@ contains
     FMT2, LINE
     FMT2, "&particle_vars"
     FMT3, var2val(inputstep)
+    FMT3, var2val(particle_init_method)
     FMT3, var2val_char(coordfile)
     FMT3, var2val(max_age)
     FMT3, var2val(kill_beached)
@@ -153,59 +155,21 @@ contains
 
   end subroutine init_time
   !===========================================
-  subroutine init_particles_from_coordfile
-    !---------------------------------------------
-    ! Allocate array for estimated amount of particles
-    !---------------------------------------------
-    integer :: ipart
-
-    !print
-    FMT1, "======== Init particles ========"
-
-    open (COORDFILE, file=trim(coordfile), action='read', iostat=ierr)
-    if (ierr .ne. 0) call throw_error("init_particles_from_coordfile", "Failed to open "//trim(coordfile), ierr)
-    read (COORDFILE, *) nInitParticles
-    allocate (initCoords(nInitParticles, 6))
-    do ipart = 1, nInitParticles
-      read (COORDFILE, *, iostat=ierr) initCoords(ipart, 1), initCoords(ipart, 2), &
-        initCoords(ipart, 3), initCoords(ipart, 4), &
-        initCoords(ipart, 5), initCoords(ipart, 6)
-      if (ierr .ne. 0) call throw_error("init_particles_from_coordfile", "Failed to read from "//trim(coordfile), ierr)
-    end do
-    close (COORDFILE, iostat=ierr)
-    if (ierr .ne. 0) call throw_error("init_particles_from_coordfile", "Failed to close "//trim(coordfile), ierr)
-
-    do ipart = 1, nInitParticles
-      if (initCoords(ipart, 1) < lons(1) .or. initCoords(ipart, 1) > lons(nx) .or. &
-          initCoords(ipart, 2) < lats(1) .or. initCoords(ipart, 2) > lats(ny)) then
-        ERROR, "Particle", ipart, ":", &
-          initCoords(ipart, 1), initCoords(ipart, 2)
-        call throw_error("init_particles_from_coordfile", "Particle initialized outside of domain")
-      end if
-    end do
-    FMT2, "Initial coordinates OK"
-
-    nParticles = nInitParticles * (nTimes / inputstep) + nInitParticles
-    allocate (particles(nParticles))
-    FMT2, "Allocated array for", nParticles, "particles"
-
-    !print
-    FMT2, "Finished init particles"
-
-  end subroutine init_particles_from_coordfile
-  !===========================================
   subroutine init_model
     !---------------------------------------------
     ! Call all the subroutines to initialise the model
-    ! TODO: options, for example, different ways
-    !       to init particles
     !---------------------------------------------
 
     call init_namelist                 ! init.f90
     call init_dirlist                  ! fields.f90
     call init_time                     ! init.f90
     call init_domain                   ! domain.f90
-    call init_particles_from_coordfile ! init.f90
+    select case (particle_init_method)
+    case (TXT_FILE)
+      call init_particles_from_coordfile ! particle.f90
+    case (NC_FILE)
+      call init_particles_from_netcdf    ! particle.f90
+    end select
     call init_fields                   ! fields.f90
 
   end subroutine init_model

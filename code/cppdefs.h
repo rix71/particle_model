@@ -1,6 +1,6 @@
 !---------------------------------------------
 ! For printing
-#define PROGRESSINFO 1
+#define PROGRESSINFO 100
 #define LINE '--------------------------'
 #define STAR '**************************'
 
@@ -69,4 +69,8 @@
 #define DEFAULT_DENSITY 0
 #define DENSITY 1
 #define TEMP_SALT 2
+!--------------
+! particle init
+#define TXT_FILE 1
+#define NC_FILE 2
 

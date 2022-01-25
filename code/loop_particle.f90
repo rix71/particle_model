@@ -32,9 +32,9 @@ module loop_particle
                     get_indices_vert, read_fields_full_domain
   use nc_manager, only: nc_get_dim
   use modtime
-  use output, only: outputstep, write_data, &
+  use output, only: outputstep, snap_interval, write_data, &
                     write_beached, write_boundary, write_data_only_active, &
-                    write_all_particles, write_active_particles, write_data_snapshot
+                    write_all_particles, write_active_particles, write_data_snapshot, write_snapshot
   implicit none
   private
   !===================================================
@@ -175,12 +175,13 @@ contains
         if (mod(itime, inputstep) .eq. 0) then
           FMT2, "Releasing new particles at itime = ", itime
           do ipart = 1, nInitParticles
-            particles(ipart + runparts) = particle(xPos=initCoords(ipart, 1), &
-                                                   yPos=initCoords(ipart, 2), &
-                                                   originNum=initCoords(ipart, 3), &
-                                                   beachingtime=initCoords(ipart, 4), &
-                                                   rho=initCoords(ipart, 5), &
-                                                   radius=initCoords(ipart, 6), &
+            particles(ipart + runparts) = particle(xPos=initCoords%x(ipart), &
+                                                   yPos=initCoords%y(ipart), &
+                                                   zPos=initCoords%z(ipart), &
+                                                   originNum=initCoords%id(ipart), &
+                                                   beachingtime=initCoords%beaching_time(ipart), &
+                                                   rho=initCoords%rho(ipart), &
+                                                   radius=initCoords%radius(ipart), &
                                                    kill_bch=kill_beached, &
                                                    kill_bdy=kill_boundary)
           end do
@@ -203,7 +204,6 @@ contains
                 inactive_particles = inactive_particles + 1
               end if
             end do
-            ! FMT2, "There are ", active_particles, " active particles"
             FMT2, active_particles, " active particles"
             FMT2, inactive_particles, " inactive particles"
           end if
@@ -320,7 +320,7 @@ contains
               !---------------------------------------------
          pvelu = velocity(xnow, ynow, particles(ipart)%u, particles(ipart)%rho, particles(ipart)%radius, uspeed, rho_sea, viscosity)
          pvelv = velocity(xnow, ynow, particles(ipart)%v, particles(ipart)%rho, particles(ipart)%radius, vspeed, rho_sea, viscosity)
-              if (run_3d) pvelw = vertical_velocity(particles(ipart)%rho, particles(ipart)%radius, rho_sea)
+              if (run_3d) pvelw = vertical_velocity(particles(ipart)%rho, particles(ipart)%radius, rho_sea) + wspeed
             case (.false.)
               pvelu = uspeed
               pvelv = vspeed
@@ -333,7 +333,7 @@ contains
             cartx_new = cartx + pvelu * dt
             carty_new = carty + pvelv * dt
             if (run_3d) then
-              znew = znow + pvelw * dt 
+              znew = znow + pvelw * dt
             end if
             !---------------------------------------------
             ! New coordinates and indices
@@ -367,7 +367,7 @@ contains
               ig_prev = ig; jg_prev = jg
             end if
             !---------------------------------------------
-            call particles(ipart)%check_depth(zaxdatanew_interp, ig, jg, znew, .false.)
+            if (run_3d) call particles(ipart)%check_depth(zaxdatanew_interp, ig, jg, znew, .false.)
             !---------------------------------------------
             ! Get current speed at particle location
             select case (run_3d)
@@ -412,7 +412,7 @@ contains
               !---------------------------------------------
               pvelunew = velocity(xnew, ynew, pvelu, particles(ipart)%rho, particles(ipart)%radius, uspeednew, rho_sea, viscosity)
               pvelvnew = velocity(xnew, ynew, pvelv, particles(ipart)%rho, particles(ipart)%radius, vspeednew, rho_sea, viscosity)
-              if (run_3d) pvelwnew = vertical_velocity(particles(ipart)%rho, particles(ipart)%radius, rho_sea)
+              if (run_3d) pvelwnew = vertical_velocity(particles(ipart)%rho, particles(ipart)%radius, rho_sea) + wspeednew
             case (.false.)
               pvelunew = uspeednew
               pvelvnew = vspeednew
@@ -470,12 +470,12 @@ contains
             xnew = xnow
             ynew = ynow
             znew = znow
-            pvelu = 0.
-            pvelv = 0.
-            pvelw = 0.
-            pvelunew = 0.
-            pvelvnew = 0.
-            pvelwnew = 0.
+            pvelu = 0.0d0
+            pvelv = 0.0d0
+            pvelw = 0.0d0
+            pvelunew = 0.0d0
+            pvelvnew = 0.0d0
+            pvelwnew = 0.0d0
           end if
           !---------------------------------------------
           ! Update particles
@@ -483,7 +483,9 @@ contains
           !---------------------------------------------
           ! Check if particle has beached or reached the boundary
           call particles(ipart)%check_beached_bdy
-          if (particles(ipart)%age == max_age) call write_data_snapshot(particles(ipart), ipart)
+          if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
+            call write_data_snapshot(particles(ipart), ipart)
+          end if
           !---------------------------------------------
           ! Check if the particle is still alive
           if (max_age > 0) call particles(ipart)%check_age(max_age)
