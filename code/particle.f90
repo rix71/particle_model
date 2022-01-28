@@ -169,15 +169,16 @@ module particle_vars
   use precdefs
   use errors
   use particle_type
-  use nc_manager, only: nc_read1d, nc_get_dim, nc_var_exists
-  use domain_vars, only: lons, lats, nx, ny
+  use nc_manager, only: nc_read_real_1d, nc_read_real_2d, nc_get_dim, nc_var_exists
+  use domain_vars, only: lons, lats, nx, ny, seamask, x0, y0, dx, dy
+  use fields, only: get_indices2d
   use time_vars, only: nTimes
 
   logical                     :: kill_beached, kill_boundary ! Set isActive=.false. if beached or on boundary?
   integer                     :: inputstep, &                ! How often are particles released?
                                  particle_init_method, &     ! Read initial positions (1 - txt, 2 - .nc)
                                  nParticles, &               ! Number of particles
-                                 nInitParticles, &           ! Number of particles released every "inputstep"
+                                 nInitTimes, &
                                  runparts = 0                ! Number of particles to loop over
   real(rk)                    :: max_age                     ! Lifetime (for all particles) in timesteps
   character(len=256)          :: coordfile                   ! File containing particle locations at init.
@@ -185,31 +186,37 @@ module particle_vars
   ! real(rk), allocatable       :: initCoords(:, :)            ! Array of initial coordinates
 
   type, private :: initial_position
+    integer                             :: next_idx = 1, &
+                                           time_idx = 1, &
+                                           n_init_particles
     real(rk), allocatable, dimension(:) :: x, y, z, &
                                            rho, radius, &
                                            beaching_time, &
                                            id
   contains
-    procedure :: allocate_nInitParticles
+    procedure :: allocate_n_init_particles
+    procedure :: check_initial_coordinates
   end type initial_position
 
-  type(initial_position) :: initCoords
+  type(initial_position), allocatable :: initCoords(:)
 !===================================================
 contains
 !===========================================
-  subroutine allocate_nInitParticles(this, n_init)
+  subroutine allocate_n_init_particles(this)
     class(initial_position), intent(inout) :: this
-    integer, intent(in) :: n_init
+    integer :: n_init_p
 
-    allocate (this%x(n_init), this%y(n_init), this%z(n_init), &
-              this%rho(n_init), this%radius(n_init), &
-              this%beaching_time(n_init), this%id(n_init))
+    n_init_p = this%n_init_particles
+
+    allocate (this%x(n_init_p), this%y(n_init_p), this%z(n_init_p), &
+              this%rho(n_init_p), this%radius(n_init_p), &
+              this%beaching_time(n_init_p), this%id(n_init_p))
 
     this%x = 0.0d0; this%y = 0.0d0; this%z = 0.0d0; 
     this%rho = 0.0d0; this%radius = 0.0d0; 
     this%beaching_time = 0.0d0; this%id = 0.0d0
 
-  end subroutine allocate_nInitParticles
+  end subroutine allocate_n_init_particles
   !===========================================
   subroutine init_particles_from_coordfile
     !---------------------------------------------
@@ -220,23 +227,24 @@ contains
     !print
     FMT1, "======== Init particles ========"
 
+    allocate (initCoords(1))
+
     open (COORDFILE, file=trim(coordfile), action='read', iostat=ierr)
     if (ierr .ne. 0) call throw_error("init_particles_from_coordfile", "Failed to open "//trim(coordfile), ierr)
-    read (COORDFILE, *) nInitParticles
-    ! allocate (initCoords(nInitParticles, 7))
-    call initCoords%allocate_nInitParticles(nInitParticles)
-    do ipart = 1, nInitParticles
-      read (COORDFILE, *, iostat=ierr) initCoords%x(ipart), initCoords%y(ipart), &
-        initCoords%z(ipart), initCoords%id(ipart), &
-        initCoords%beaching_time(ipart), initCoords%rho(ipart), initCoords%radius(ipart)
+    read (COORDFILE, *) initCoords(1)%n_init_particles
+    call initCoords(1)%allocate_n_init_particles
+    do ipart = 1, initCoords(1)%n_init_particles
+      read (COORDFILE, *, iostat=ierr) initCoords(1)%x(ipart), initCoords(1)%y(ipart), &
+        initCoords(1)%z(ipart), initCoords(1)%id(ipart), &
+        initCoords(1)%beaching_time(ipart), initCoords(1)%rho(ipart), initCoords(1)%radius(ipart)
       if (ierr .ne. 0) call throw_error("init_particles_from_coordfile", "Failed to read from "//trim(coordfile), ierr)
     end do
     close (COORDFILE, iostat=ierr)
     if (ierr .ne. 0) call throw_error("init_particles_from_coordfile", "Failed to close "//trim(coordfile), ierr)
 
-    call check_initial_coordinates
+    call initCoords(1)%check_initial_coordinates
 
-    nParticles = nInitParticles * (nTimes / inputstep) + nInitParticles
+    nParticles = initCoords(1)%n_init_particles * (nTimes / inputstep) + initCoords(1)%n_init_particles
     allocate (particles(nParticles))
     FMT2, "Allocated array for", nParticles, "particles"
 
@@ -249,58 +257,84 @@ contains
     !---------------------------------------------
     ! Allocate array for estimated amount of particles
     !---------------------------------------------
+    integer :: itime
+    real(rk), allocatable :: nInitParticles(:)
 
     FMT1, "======== Init particles ========"
 
-    call nc_get_dim(trim(coordfile), "particle", nInitParticles)
+    call nc_get_dim(trim(coordfile), "time", nInitTimes)
+    allocate (initCoords(nInitTimes), nInitParticles(nInitTimes))
 
-    call initCoords%allocate_nInitParticles(nInitParticles)
+    call nc_read_real_1d(trim(coordfile), "n_particles", nInitTimes, nInitParticles)
 
-    if (nc_var_exists(trim(coordfile), "x")) then
-      call nc_read1d(trim(coordfile), "x", nInitParticles, initCoords%x)
+    debug(nInitTimes); debug(nInitParticles)
+
+    do itime = 1, nInitTimes
+      initCoords(itime)%time_idx = itime
+      if (itime < nInitTimes) then
+        initCoords(itime)%next_idx = itime + 1
+      else
+        ! Could also be periodic (last next_idx = 1)
+        initCoords(itime)%next_idx = itime
+      end if
+
+      debug(itime)
+      debug(int(nInitParticles(itime)))
+
+      initCoords(itime)%n_init_particles = int(nInitParticles(itime))
+      call initCoords(itime)%allocate_n_init_particles
+
+      if (nc_var_exists(trim(coordfile), "x")) then
+        call nc_read_real_2d(trim(coordfile), "x", 1, int(nInitParticles(itime)), initCoords(itime)%x, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+      else
+        initCoords(itime)%x = 0.0d0
+      end if
+
+      if (nc_var_exists(trim(coordfile), "y")) then
+        call nc_read_real_2d(trim(coordfile), "y", 1, int(nInitParticles(itime)), initCoords(itime)%y, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+      else
+        initCoords(itime)%y = 0.0d0
+      end if
+
+      if (nc_var_exists(trim(coordfile), "z")) then
+        call nc_read_real_2d(trim(coordfile), "z", 1, int(nInitParticles(itime)), initCoords(itime)%z, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+      else
+        initCoords(itime)%z = 0.0d0
+      end if
+
+      if (nc_var_exists(trim(coordfile), "id")) then
+        call nc_read_real_2d(trim(coordfile), "id", 1, int(nInitParticles(itime)), initCoords(itime)%id, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+      else
+        initCoords(itime)%id = 0.0d0
+      end if
+
+      if (nc_var_exists(trim(coordfile), "beaching_time")) then
+        call nc_read_real_2d(trim(coordfile), "beaching_time", 1, int(nInitParticles(itime)), initCoords(itime)%beaching_time, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+      else
+        initCoords(itime)%beaching_time = 86400.0d0
+      end if
+
+      if (nc_var_exists(trim(coordfile), "rho")) then
+        call nc_read_real_2d(trim(coordfile), "rho", 1, int(nInitParticles(itime)), initCoords(itime)%rho, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+      else
+        initCoords(itime)%rho = 30.0d0
+      end if
+
+      if (nc_var_exists(trim(coordfile), "radius")) then
+        call nc_read_real_2d(trim(coordfile), "radius", 1, int(nInitParticles(itime)), initCoords(itime)%radius, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+      else
+        initCoords(itime)%radius = 0.001
+      end if
+
+      call initCoords(itime)%check_initial_coordinates
+
+    end do
+
+    if (nInitTimes > 1) then
+      nParticles = int(sum(nInitParticles))
     else
-      initCoords%x = 0.0d0
+      nParticles = int(nInitParticles(1)) * (nTimes / inputstep) + int(nInitParticles(1))
     end if
-
-    if (nc_var_exists(trim(coordfile), "y")) then
-      call nc_read1d(trim(coordfile), "y", nInitParticles, initCoords%y)
-    else
-      initCoords%y = 0.0d0
-    end if
-
-    if (nc_var_exists(trim(coordfile), "z")) then
-      call nc_read1d(trim(coordfile), "z", nInitParticles, initCoords%z)
-    else
-      initCoords%z = 0.0d0
-    end if
-
-    if (nc_var_exists(trim(coordfile), "id")) then
-      call nc_read1d(trim(coordfile), "id", nInitParticles, initCoords%id)
-    else
-      initCoords%id = 0.0d0
-    end if
-
-    if (nc_var_exists(trim(coordfile), "beaching_time")) then
-      call nc_read1d(trim(coordfile), "beaching_time", nInitParticles, initCoords%beaching_time)
-    else
-      initCoords%beaching_time = 86400.0d0
-    end if
-
-    if (nc_var_exists(trim(coordfile), "rho")) then
-      call nc_read1d(trim(coordfile), "rho", nInitParticles, initCoords%rho)
-    else
-      initCoords%rho = 30.0d0
-    end if
-
-    if (nc_var_exists(trim(coordfile), "radius")) then
-      call nc_read1d(trim(coordfile), "radius", nInitParticles, initCoords%radius)
-    else
-      initCoords%radius = 0.001
-    end if
-
-    call check_initial_coordinates
-
-    nParticles = nInitParticles * (nTimes / inputstep) + nInitParticles
     allocate (particles(nParticles))
     FMT2, "Allocated array for", nParticles, "particles"
 
@@ -308,19 +342,29 @@ contains
 
   end subroutine init_particles_from_netcdf
   !===========================================
-  subroutine check_initial_coordinates
+  subroutine check_initial_coordinates(this)
+    class(initial_position), intent(in) :: this
+    integer :: ipart, i, j, on_land = 0
 
-    integer :: ipart
-
-    do ipart = 1, nInitParticles
-      if (initCoords%x(ipart) < lons(1) .or. initCoords%x(ipart) > lons(nx) .or. &
-          initCoords%y(ipart) < lats(1) .or. initCoords%y(ipart) > lats(ny)) then
+    do ipart = 1, this%n_init_particles
+      if (this%x(ipart) < lons(1) .or. this%x(ipart) > lons(nx) .or. &
+          this%y(ipart) < lats(1) .or. this%y(ipart) > lats(ny)) then
         ERROR, "Particle", ipart, ":", &
-          initCoords%x(ipart), initCoords%y(ipart)
-        call throw_error("check_initial_coordinates", "Particle initialized outside of domain")
+          this%x(ipart), this%y(ipart)
+        call throw_error("check_initial_coordinates", "Particle initialised outside of domain")
+      end if
+      call get_indices2d(this%x(ipart), this%y(ipart), x0, y0, dx, dy, i, j)
+      if (seamask(i, j) == LAND) then
+        ! call throw_warning("check_initial_coordinates", "Particle initialised on land")
+        on_land = on_land + 1
       end if
     end do
-    FMT2, "Initial coordinates OK"
+    if (on_land > 0) then
+      call throw_warning("check_initial_coordinates", "Particles initialised on land")
+      WARNING, on_land, "particles on land, time idx = ", this%time_idx
+      ! else
+      !   FMT2, "Initial coordinates OK"
+    end if
 
     return
   end subroutine check_initial_coordinates

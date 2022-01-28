@@ -14,7 +14,7 @@ module loop_particle
                        nc_itime, nc_itime_next, ncNTimes, pvelu, pvelunew, &
                        pvelv, pvelvnew, pvelw, pvelwnew
   use particle_type, only: particle
-  use particle_vars, only: nInitParticles, runparts, inputstep, initCoords, particles, max_age, kill_beached, kill_boundary
+  use particle_vars, only: runparts, inputstep, initCoords, particles, max_age, kill_beached, kill_boundary
   use time_vars, only: theDate, run_end_dt, dt, nc_timestep, nTimes
   use domain, only: lonlat2xy, xy2lonlat
   use domain_vars, only: x0, y0, dx, dy, dz, dx_m, dy_m, nx, ny, lons, lats, depdata, seamask
@@ -49,7 +49,7 @@ contains
   !===========================================
   subroutine loop
     logical :: read_first = .false., interp_first = .false. ! This should avoid reading the fields twice
-    integer :: ipart, itime = 0, itime_interp = 0, n_adjust_dt = 0
+    integer :: ipart, i_release = 1, itime = 0, itime_interp = 0, n_adjust_dt = 0
     integer :: ig_prev, jg_prev
     real(rk) :: dt_orig, dt_interp_1, dt_interp_2
 
@@ -173,20 +173,21 @@ contains
         ! Release particles
         ! TODO: Do this only in case of continuous release (particle_method ?)
         if (mod(itime, inputstep) .eq. 0) then
-          FMT2, "Releasing new particles at itime = ", itime
-          do ipart = 1, nInitParticles
-            particles(ipart + runparts) = particle(xPos=initCoords%x(ipart), &
-                                                   yPos=initCoords%y(ipart), &
-                                                   zPos=initCoords%z(ipart), &
-                                                   originNum=initCoords%id(ipart), &
-                                                   beachingtime=initCoords%beaching_time(ipart), &
-                                                   rho=initCoords%rho(ipart), &
-                                                   radius=initCoords%radius(ipart), &
+          FMT2, "Releasing ", initCoords(i_release)%n_init_particles, " new particles at itime = ", itime
+          do ipart = 1, initCoords(i_release)%n_init_particles
+            particles(ipart + runparts) = particle(xPos=initCoords(i_release)%x(ipart), &
+                                                   yPos=initCoords(i_release)%y(ipart), &
+                                                   zPos=initCoords(i_release)%z(ipart), &
+                                                   originNum=initCoords(i_release)%id(ipart), &
+                                                   beachingtime=initCoords(i_release)%beaching_time(ipart), &
+                                                   rho=initCoords(i_release)%rho(ipart), &
+                                                   radius=initCoords(i_release)%radius(ipart), &
                                                    kill_bch=kill_beached, &
                                                    kill_bdy=kill_boundary)
           end do
-          runparts = runparts + nInitParticles
+          runparts = runparts + initCoords(i_release)%n_init_particles
           FMT2, runparts, "particles"
+          i_release = initCoords(i_release)%next_idx
         end if
         !---------------------------------------------
 #ifndef SAYLESS
