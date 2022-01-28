@@ -73,4 +73,9 @@
 ! particle init
 #define TXT_FILE 1
 #define NC_FILE 2
-
+!--------------
+! seamask
+#define LAND 1 
+#define SEA 2
+#define BEACH 3
+#define BOUNDARY 4
