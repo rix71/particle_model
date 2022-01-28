@@ -14,7 +14,7 @@ module fields
   use field_vars
   use modtime
   use time_vars, only: run_start_dt
-  use nc_manager, only: nc_read4d, nc_var_exists
+  use nc_manager, only: nc_read_real_4d, nc_var_exists
   use physics, only: seawater_density_from_temp_and_salt
   implicit none
   private
@@ -396,6 +396,7 @@ contains
 
     do i = 1, nentries
       if (date < init_datetime_from_netcdf(trim(GETMPATH)//'/'//trim(filelist(i)), 1)) then
+        if (i == 1) call throw_error("find_file", "The date is earlier than first date in data file")
         write (thefile, '(a)') trim(GETMPATH)//'/'//trim(filelist(i - 1))
         dbgtail(find_file)
         return
@@ -646,32 +647,32 @@ contains
 
         allocate (buffer(count(1), count(2), count(3), count(4)))
 
-        call nc_read4d(trim(subdom_filename), trim(uvarname), start, count, buffer)
+        call nc_read_real_4d(trim(subdom_filename), trim(uvarname), start, count, buffer)
         arr_u(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
-        call nc_read4d(trim(subdom_filename), trim(vvarname), start, count, buffer)
+        call nc_read_real_4d(trim(subdom_filename), trim(vvarname), start, count, buffer)
         arr_v(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
 
         if (vertical_read) then
-          call nc_read4d(trim(subdom_filename), trim(wvarname), start, count, buffer)
+          call nc_read_real_4d(trim(subdom_filename), trim(wvarname), start, count, buffer)
           arr_w(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
-          call nc_read4d(trim(subdom_filename), trim(zaxvarname), start, count, buffer)
+          call nc_read_real_4d(trim(subdom_filename), trim(zaxvarname), start, count, buffer)
           arr_zax(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
         end if
 
         if (density_read) then
-          call nc_read4d(trim(subdom_filename), "rho", start, count, buffer)
+          call nc_read_real_4d(trim(subdom_filename), "rho", start, count, buffer)
           arr_density(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
         end if
 
         if (temp_salt_read) then
-          call nc_read4d(trim(subdom_filename), "temp", start, count, buffer)
+          call nc_read_real_4d(trim(subdom_filename), "temp", start, count, buffer)
           arr_temp(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
-          call nc_read4d(trim(subdom_filename), "salt", start, count, buffer)
+          call nc_read_real_4d(trim(subdom_filename), "salt", start, count, buffer)
           arr_salt(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
         end if
 
         if (viscosity_read) then
-          call nc_read4d(trim(subdom_filename), "nuh", start, count, buffer)
+          call nc_read_real_4d(trim(subdom_filename), "nuh", start, count, buffer)
           arr_viscosity(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:nlevels) = buffer(:, :, :, 1)
         end if
 
@@ -685,25 +686,25 @@ contains
       debug(start)
       debug(count)
 
-      call nc_read4d(trim(subdom_filename), trim(uvarname), start, count, arr_u)
-      call nc_read4d(trim(subdom_filename), trim(vvarname), start, count, arr_v)
+      call nc_read_real_4d(trim(subdom_filename), trim(uvarname), start, count, arr_u)
+      call nc_read_real_4d(trim(subdom_filename), trim(vvarname), start, count, arr_v)
 
       if (vertical_read) then
-        call nc_read4d(trim(subdom_filename), trim(wvarname), start, count, arr_w)
-        call nc_read4d(trim(subdom_filename), trim(zaxvarname), start, count, arr_zax)
+        call nc_read_real_4d(trim(subdom_filename), trim(wvarname), start, count, arr_w)
+        call nc_read_real_4d(trim(subdom_filename), trim(zaxvarname), start, count, arr_zax)
       end if
 
       if (density_read) then
-        call nc_read4d(trim(subdom_filename), "rho", start, count, arr_density)
+        call nc_read_real_4d(trim(subdom_filename), "rho", start, count, arr_density)
       end if
 
       if (temp_salt_read) then
-        call nc_read4d(trim(subdom_filename), "temp", start, count, arr_temp)
-        call nc_read4d(trim(subdom_filename), "salt", start, count, arr_salt)
+        call nc_read_real_4d(trim(subdom_filename), "temp", start, count, arr_temp)
+        call nc_read_real_4d(trim(subdom_filename), "salt", start, count, arr_salt)
       end if
 
       if (viscosity_read) then
-        call nc_read4d(trim(subdom_filename), "nuh", start, count, arr_viscosity)
+        call nc_read_real_4d(trim(subdom_filename), "nuh", start, count, arr_viscosity)
       end if
 
     end select

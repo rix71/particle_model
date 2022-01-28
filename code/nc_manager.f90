@@ -10,7 +10,7 @@ module nc_manager
   private
   !===================================================
   !---------------------------------------------
-  public :: nc_read1d, nc_read2d, nc_read4d, nc_read_time_val, &
+  public :: nc_read_real_1d, nc_read_real_2d, nc_read_real_4d, nc_read_time_val, &
             nc_get_dim, nc_get_timeunit, nc_var_exists, nc_check
 
   !---------------------------------------------
@@ -328,7 +328,7 @@ contains
     return
   end subroutine nc_write_real_4d
   !===========================================
-  subroutine nc_read1d(fname, vname, nvals, dataout)
+  subroutine nc_read_real_1d(fname, vname, nvals, dataout)
 
     integer               :: nvals
     integer               :: ncid, varid
@@ -336,31 +336,36 @@ contains
     character(len=*)      :: vname
     real(rk), intent(out) :: dataout(nvals)
 
-    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read1d :: open")
-    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read1d :: inq_varid "//trim(vname))
-    call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout), "nc_read1d :: get_var "//trim(vname))
-    call nc_check(trim(fname), nf90_close(ncid), "nc_read1d :: close")
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read_real_1d :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read_real_1d :: inq_varid "//trim(vname))
+    call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout), "nc_read_real_1d :: get_var "//trim(vname))
+    call nc_check(trim(fname), nf90_close(ncid), "nc_read_real_1d :: close")
 
     return
-  end subroutine
+  end subroutine nc_read_real_1d
   !===========================================
-  subroutine nc_read2d(fname, vname, nx, ny, dataout)
+  subroutine nc_read_real_2d(fname, vname, nx, ny, dataout, start, count)
 
-    integer              :: nx, ny
-    integer              :: ncid, varid
-    character(len=*)     :: fname
-    character(len=*)     :: vname
+    integer               :: nx, ny
+    integer               :: ncid, varid
+    integer, optional     :: start(2), count(2)
+    character(len=*)      :: fname
+    character(len=*)      :: vname
     real(rk), intent(out) :: dataout(nx, ny)
 
-    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read2d :: open")
-    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read2d :: inq_varid "//trim(vname))
-    call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout), "nc_read2d :: get_var "//trim(vname))
-    call nc_check(trim(fname), nf90_close(ncid), "nc_read2d :: close")
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read_real_2d :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read_real_2d :: inq_varid "//trim(vname))
+    if (present(start)) then
+call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout, start=start, count=count), "nc_read_real_2d :: get_var "//trim(vname))
+    else
+      call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout), "nc_read_real_2d :: get_var "//trim(vname))
+    end if
+    call nc_check(trim(fname), nf90_close(ncid), "nc_read_real_2d :: close")
 
     return
-  end subroutine nc_read2d
+  end subroutine nc_read_real_2d
   !===========================================
-  subroutine nc_read4d(fname, vname, start, count, dataout)
+  subroutine nc_read_real_4d(fname, vname, start, count, dataout)
 
     integer               :: ncid, varid
     integer, dimension(4) :: start, count
@@ -368,14 +373,14 @@ contains
     character(len=*)      :: vname
     real(rk), intent(out) :: dataout(count(1), count(2), count(3), count(4))
 
-    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read4d :: open")
-    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read4d :: inq_varid "//trim(vname))
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read_real_4d :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read_real_4d :: inq_varid "//trim(vname))
     call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout, start=start, &
-                                            count=count), "nc_read4d :: get_var "//trim(vname))
-    call nc_check(trim(fname), nf90_close(ncid), "nc_read4d :: close")
+                                            count=count), "nc_read_real_4d :: get_var "//trim(vname))
+    call nc_check(trim(fname), nf90_close(ncid), "nc_read_real_4d :: close")
 
     return
-  end subroutine
+  end subroutine nc_read_real_4d
   !===========================================
   subroutine nc_read_time_val(fname, n, timeval)
 

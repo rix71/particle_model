@@ -7,7 +7,7 @@ module domain
   use errors
   use params, only: pi
   use domain_vars
-  use nc_manager, only: nc_read1d, nc_read2d
+  use nc_manager, only: nc_read_real_1d, nc_read_real_2d
   implicit none
   private
   !===================================================
@@ -36,8 +36,8 @@ contains
     allocate (lons(nx), lats(ny))
 
     FMT2, "Reading coordinates"
-    call nc_read1d(trim(TOPOFILE), trim(lonvarname), nx, lons)
-    call nc_read1d(trim(TOPOFILE), trim(latvarname), ny, lats)
+    call nc_read_real_1d(trim(TOPOFILE), trim(lonvarname), nx, lons)
+    call nc_read_real_1d(trim(TOPOFILE), trim(latvarname), ny, lats)
 
     y0 = lats(1); y1 = lats(ny); dy = lats(2) - lats(1); dy_m = dy * 60.*1852.
     x0 = lons(1); x1 = lons(nx); dx = lons(2) - lons(1); dx_m = dx * 60.*1852.*cos(0.5 * (y0 + y1) * pi / 180.)
@@ -53,7 +53,7 @@ contains
     allocate (depdata(nx, ny), seamask(nx, ny))
 
     FMT2, "Reading bathymetry"
-    call nc_read2d(trim(TOPOFILE), trim(bathyvarname), nx, ny, depdata)
+    call nc_read_real_2d(trim(TOPOFILE), trim(bathyvarname), nx, ny, depdata)
 
     !---------------------------------------------
     ! TODO: Seamask could have another value (4) to represent boundaries.

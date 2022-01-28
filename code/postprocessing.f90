@@ -68,11 +68,11 @@ contains
     debug(ntimes); debug(nparticles)
     allocate (timevals(ntimes), x(ntimes, nparticles), y(ntimes, nparticles), age(ntimes, nparticles), &
               counts_time(nx, ny, ntimes), mean_age_time(nx, ny, ntimes))
-    call nc_read1d(trim(nc_filein_active), "time", ntimes, timevals)
+    call nc_read_real_1d(trim(nc_filein_active), "time", ntimes, timevals)
     call nc_get_timeunit(trim(nc_filein_active), timeunit)
-    call nc_read2d(trim(nc_filein_active), "x", nparticles, ntimes, x)
-    call nc_read2d(trim(nc_filein_active), "y", nparticles, ntimes, y)
-    call nc_read2d(trim(nc_filein_active), "age", nparticles, ntimes, age)
+    call nc_read_real_2d(trim(nc_filein_active), "x", nparticles, ntimes, x)
+    call nc_read_real_2d(trim(nc_filein_active), "y", nparticles, ntimes, y)
+    call nc_read_real_2d(trim(nc_filein_active), "age", nparticles, ntimes, age)
 
     counts_time = 0
     counts = 0
