@@ -2,6 +2,7 @@
 #include "cppdefs.h"
 module postprocessing
   use precdefs
+  use errors
   use particle_vars, only: particles, runparts
   use domain_vars, only: nx, ny, x0, y0, dx, dy, seamask, lons, lats
   use fields, only: get_indices2d
@@ -49,15 +50,17 @@ contains
 
   end subroutine process_all_particles
   !===========================================
-  subroutine process_active_file(counts, counts_time, ntimes, timevals, timeunit, mean_age_time)
+  subroutine process_active_file(counts, ntimes, timevals, timeunit, mean_age_time)
 
     character(len=512)                   :: nc_filein_active
     character(len=512), intent(out)      :: timeunit
     integer                              :: nparticles, itime, ipart, i, j
     real(rk), allocatable                :: x(:, :), y(:, :), age(:, :)
-    real(rk), allocatable, intent(inout) :: timevals(:), mean_age_time(:, :, :)
+    real(rk), allocatable, intent(inout) :: timevals(:) !, mean_age_time(:, :, :)
     integer, intent(out)                 :: counts(nx, ny), ntimes
-    integer, allocatable, intent(inout)  :: counts_time(:, :, :)
+    real(rk), intent(out)                :: mean_age_time(nx, ny)
+    ! integer, allocatable, intent(inout)  :: counts(:, :, :)
+    integer                              :: ierr
 
     dbghead(process_active_file)
 
@@ -66,15 +69,18 @@ contains
     call nc_get_dim(trim(nc_filein_active), "time", ntimes)
     call nc_get_dim(trim(nc_filein_active), "particle", nparticles)
     debug(ntimes); debug(nparticles)
-    allocate (timevals(ntimes), x(ntimes, nparticles), y(ntimes, nparticles), age(ntimes, nparticles), &
-              counts_time(nx, ny, ntimes), mean_age_time(nx, ny, ntimes))
+
+    allocate (timevals(ntimes), x(ntimes, nparticles), y(ntimes, nparticles), age(ntimes, nparticles), stat=ierr)
+    ! counts(nx, ny), &
+    ! mean_age_time(nx, ny), &
+    
+    if (ierr .ne. 0) call throw_error("process_active_file", "Could not allocate", ierr)
     call nc_read_real_1d(trim(nc_filein_active), "time", ntimes, timevals)
     call nc_get_timeunit(trim(nc_filein_active), timeunit)
     call nc_read_real_2d(trim(nc_filein_active), "x", nparticles, ntimes, x)
     call nc_read_real_2d(trim(nc_filein_active), "y", nparticles, ntimes, y)
     call nc_read_real_2d(trim(nc_filein_active), "age", nparticles, ntimes, age)
 
-    counts_time = 0
     counts = 0
     mean_age_time = 0.
     do itime = 1, ntimes
@@ -85,24 +91,28 @@ contains
           call get_indices2d(x(itime, ipart), y(itime, ipart), x0, y0, dx, dy, i, j)
           debug(i); debug(j)
 
-          counts_time(i, j, itime) = counts_time(i, j, itime) + 1
-          mean_age_time(i, j, itime) = mean_age_time(i, j, itime) + age(itime, ipart)
+          counts(i, j) = counts(i, j) + 1
+          mean_age_time(i, j) = mean_age_time(i, j) + age(itime, ipart)
 
         end if
       end do
-      where (counts_time(:, :, itime) > 0) mean_age_time(:, :, itime) = mean_age_time(:, :, itime) / counts_time(:, :, itime)
     end do
-    counts = sum(counts_time, dim=3)
+    where (counts > 0) mean_age_time = mean_age_time / counts
+    ! counts = sum(counts_time, dim=3)
 
-    where (seamask == 1) counts = int(FILLVALUE_BIG)
-    do i = 1, nx
-      do j = 1, ny
-        if (seamask(i, j) == 1) then
-          counts_time(i, j, :) = FILLVALUE_BIG
-          mean_age_time(i, j, :) = FILLVALUE_BIG
-        end if
-      end do
-    end do
+    where (seamask == LAND)
+      counts = int(FILLVALUE_BIG)
+      ! counts_time(i, j) = FILLVALUE_BIG
+      mean_age_time = FILLVALUE_BIG
+    end where
+    ! do i = 1, nx
+    !   do j = 1, ny
+    !     if (seamask(i, j) ==) then
+    !       counts_time(i, j, :) = FILLVALUE_BIG
+    !       mean_age_time(i, j, :) = FILLVALUE_BIG
+    !     end if
+    !   end do
+    ! end do
 
     dbgtail(process_active_file)
   end subroutine process_active_file
@@ -147,10 +157,11 @@ contains
       active: block
         character(len=512)    :: timeunit
         integer               :: counts(nx, ny), ntimes
-        integer, allocatable  :: counts_time(:, :, :)
-        real(rk), allocatable :: timevals(:), mean_age_time(:, :, :)
+        real(rk)              :: mean_age_time(nx, ny)
+        ! integer, allocatable  :: counts_time(:, :, :)
+        real(rk), allocatable :: timevals(:) !, mean_age_time(:, :, :)
 
-        call process_active_file(counts, counts_time, ntimes, timevals, timeunit, mean_age_time)
+        call process_active_file(counts, ntimes, timevals, timeunit, mean_age_time)
 
         call nc_add_dimension(trim(nc_fileout_post), "time", nc_t_dimid, ntimes)
 
@@ -162,15 +173,15 @@ contains
         call nc_add_attr(trim(nc_fileout_post), "counts_active", "units", "particles")
         call nc_write(trim(nc_fileout_post), counts, "counts_active", nx, ny)
 
-        call nc_add_variable(trim(nc_fileout_post), "counts_time_active", "int", 3, &
-                             [nc_x_dimid, nc_y_dimid, nc_t_dimid], FILLVALUE_BIG)
-        call nc_add_attr(trim(nc_fileout_post), "counts_time_active", "units", "particles")
-        call nc_write(trim(nc_fileout_post), counts_time, "counts_time_active", nx, ny, ntimes)
+        ! call nc_add_variable(trim(nc_fileout_post), "counts_time_active", "int", 3, &
+        !                      [nc_x_dimid, nc_y_dimid, nc_t_dimid], FILLVALUE_BIG)
+        ! call nc_add_attr(trim(nc_fileout_post), "counts_time_active", "units", "particles")
+        ! call nc_write(trim(nc_fileout_post), counts_time, "counts_time_active", nx, ny, ntimes)
 
-        call nc_add_variable(trim(nc_fileout_post), "mean_age_time_active", "int", 3, &
-                             [nc_x_dimid, nc_y_dimid, nc_t_dimid], FILLVALUE_BIG)
-        call nc_add_attr(trim(nc_fileout_post), "mean_age_time_active", "units", "s")
-        call nc_write(trim(nc_fileout_post), mean_age_time, "mean_age_time_active", nx, ny, ntimes)
+        call nc_add_variable(trim(nc_fileout_post), "mean_age_active", "float", 2, &
+                             [nc_x_dimid, nc_y_dimid], FILLVALUE_BIG)
+        call nc_add_attr(trim(nc_fileout_post), "mean_age_active", "units", "s")
+        call nc_write(trim(nc_fileout_post), mean_age_time, "mean_age_active", nx, ny)
 
       end block active
     end if
