@@ -30,14 +30,14 @@ module loop_vars
   ! This module contains temporary variables used in the loop
   !----------------------------------------------------------------
   use precdefs
-  use modtime, only: datetime
+  use modtime, only: t_datetime
 
   integer            :: pnum, &               ! Processor/subdomain number
                         ig, jg, kg, &         ! Global indices
                         ncNTimes, &           ! Number of timesteps in nc file
                         nc_itime, &           ! Time index in netCDF
                         nc_itime_next         ! Next time index in netCDF
-  type(datetime)     :: dateThis, dateNext, & ! Temporary date variables, first date of netCDF files
+  type(t_datetime)   :: dateThis, dateNext, & ! Temporary date variables, first date of netCDF files
                         dateThisNcTimestep, & ! Date of current timestep in netCDF
                         dateNextNcTimestep    ! Date of next timestep in netCDF
   character(len=256) :: thisPath, nextPath    ! Temporary path to data
@@ -80,10 +80,10 @@ module time_vars
   ! - time step
   !----------------------------------------------------------------
   use precdefs
-  use modtime, only: datetime
+  use modtime, only: t_datetime
 
   integer           :: nTimes                   ! Number of timesteps
-  type(datetime)    :: theDate, &               ! Current date during simulation
+  type(t_datetime)  :: theDate, &               ! Current date during simulation
                        run_start_dt, run_end_dt ! Model start/end dates
   character(len=64) :: run_start, run_end       ! Date strings from namelist
   real(rk)          :: dt, &                    ! Time increment

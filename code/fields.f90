@@ -204,18 +204,18 @@ contains
     if (ierr .ne. 0) call throw_error("init_fields", "Could not allocate", ierr)
     udata = 0; vdata = 0; udatanew = 0; vdatanew = 0; 
     allocate (udata_interp(nx, ny, nlevels), vdata_interp(nx, ny, nlevels), &
-    udatanew_interp(nx, ny, nlevels), vdatanew_interp(nx, ny, nlevels), stat=ierr)
+              udatanew_interp(nx, ny, nlevels), vdatanew_interp(nx, ny, nlevels), stat=ierr)
     if (ierr .ne. 0) call throw_error("init_fields", "Could not allocate", ierr)
     udata_interp = 0; vdata_interp = 0; udatanew_interp = 0; vdatanew_interp = 0; 
     !---------------------------------------------
     ! Arrays for v. velocity
     if (run_3d) then
       allocate (wdata(nx, ny, nlevels), wdatanew(nx, ny, nlevels), &
-      zaxdata(nx, ny, nlevels), zaxdatanew(nx, ny, nlevels), stat=ierr)
+                zaxdata(nx, ny, nlevels), zaxdatanew(nx, ny, nlevels), stat=ierr)
       if (ierr .ne. 0) call throw_error("init_fields", "Could not allocate", ierr)
       wdata = 0; wdatanew = 0; zaxdata = 0; zaxdatanew = 0; 
       allocate (wdata_interp(nx, ny, nlevels), wdatanew_interp(nx, ny, nlevels), &
-      zaxdata_interp(nx, ny, nlevels), zaxdatanew_interp(nx, ny, nlevels), stat=ierr)
+                zaxdata_interp(nx, ny, nlevels), zaxdatanew_interp(nx, ny, nlevels), stat=ierr)
       if (ierr .ne. 0) call throw_error("init_fields", "Could not allocate", ierr)
       wdata_interp = 0; wdatanew_interp = 0; zaxdata_interp = 0; zaxdatanew_interp = 0; 
     end if
@@ -239,7 +239,7 @@ contains
       else
         call throw_warning("init_fields", "Could not find density ('rho') in "//trim(filename))
         if (nc_var_exists(trim(filename), "temp") .and. &
-        nc_var_exists(trim(filename), "salt")) then
+            nc_var_exists(trim(filename), "salt")) then
           allocate (temp(nx, ny, nlevels), tempnew(nx, ny, nlevels), stat=ierr)
           if (ierr .ne. 0) call throw_error("init_fields", "Could not allocate", ierr)
           temp = 0; tempnew = 0
@@ -249,7 +249,7 @@ contains
           has_density = TEMP_SALT
         else
           call throw_warning("init_fields", "Could not find temperature or salinity ('temp'/'salt') in "//trim(filename)// &
-          ". Using default density.")
+                             ". Using default density.")
           has_density = DEFAULT_DENSITY
         end if
       end if
@@ -295,7 +295,7 @@ contains
 
     integer                         :: i
     integer, save                   :: NCall = 0
-    type(datetime), intent(in)      :: date
+    type(t_datetime), intent(in)      :: date
     integer(rk)                         :: YYYYMMDD
     character(len=256)              :: testdir
     character(len=256), intent(out) :: thedir
@@ -368,8 +368,8 @@ contains
 
     integer                         :: i
     integer, save                   :: NCall = 0
-    type(datetime), intent(in)      :: date
-    type(datetime)                  :: testdate
+    type(t_datetime), intent(in)      :: date
+    type(t_datetime)                  :: testdate
     character(len=256), intent(out) :: thefile
 
     dbghead(find_file)

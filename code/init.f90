@@ -121,11 +121,11 @@ contains
     FMT1, "======== Init time ========"
 
     ! Initialise datetime (really don't need the names...)
-    run_start_dt = datetime(run_start)
+    run_start_dt = t_datetime(run_start)
     call run_start_dt%setName(startName)
-    run_end_dt = datetime(run_end)
+    run_end_dt = t_datetime(run_end)
     call run_end_dt%setName(endName)
-    theDate = datetime(run_start)
+    theDate = t_datetime(run_start)
     call theDate%setName(simName)
 
     ! Number of iterations

@@ -11,9 +11,9 @@ module modtime
   private
   !===================================================
   !---------------------------------------------
-  public :: datetime, dateDiff, init_datetime_from_netcdf
+  public :: t_datetime, dateDiff, init_datetime_from_netcdf
   !---------------------------------------------
-  type datetime
+  type t_datetime
     integer           :: year = 1, month = 1, day = 1
     integer           :: hour = 0, minute = 0, second = 0
     character(len=16) :: dtName ! Absolutely unnecessary...
@@ -45,11 +45,11 @@ module modtime
     procedure, pass(this) :: date_le
     generic :: operator(<=) => date_le
     generic :: operator(.le.) => date_le
-  end type datetime
+  end type t_datetime
   !---------------------------------------------
-  interface datetime
-    procedure :: datetime_construct
-  end interface datetime
+  interface t_datetime
+    procedure :: ctor_datetime
+  end interface t_datetime
   !---------------------------------------------
   ! Days in month. This is pretty dumb...
   integer, dimension(12) :: daysInMonth = (/31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31/)
@@ -64,7 +64,7 @@ module modtime
   !===================================================
 contains
   !===========================================
-  type(datetime) function datetime_construct(date_str)
+  type(t_datetime) function ctor_datetime(date_str) result(res)
     !---------------------------------------------
     ! Constructor for datetime
     ! TODO: Date validation
@@ -78,27 +78,27 @@ contains
 
     if (len_str .eq. 10) then
       read (date_str, '(i4,1x,i2,1x,i2)') year, month, day
-      datetime_construct%year = year
-      datetime_construct%month = month
-      datetime_construct%day = day
+      res%year = year
+      res%month = month
+      res%day = day
     else if (len_str .eq. 19) then
       read (date_str, '(i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)') year, month, day, &
         hour, minute, second
-      datetime_construct%year = year
-      datetime_construct%month = month
-      datetime_construct%day = day
-      datetime_construct%hour = hour
-      datetime_construct%minute = minute
-      datetime_construct%second = second
+      res%year = year
+      res%month = month
+      res%day = day
+      res%hour = hour
+      res%minute = minute
+      res%second = second
     else
       call throw_error("datetime", &
                        "Wrong date format: "//trim(date_str)// &
                        " Accepted date formats are 'yyyy-mm-dd' or 'yyyy-mm-dd HH:MM:SS'")
     end if
 
-  end function datetime_construct
+  end function ctor_datetime
   !===========================================
-  type(datetime) function init_datetime_from_netcdf(fname, n)
+  type(t_datetime) function init_datetime_from_netcdf(fname, n)
     !---------------------------------------------
     ! Reads the time unit from netCDF and returns a datetime
     ! datetime instance. Time unit date if no 'n', first date
@@ -117,7 +117,7 @@ contains
     read (timeunit, '(8x,1x,5x,i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)') year, month, day, hour, minute, second
     write (ncdatestr, "(i4,a,i2.2,a,i2.2,1x,i2.2,a,i2.2,a,i2.2)") year, "-", month, "-", day, &
       hour, ":", minute, ":", second
-    init_datetime_from_netcdf = datetime(ncdatestr)
+    init_datetime_from_netcdf = t_datetime(ncdatestr)
 
     if (present(n)) then
       call nc_read_time_val(trim(fname), n, diff)
@@ -129,7 +129,7 @@ contains
   subroutine setName(this, name)
 
     character(len=*), intent(in)   :: name
-    class(datetime), intent(inout) :: this
+    class(t_datetime), intent(inout) :: this
 
     this%dtName = trim(name)
 
@@ -137,7 +137,7 @@ contains
   !===========================================
   subroutine print_date(this)
 
-    class(datetime), intent(in) :: this
+    class(t_datetime), intent(in) :: this
 
     FMT1, "============================="
     FMT1, '----', this%dtName, '----'
@@ -155,7 +155,7 @@ contains
   subroutine print_short_date(this)
 
     character(len=19)           :: datestr
-    class(datetime), intent(in) :: this
+    class(t_datetime), intent(in) :: this
 
     write (datestr, "(i4,a,i2.2,a,i2.2,1x,i2.2,a,i2.2,a,i2.2)") &
       this%year, "-", this%month, "-", this%day, &
@@ -171,7 +171,7 @@ contains
     ! TODO: Backwards update
     !---------------------------------------------
 
-    class(datetime), intent(inout) :: this
+    class(t_datetime), intent(inout) :: this
     real(rk), intent(in)           :: dt
 
     call reset_DIM
@@ -204,12 +204,12 @@ contains
     return
   end subroutine update
   !===========================================
-  type(datetime) function nextDate(this, dt)
+  type(t_datetime) function nextDate(this, dt)
     !---------------------------------------------
     ! Get a new instance of datetime at the next timestep
     ! without updating the original date
     !---------------------------------------------
-    class(datetime), intent(in) :: this
+    class(t_datetime), intent(in) :: this
     real(rk), intent(in)        :: dt
 
     nextDate = this
@@ -225,7 +225,7 @@ contains
     ! TODO: Make into pure function or something so won't have to reset
     !---------------------------------------------
 
-    class(datetime), intent(in) :: this
+    class(t_datetime), intent(in) :: this
 
     if (mod(this%year, 4) .eq. 0) then
       daysInMonth(2) = 29
@@ -256,7 +256,7 @@ contains
     !---------------------------------------------
     ! The number of the day in the year
     !---------------------------------------------
-    class(datetime), intent(in) :: this
+    class(t_datetime), intent(in) :: this
 
     call this%isLeap
     yearday = sum(daysInMonth(1:this%month - 1))
@@ -271,7 +271,7 @@ contains
     ! Gives date as 'seconds from 1900-01-01 00:00:00'
     !---------------------------------------------
     integer                     :: year
-    class(datetime), intent(in) :: this
+    class(t_datetime), intent(in) :: this
 
     dbghead(date2num)
     debug(this%shortDate(.true.))
@@ -293,7 +293,7 @@ contains
     !---------------------------------------------
     ! Gives the difference between two dates in seconds
     !---------------------------------------------
-    type(datetime), intent(in) :: dateStart, dateEnd
+    type(t_datetime), intent(in) :: dateStart, dateEnd
     real(rk)                   :: datenumStart, datenumEnd
 
     datenumStart = dateStart%date2num()
@@ -327,7 +327,7 @@ contains
     !---------------------------------------------
     logical, intent(in)           :: include_time
     character(len=14)             :: formatout
-    class(datetime), intent(in)   :: this
+    class(t_datetime), intent(in)   :: this
 
     select case (include_time)
     case (.false.)
@@ -345,7 +345,7 @@ contains
     ! For comparing dates.
     ! This overloads '.gt.' or '>'
     !---------------------------------------------
-    class(datetime), intent(in) :: this, other
+    class(t_datetime), intent(in) :: this, other
 
     if (this%year .gt. other%year) then
       gt = .true.
@@ -390,7 +390,7 @@ contains
     ! For comparing dates.
     ! This overloads '.lt.' or '<'
     !---------------------------------------------
-    class(datetime), intent(in) :: this, other
+    class(t_datetime), intent(in) :: this, other
 
     lt = other > this
 
@@ -401,7 +401,7 @@ contains
     ! For comparing dates
     ! This overloads '.eq.' or '=='
     !---------------------------------------------
-    class(datetime), intent(in) :: this, other
+    class(t_datetime), intent(in) :: this, other
 
     eq = (this%year .eq. other%year) .and. &
          (this%month .eq. other%month) .and. &
@@ -416,7 +416,7 @@ contains
     !---------------------------------------------
     ! You get the point.
     !---------------------------------------------
-    class(datetime), intent(in) :: this, other
+    class(t_datetime), intent(in) :: this, other
 
     ge = (this > other) .or. (this == other)
 
@@ -424,7 +424,7 @@ contains
   !===========================================
   elemental logical function date_le(this, other) result(le)
 
-    class(datetime), intent(in) :: this, other
+    class(t_datetime), intent(in) :: this, other
 
     le = (this < other) .or. (this == other)
 
