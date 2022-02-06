@@ -17,10 +17,10 @@ module particle_type
   private
   !===================================================
   !---------------------------------------------
-  public :: particle
+  public :: t_particle
   !---------------------------------------------
   ! Particle type
-  type particle
+  type t_particle
     logical           :: isActive = .true.     ! Skip particle in loop if isActive == .false.
     logical           :: kill_bch, kill_bdy    ! Set isActive=.false. if beached or on boundary?
     integer           :: warnings = 0
@@ -46,14 +46,14 @@ module particle_type
     procedure :: check_beached_bdy
     procedure :: check_age
     procedure :: check_depth
-  end type particle
+  end type t_particle
 
   !===================================================
 contains
   !===========================================
   subroutine print_particle_info(this)
 
-    class(particle), intent(in) :: this
+    class(t_particle), intent(in) :: this
 
     print "(5x,a)", "============================="
     print "(6x,a,1x,f3.0,1x,a)", 'Particle from:', this%originNum, this%originName
@@ -72,7 +72,7 @@ contains
   !===========================================
   subroutine update(this)
 
-    class(particle), intent(inout) :: this
+    class(t_particle), intent(inout) :: this
 
     this%xPos = xnew
     this%yPos = ynew
@@ -94,7 +94,7 @@ contains
   !===========================================
   subroutine check_age(this, max_age)
 
-    class(particle), intent(inout)  :: this
+    class(t_particle), intent(inout)  :: this
     real(rk), intent(in)            :: max_age
 
     if (this%age > max_age) then
@@ -105,7 +105,7 @@ contains
   !===========================================
   subroutine check_depth(this, zaxarr, i, j, zval, change_state)
 
-    class(particle), intent(inout) :: this
+    class(t_particle), intent(inout) :: this
     logical, intent(in)            :: change_state
     integer, intent(in)            :: i, j
     real(rk), intent(in)           :: zaxarr(nx, ny, nlevels)
@@ -130,7 +130,7 @@ contains
   !===========================================
   subroutine check_beached_bdy(this)
 
-    class(particle), intent(inout) :: this
+    class(t_particle), intent(inout) :: this
 
     dbghead(check_beached_bdy)
 
@@ -182,10 +182,10 @@ module particle_vars
                                  runparts = 0                ! Number of particles to loop over
   real(rk)                    :: max_age                     ! Lifetime (for all particles) in timesteps
   character(len=256)          :: coordfile                   ! File containing particle locations at init.
-  type(particle), allocatable :: particles(:)                ! Array of particles
+  type(t_particle), allocatable :: particles(:)                ! Array of particles
   ! real(rk), allocatable       :: initCoords(:, :)            ! Array of initial coordinates
 
-  type, private :: initial_position
+  type, private :: t_initial_position
     integer                             :: next_idx = 1, &
                                            time_idx = 1, &
                                            n_init_particles
@@ -196,14 +196,14 @@ module particle_vars
   contains
     procedure :: allocate_n_init_particles
     procedure :: check_initial_coordinates
-  end type initial_position
+  end type t_initial_position
 
-  type(initial_position), allocatable :: initCoords(:)
+  type(t_initial_position), allocatable :: initCoords(:)
 !===================================================
 contains
 !===========================================
   subroutine allocate_n_init_particles(this)
-    class(initial_position), intent(inout) :: this
+    class(t_initial_position), intent(inout) :: this
     integer :: n_init_p
 
     n_init_p = this%n_init_particles
@@ -285,43 +285,50 @@ contains
       call initCoords(itime)%allocate_n_init_particles
 
       if (nc_var_exists(trim(coordfile), "x")) then
-        call nc_read_real_2d(trim(coordfile), "x", 1, int(nInitParticles(itime)), initCoords(itime)%x, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+        call nc_read_real_2d(trim(coordfile), "x", 1, int(nInitParticles(itime)), initCoords(itime)%x, &
+                             start=[1, itime], count=[int(nInitParticles(itime)), 1])
       else
         initCoords(itime)%x = 0.0d0
       end if
 
       if (nc_var_exists(trim(coordfile), "y")) then
-        call nc_read_real_2d(trim(coordfile), "y", 1, int(nInitParticles(itime)), initCoords(itime)%y, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+        call nc_read_real_2d(trim(coordfile), "y", 1, int(nInitParticles(itime)), initCoords(itime)%y, &
+                             start=[1, itime], count=[int(nInitParticles(itime)), 1])
       else
         initCoords(itime)%y = 0.0d0
       end if
 
       if (nc_var_exists(trim(coordfile), "z")) then
-        call nc_read_real_2d(trim(coordfile), "z", 1, int(nInitParticles(itime)), initCoords(itime)%z, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+        call nc_read_real_2d(trim(coordfile), "z", 1, int(nInitParticles(itime)), initCoords(itime)%z, &
+                             start=[1, itime], count=[int(nInitParticles(itime)), 1])
       else
         initCoords(itime)%z = 0.0d0
       end if
 
       if (nc_var_exists(trim(coordfile), "id")) then
-        call nc_read_real_2d(trim(coordfile), "id", 1, int(nInitParticles(itime)), initCoords(itime)%id, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+        call nc_read_real_2d(trim(coordfile), "id", 1, int(nInitParticles(itime)), initCoords(itime)%id, &
+                             start=[1, itime], count=[int(nInitParticles(itime)), 1])
       else
         initCoords(itime)%id = 0.0d0
       end if
 
       if (nc_var_exists(trim(coordfile), "beaching_time")) then
-        call nc_read_real_2d(trim(coordfile), "beaching_time", 1, int(nInitParticles(itime)), initCoords(itime)%beaching_time, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+        call nc_read_real_2d(trim(coordfile), "beaching_time", 1, int(nInitParticles(itime)), initCoords(itime)%beaching_time, &
+                             start=[1, itime], count=[int(nInitParticles(itime)), 1])
       else
         initCoords(itime)%beaching_time = 86400.0d0
       end if
 
       if (nc_var_exists(trim(coordfile), "rho")) then
-        call nc_read_real_2d(trim(coordfile), "rho", 1, int(nInitParticles(itime)), initCoords(itime)%rho, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+        call nc_read_real_2d(trim(coordfile), "rho", 1, int(nInitParticles(itime)), initCoords(itime)%rho, &
+                             start=[1, itime], count=[int(nInitParticles(itime)), 1])
       else
         initCoords(itime)%rho = 30.0d0
       end if
 
       if (nc_var_exists(trim(coordfile), "radius")) then
-        call nc_read_real_2d(trim(coordfile), "radius", 1, int(nInitParticles(itime)), initCoords(itime)%radius, start=[1, itime], count=[int(nInitParticles(itime)), 1])
+        call nc_read_real_2d(trim(coordfile), "radius", 1, int(nInitParticles(itime)), initCoords(itime)%radius, &
+                             start=[1, itime], count=[int(nInitParticles(itime)), 1])
       else
         initCoords(itime)%radius = 0.001
       end if
@@ -343,7 +350,7 @@ contains
   end subroutine init_particles_from_netcdf
   !===========================================
   subroutine check_initial_coordinates(this)
-    class(initial_position), intent(in) :: this
+    class(t_initial_position), intent(in) :: this
     integer :: ipart, i, j, on_land = 0
 
     do ipart = 1, this%n_init_particles

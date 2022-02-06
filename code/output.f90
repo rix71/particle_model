@@ -349,7 +349,7 @@ contains
   !===========================================
   subroutine write_data_snapshot(p, particle_num)
 
-    class(particle), intent(in) :: p
+    class(t_particle), intent(in) :: p
     integer, intent(in) :: particle_num
     integer             :: ncid, varid
     integer, save       :: nc_itime_out = 0
@@ -428,7 +428,7 @@ contains
   !===========================================
   subroutine write_beached(pin)
 
-    type(particle), intent(in) :: pin
+    type(t_particle), intent(in) :: pin
 
     if (pin%state .eq. 1.) then
       write (BCHFILE, *) pin%xPos, pin%yPos, pin%originNum, pin%age, pin%trajLen
@@ -441,7 +441,7 @@ contains
   !===========================================
   subroutine write_boundary(pin)
 
-    type(particle), intent(in) :: pin
+    type(t_particle), intent(in) :: pin
 
     if (pin%state .eq. 2.) then
       write (BDYFILE, *) pin%xPos, pin%yPos, pin%originNum, pin%age, pin%trajLen

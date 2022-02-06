@@ -13,7 +13,7 @@ module loop_particle
                        carty, carty_new, ig, jg, kg, igr, jgr, kgr, &
                        nc_itime, nc_itime_next, ncNTimes, pvelu, pvelunew, &
                        pvelv, pvelvnew, pvelw, pvelwnew
-  use particle_type, only: particle
+  use particle_type, only: t_particle
   use particle_vars, only: runparts, inputstep, initCoords, particles, max_age, kill_beached, kill_boundary
   use time_vars, only: theDate, run_end_dt, dt, nc_timestep, nTimes
   use domain, only: lonlat2xy, xy2lonlat
@@ -175,15 +175,15 @@ contains
         if (mod(itime, inputstep) .eq. 0) then
           FMT2, "Releasing ", initCoords(i_release)%n_init_particles, " new particles at itime = ", itime
           do ipart = 1, initCoords(i_release)%n_init_particles
-            particles(ipart + runparts) = particle(xPos=initCoords(i_release)%x(ipart), &
-                                                   yPos=initCoords(i_release)%y(ipart), &
-                                                   zPos=initCoords(i_release)%z(ipart), &
-                                                   originNum=initCoords(i_release)%id(ipart), &
-                                                   beachingtime=initCoords(i_release)%beaching_time(ipart), &
-                                                   rho=initCoords(i_release)%rho(ipart), &
-                                                   radius=initCoords(i_release)%radius(ipart), &
-                                                   kill_bch=kill_beached, &
-                                                   kill_bdy=kill_boundary)
+            particles(ipart + runparts) = t_particle(xPos=initCoords(i_release)%x(ipart), &
+                                                     yPos=initCoords(i_release)%y(ipart), &
+                                                     zPos=initCoords(i_release)%z(ipart), &
+                                                     originNum=initCoords(i_release)%id(ipart), &
+                                                     beachingtime=initCoords(i_release)%beaching_time(ipart), &
+                                                     rho=initCoords(i_release)%rho(ipart), &
+                                                     radius=initCoords(i_release)%radius(ipart), &
+                                                     kill_bch=kill_beached, &
+                                                     kill_bdy=kill_boundary)
           end do
           runparts = runparts + initCoords(i_release)%n_init_particles
           FMT2, runparts, "particles"
