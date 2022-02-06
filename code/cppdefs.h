@@ -1,6 +1,11 @@
 !---------------------------------------------
 ! For printing
+#ifdef DEBUG
+#define PROGRESSINFO 1
+#else
 #define PROGRESSINFO 100
+#endif
+
 #define LINE '--------------------------'
 #define STAR '**************************'
 
