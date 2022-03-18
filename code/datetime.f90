@@ -1,22 +1,22 @@
 #include "cppdefs.h"
-module modtime
+module mod_datetime
   !----------------------------------------------------------------
   ! Module for handling dates
   ! Timezones are not taken into account, assumes UTC
   !----------------------------------------------------------------
-  use precdefs
-  use errors
+  use mod_precdefs
+  use mod_errors
   use nc_manager, only: nc_get_timeunit, nc_read_time_val
   implicit none
   private
   !===================================================
   !---------------------------------------------
-  public :: t_datetime, dateDiff, init_datetime_from_netcdf
+  public :: t_datetime, date_diff, datetime_from_netcdf
   !---------------------------------------------
   type t_datetime
     integer           :: year = 1, month = 1, day = 1
     integer           :: hour = 0, minute = 0, second = 0
-    character(len=16) :: dtName ! Absolutely unnecessary...
+    character(len=LEN_CHAR_S) :: dtName ! Absolutely unnecessary...
 
   contains
     procedure :: setName
@@ -69,7 +69,7 @@ contains
     ! Constructor for datetime
     ! TODO: Date validation
     !---------------------------------------------
-    character(len=64), intent(in) :: date_str
+    character(len=LEN_CHAR_S), intent(in) :: date_str
     integer                       :: year, month, day
     integer                       :: hour, minute, second
     integer                       :: len_str
@@ -98,7 +98,7 @@ contains
 
   end function ctor_datetime
   !===========================================
-  type(t_datetime) function init_datetime_from_netcdf(fname, n)
+  type(t_datetime) function datetime_from_netcdf(fname, n)
     !---------------------------------------------
     ! Reads the time unit from netCDF and returns a datetime
     ! datetime instance. Time unit date if no 'n', first date
@@ -109,7 +109,7 @@ contains
     integer                       :: hour, minute, second
     integer, intent(in), optional :: n
     character(len=60)             :: timeunit
-    character(len=64)             :: ncdatestr
+    character(len=LEN_CHAR_S)             :: ncdatestr
     character(len=*), intent(in)  :: fname
     real(rk)                      :: diff
 
@@ -117,19 +117,19 @@ contains
     read (timeunit, '(8x,1x,5x,i4,1x,i2,1x,i2,1x,i2,1x,i2,1x,i2)') year, month, day, hour, minute, second
     write (ncdatestr, "(i4,a,i2.2,a,i2.2,1x,i2.2,a,i2.2,a,i2.2)") year, "-", month, "-", day, &
       hour, ":", minute, ":", second
-    init_datetime_from_netcdf = t_datetime(ncdatestr)
+    datetime_from_netcdf = t_datetime(ncdatestr)
 
     if (present(n)) then
-      call nc_read_time_val(trim(fname), n, diff)
-      call init_datetime_from_netcdf%update(diff)
+      diff = nc_read_time_val(trim(fname), n)
+      call datetime_from_netcdf%update(diff)
     end if
 
-  end function init_datetime_from_netcdf
+  end function datetime_from_netcdf
   !===========================================
   subroutine setName(this, name)
 
-    character(len=*), intent(in)   :: name
     class(t_datetime), intent(inout) :: this
+    character(len=*), intent(in)     :: name
 
     this%dtName = trim(name)
 
@@ -154,7 +154,7 @@ contains
   !===========================================
   subroutine print_short_date(this)
 
-    character(len=19)           :: datestr
+    character(len=19)             :: datestr
     class(t_datetime), intent(in) :: this
 
     write (datestr, "(i4,a,i2.2,a,i2.2,1x,i2.2,a,i2.2,a,i2.2)") &
@@ -172,7 +172,7 @@ contains
     !---------------------------------------------
 
     class(t_datetime), intent(inout) :: this
-    real(rk), intent(in)           :: dt
+    real(rk), intent(in)             :: dt
 
     call reset_DIM
     call this%isleap
@@ -210,7 +210,7 @@ contains
     ! without updating the original date
     !---------------------------------------------
     class(t_datetime), intent(in) :: this
-    real(rk), intent(in)        :: dt
+    real(rk), intent(in)          :: dt
 
     nextDate = this
     call nextDate%update(dt)
@@ -243,6 +243,7 @@ contains
     !---------------------------------------------
     integer, intent(in) :: year
 
+    isLeapBool = .false.
     if (mod(year, 4) .eq. 0) then
       isLeapBool = .true.
       if ((mod(year, 100) .eq. 0) .and. (mod(year, 400) .ne. 0)) then
@@ -270,7 +271,7 @@ contains
     !---------------------------------------------
     ! Gives date as 'seconds from 1900-01-01 00:00:00'
     !---------------------------------------------
-    integer                     :: year
+    integer                       :: year
     class(t_datetime), intent(in) :: this
 
     dbghead(date2num)
@@ -289,22 +290,23 @@ contains
     dbgtail(date2num)
   end function date2num
   !===========================================
-  real(rk) function dateDiff(dateStart, dateEnd)
+  real(rk) function date_diff(start, end)
     !---------------------------------------------
     ! Gives the difference between two dates in seconds
+    ! TODO: - operator?
     !---------------------------------------------
-    type(t_datetime), intent(in) :: dateStart, dateEnd
-    real(rk)                   :: datenumStart, datenumEnd
+    type(t_datetime), intent(in) :: start, end
+    real(rk)                     :: start_num, end_num
 
-    datenumStart = dateStart%date2num()
-    datenumEnd = dateEnd%date2num()
-    dateDiff = datenumEnd - datenumStart
+    start_num = start%date2num()
+    end_num = end%date2num()
+    date_diff = end_num - start_num
 
-    debug(datenumStart)
-    debug(datenumEnd)
-    debug(dateDiff)
+    debug(start_num)
+    debug(end_num)
+    debug(date_diff)
 
-  end function dateDiff
+  end function date_diff
   !===========================================
   elemental real(rk) function daysInYear(year)
     !---------------------------------------------
@@ -327,7 +329,7 @@ contains
     !---------------------------------------------
     logical, intent(in)           :: include_time
     character(len=14)             :: formatout
-    class(t_datetime), intent(in)   :: this
+    class(t_datetime), intent(in) :: this
 
     select case (include_time)
     case (.false.)
@@ -437,4 +439,4 @@ contains
     return
   end subroutine reset_DIM
 
-end module modtime
+end module mod_datetime

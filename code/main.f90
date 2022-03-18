@@ -1,14 +1,14 @@
 #include "cppdefs.h"
 program main
-  use precdefs
+  use mod_precdefs
 #ifdef WRITESTDOUT
   use run_params, only: runid
 #endif
   use run_params, only: dry_run
-  use initialise, only: init_run, init_model
-  use loop_particle, only: loop
-  use output, only: init_output, open_beach_bdy_files, close_beach_bdy_files
-  use postprocessing, only: postprocess
+  use mod_initialise, only: init_run, init_model
+  use mod_loop, only: loop
+  use mod_output, only: init_output, open_beach_bdy_files, close_beach_bdy_files
+  use mod_postprocessing, only: postprocess
   implicit none
   !===================================================
   call init_run

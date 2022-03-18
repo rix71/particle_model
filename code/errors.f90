@@ -1,5 +1,5 @@
 #include "cppdefs.h"
-module errors
+module mod_errors
   !----------------------------------------------------------------
   ! Basically stop
   !----------------------------------------------------------------
@@ -35,4 +35,4 @@ contains
     return
   end subroutine throw_warning
 
-end module errors
+end module mod_errors

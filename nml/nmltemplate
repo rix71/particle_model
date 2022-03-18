@@ -84,12 +84,12 @@
 !                  and search for file names "GETMPATH/[prefix]*[suffix]*.nc"
 ! file_prefix    - [char] Before processor number
 ! file_suffix    - [char] After processor number
-! startlevel     - [int] First index from which to read nlevels
 ! nlevels        - [int] Number of levels
 ! uvarname       - [char] Name of current x-component variable in GETM data
 ! vvarname       - [char] Name of current y-component variable in GETM data
 ! wvarname       - [char] Name of current z-component variable in GETM data
 ! zaxvarname     - [char] Name of vertical layer depth variable in GETM data
+! elevvarname    - [char] Name of elevation variable in GETM data
 ! zax_style      - [int] Depth values (1) or layer thickness (2)
 ! run_3d         - [bool] Do 3D simulation
 !===============================
@@ -99,12 +99,12 @@
   has_subdomains = .true.
   file_prefix = ''
   file_suffix = ''
-  startlevel = 1
   nlevels = 1
   uvarname = 'velx3d'
   vvarname = 'vely3d'
   wvarname = 'w'
   zaxvarname = 'zcn'
+  elevvarname = ''
   zax_style = 1
   run_3d = .false.
 /

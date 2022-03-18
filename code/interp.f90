@@ -1,9 +1,9 @@
 #include "cppdefs.h"
-module interp
+module mod_interp
   !----------------------------------------------------------------
   ! This module contains different interpolation methods
   !----------------------------------------------------------------
-  use precdefs
+  use mod_precdefs
   implicit none
   private
   !===================================================
@@ -12,18 +12,18 @@ module interp
   !===================================================
 contains
   !===========================================
-  subroutine bilinearinterp(x11, x12, x21, x22, y1, y2, z11, z12, z21, z22, x, y, z)
+  subroutine bilinearinterp(x11, x12, x21, x22, y1, y2, c11, c12, c21, c22, x, y, c)
 
-    real, intent(in)      :: x11, x12, x21, x22
-    real, intent(in)      :: y1, y2
-    real(rk), intent(in)  :: z11, z12, z21, z22
+    real(rk), intent(in)  :: x11, x12, x21, x22
+    real(rk), intent(in)  :: y1, y2
+    real(rk), intent(in)  :: c11, c12, c21, c22
     real(rk), intent(in)  :: x, y
-    real(rk), intent(out) :: z
-    real(rk)              :: z1, z2
+    real(rk), intent(out) :: c
+    real(rk)              :: c1, c2
 
-    z1 = (x12 - x) / (x12 - x11) * z11 + (x - x11) / (x12 - x11) * z12
-    z2 = (x22 - x) / (x22 - x21) * z21 + (x - x21) / (x22 - x21) * z22
-    z = (y2 - y) / (y2 - y1) * z1 + (y - y1) / (y2 - y1) * z2
+    c1 = (x21 - x) / (x21 - x11) * c11 + (x - x11) / (x21 - x11) * c21
+    c2 = (x22 - x) / (x22 - x12) * c12 + (x - x12) / (x22 - x12) * c22
+    c = (y2 - y) / (y2 - y1) * c1 + (y - y1) / (y2 - y1) * c2
 
     return
   end subroutine bilinearinterp
@@ -32,21 +32,24 @@ contains
                              c111, c121, c211, c221, c112, c122, c212, c222, &
                              x, y, z, c)
     !---------------------------------------------
-    ! indexing: c_ijk
-    ! e.g. 111 - front left bottom corner
-    !      121 - front right bottom corner
-    !      221 - back right bottom corner
-    !      222 - back right top corner
+    ! indexing:
+    !    c_ijk
+    !      111 - left front bottom corner
+    !      121 - left back bottom corner
+    !      221 - right back bottom corner
+    !      222 - right back top corner
+    !     c_jk
     !       11 - front bottom corner along x-axis
     !       22 - back top corner along x-axis
+    !      c_k
     !        1 - bottom point along y-axis
     !        2 - top point along y-axis
     ! TODO: Maybe calculate dx, dy and dz for each edge?
     !---------------------------------------------
 
-    real, intent(in)      :: x1, x2
-    real, intent(in)      :: y1, y2
-    real, intent(in)      :: z1, z2
+    real(rk), intent(in)  :: x1, x2
+    real(rk), intent(in)  :: y1, y2
+    real(rk), intent(in)  :: z1, z2
     real(rk)              :: dx, dy, dz
     real(rk), intent(in)  :: c111, c121, c211, c221, c112, c122, c212, c222
     real(rk), intent(in)  :: x, y, z
@@ -58,10 +61,10 @@ contains
     dy = (y - y1) / (y2 - y1)
     dz = (z - z1) / (z2 - z1)
 
-    c11 = c111 * (1 - dx) + c121 * dx
-    c12 = c112 * (1 - dx) + c122 * dx
-    c21 = c211 * (1 - dx) + c221 * dx
-    c22 = c212 * (1 - dx) + c222 * dx
+    c11 = c111 * (1 - dx) + c211 * dx
+    c12 = c112 * (1 - dx) + c212 * dx
+    c21 = c121 * (1 - dx) + c221 * dx
+    c22 = c122 * (1 - dx) + c222 * dx
 
     c1 = c11 * (1 - dy) + c21 * dy
     c2 = c12 * (1 - dy) + c22 * dy
@@ -87,4 +90,4 @@ contains
     end select
 
   end subroutine timeinterp
-end module interp
+end module mod_interp

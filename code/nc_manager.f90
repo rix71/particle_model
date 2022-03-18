@@ -4,13 +4,13 @@ module nc_manager
   !----------------------------------------------------------------
   ! Some useful netCDF subroutines
   !----------------------------------------------------------------
-  use precdefs
+  use mod_precdefs
   use netcdf
   implicit none
   private
   !===================================================
   !---------------------------------------------
-  public :: nc_read_real_1d, nc_read_real_2d, nc_read_real_4d, nc_read_time_val, &
+  public :: nc_read_real_1d, nc_read_real_2d, nc_read_real_3d, nc_read_real_4d, nc_read_time_val, &
             nc_get_dim, nc_get_timeunit, nc_var_exists, nc_check
 
   !---------------------------------------------
@@ -120,9 +120,9 @@ contains
     ! Add attribute to variable
     !---------------------------------------------
 
-    character(len=*), intent(in)   :: FILE_NAME
-    character(len=*), intent(in)   :: varname, attrname, attrval
-    integer                        :: ncid, varid
+    character(len=*), intent(in) :: FILE_NAME
+    character(len=*), intent(in) :: varname, attrname, attrval
+    integer                      :: ncid, varid
 
     FMT1, "======== Add netCDF attribute ========"
     FMT2, "Adding attribute ", trim(attrname), " to ", trim(FILE_NAME)
@@ -365,6 +365,22 @@ call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout, start=start, count
     return
   end subroutine nc_read_real_2d
   !===========================================
+  subroutine nc_read_real_3d(fname, vname, start, count, dataout)
+    integer               :: ncid, varid
+    integer, dimension(3) :: start, count
+    character(len=*)      :: fname
+    character(len=*)      :: vname
+    real(rk), intent(out) :: dataout(count(1), count(2), count(3))
+
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read_real_3d :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "nc_read_real_3d :: inq_varid "//trim(vname))
+    call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout, start=start, &
+                                            count=count), "nc_read_real_3d :: get_var "//trim(vname))
+    call nc_check(trim(fname), nf90_close(ncid), "nc_read_real_3d :: close")
+
+    return
+  end subroutine nc_read_real_3d
+  !===========================================
   subroutine nc_read_real_4d(fname, vname, start, count, dataout)
 
     integer               :: ncid, varid
@@ -382,12 +398,11 @@ call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout, start=start, count
     return
   end subroutine nc_read_real_4d
   !===========================================
-  subroutine nc_read_time_val(fname, n, timeval)
+  real(rk) function nc_read_time_val(fname, n) result(res)
 
     integer                      :: ncid, varid
     integer, intent(in)          :: n
     character(len=*), intent(in) :: fname
-    real(rk), intent(out)        :: timeval
     real(rk)                     :: tmpval(1)
 
     call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "nc_read_time_val :: open")
@@ -395,10 +410,10 @@ call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout, start=start, count
     call nc_check(trim(fname), nf90_get_var(ncid, varid, tmpval, start=[n], count=[1]), "nc_read_time_val :: get_var 'time'")
     call nc_check(trim(fname), nf90_close(ncid), "nc_read_time_val :: close")
 
-    timeval = tmpval(1)
+    res = tmpval(1)
 
     return
-  end subroutine nc_read_time_val
+  end function nc_read_time_val
   !===========================================
   subroutine nc_get_dim(fname, dname, ndim)
 

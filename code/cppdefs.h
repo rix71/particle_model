@@ -63,6 +63,8 @@
 #define NMLFILENAME 'input.inp'
 ! GETM usually fills with -9999., could be different in other models...
 #define MISSING_VAL -99.0d0
+#define ZERO 0.0d0
+#define ONE 1.0d0
 !---------------------------------------------
 ! Enumerations
 !--------------
@@ -84,3 +86,11 @@
 #define SEA 2
 #define BEACH 3
 #define BOUNDARY 4
+!--------------
+! particle
+#define ACTIVE 0
+#define BEACHED 1
+#define ON_BOUNDARY 2
+#define BOTTOM 3
+
+

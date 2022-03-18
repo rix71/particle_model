@@ -110,7 +110,7 @@ MAKE = $(MAKE_COMMAND)
 # default
 MAKECMDGOALS := all
 # makefile (from 'Makefile', line 23)
-SRCS = precdefs.f90 errors.f90 interp.f90 nc_manager.f90 modtime.f90 vars.f90 physics.f90 domain.f90 fields.f90 particle.f90 output.f90 init.f90 loop_particle.f90 postprocessing.f90 main.f90 
+SRCS = mod_precdefs.f90 errors.f90 interp.f90 nc_manager.f90 mod_datetime.f90 vars.f90 physics.f90 domain.f90 fields.f90 particle.f90 output.f90 init.f90 loop_particle.f90 mod_postprocessing.f90 main.f90 
 # environment
 SHLVL = 1
 # default
@@ -209,7 +209,7 @@ nc_manager.f90:
 #  File has been updated.
 #  Successfully updated.
 
-../bin/main: obj/precdefs.o obj/errors.o obj/interp.o obj/nc_manager.o obj/modtime.o obj/vars.o obj/physics.o obj/domain.o obj/fields.o obj/particle.o obj/output.o obj/init.o obj/loop_particle.o obj/postprocessing.o obj/main.o | ../bin
+../bin/main: obj/mod_precdefs.o obj/errors.o obj/interp.o obj/nc_manager.o obj/mod_datetime.o obj/vars.o obj/physics.o obj/domain.o obj/fields.o obj/particle.o obj/output.o obj/init.o obj/loop_particle.o obj/mod_postprocessing.o obj/main.o | ../bin
 #  Implicit rule search has not been done.
 #  Last modified 2021-12-21 15:00:06
 #  File has been updated.
@@ -236,7 +236,7 @@ obj/output.o: output.f90 | obj
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
 # Not a target:
-postprocessing.f90:
+mod_postprocessing.f90:
 #  Implicit rule search has been done.
 #  Last modified 2021-12-21 15:05:08
 #  File has been updated.
@@ -258,9 +258,9 @@ errors.f90:
 #  File has been updated.
 #  Successfully updated.
 
-obj/precdefs.o: precdefs.f90 | obj
+obj/mod_precdefs.o: mod_precdefs.f90 | obj
 #  Implicit rule search has been done.
-#  Implicit/static pattern stem: 'precdefs'
+#  Implicit/static pattern stem: 'mod_precdefs'
 #  Last modified 2021-12-21 14:02:00
 #  File has been updated.
 #  Successfully updated.
@@ -295,9 +295,9 @@ obj/fields.o: fields.f90 | obj
 #  recipe to execute (from 'Makefile', line 37):
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
-obj/modtime.o: modtime.f90 | obj
+obj/mod_datetime.o: mod_datetime.f90 | obj
 #  Implicit rule search has been done.
-#  Implicit/static pattern stem: 'modtime'
+#  Implicit/static pattern stem: 'mod_datetime'
 #  Last modified 2021-12-21 14:02:00
 #  File has been updated.
 #  Successfully updated.
@@ -349,7 +349,7 @@ obj:
 	mkdir $@
 
 # Not a target:
-precdefs.f90:
+mod_precdefs.f90:
 #  Implicit rule search has been done.
 #  Last modified 2021-12-21 11:12:34
 #  File has been updated.
@@ -402,7 +402,7 @@ clean:
 	rm *.mod
 
 # Not a target:
-modtime.f90:
+mod_datetime.f90:
 #  Implicit rule search has been done.
 #  Last modified 2021-12-21 11:13:26
 #  File has been updated.
@@ -424,28 +424,28 @@ domain.f90:
 #  File has been updated.
 #  Successfully updated.
 
-obj/postprocessing.o: postprocessing.f90 | obj
+obj/mod_postprocessing.o: mod_postprocessing.f90 | obj
 #  Implicit rule search has been done.
-#  Implicit/static pattern stem: 'postprocessing'
+#  Implicit/static pattern stem: 'mod_postprocessing'
 #  Last modified 2021-12-21 14:54:12
 #  File has been updated.
 #  Needs to be updated (-q is set).
 # automatic
-# @ := obj/postprocessing.o
+# @ := obj/mod_postprocessing.o
 # automatic
 # % := 
 # automatic
-# * := postprocessing
+# * := mod_postprocessing
 # automatic
-# + := postprocessing.f90
+# + := mod_postprocessing.f90
 # automatic
 # | := obj
 # automatic
-# < := postprocessing.f90
+# < := mod_postprocessing.f90
 # automatic
-# ^ := postprocessing.f90
+# ^ := mod_postprocessing.f90
 # automatic
-# ? := postprocessing.f90
+# ? := mod_postprocessing.f90
 # variable set hash-table stats:
 # Load=8/32=25%, Rehash=0, Collisions=1/20=5%
 #  recipe to execute (from 'Makefile', line 37):

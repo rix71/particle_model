@@ -1,5 +1,5 @@
 #include "cppdefs.h"
-module physics
+module mod_physics
   !----------------------------------------------------------------
   ! This module contains the physics methods
   ! TODO:
@@ -7,82 +7,99 @@ module physics
   ! - biofouling
   ! - drag
   !----------------------------------------------------------------
-  use precdefs
-  use errors
-  use params
+  use mod_precdefs
+  use mod_params
   use time_vars, only: dt
-  use field_vars, only: run_3d
+  use mod_particle, only: t_particle
+  use mod_fieldset, only: t_fieldset
   implicit none
   private
   !===================================================
   !---------------------------------------------
-  public :: diffuse, velocity, vertical_velocity, seawater_density_from_temp_and_salt
+  public :: vertical_velocity
   !===================================================
 contains
   !===========================================
-  subroutine diffuse(xin, yin, zin)
-
-    real(rk), intent(inout) :: xin, yin, zin
-
-    xin = xin + normal_random() * sqrt(2 * Ah * dt)
-    yin = yin + normal_random() * sqrt(2 * Ah * dt)
-    if (run_3d) zin = zin + normal_random() * sqrt(2 * kv * dt)
-
-    return
-  end subroutine diffuse
-  !===========================================
-  real(rk) function velocity(x, y, u_p, rho_p, rad_p, u_env, rho_env, visc_env)
+  subroutine vertical_velocity(p, fieldset, time, density_method, viscosity_method)
     !---------------------------------------------
-    ! Calculate horizontal velocity
+    ! Calculate the vertical velocity due to buoyancy
+    ! TODO: Which timestep should be used? (original or t + dt?)
     !---------------------------------------------
+    type(t_particle), intent(inout) :: p
+    type(t_fieldset), intent(in)    :: fieldset
+    real(rk), intent(in)            :: time
+    integer, intent(in)             :: density_method
+    logical, intent(in)             :: viscosity_method
+    real(rk)                        :: i, j, k
+    real(rk)                        :: kooi_vel
+    real(rk)                        :: rho = ONE ! Fluid density
+    real(rk)                        :: T, S
+    real(rk)                        :: mu  ! Dynamic viscosity
+    real(rk)                        :: kin_visc
 
-    real(rk), intent(in) :: x, y    ! Particle location
-    real(rk), intent(in) :: u_p     ! Particle velocity
-    real(rk), intent(in) :: rho_p   ! Particle density
-    real(rk), intent(in) :: rad_p   ! Particle radius
-    real(rk), intent(in) :: u_env   ! Environment velocity
-    real(rk), intent(in) :: rho_env ! Environment density
-    real(rk), intent(in) :: visc_env ! Environment viscosity
-    real(rk)             :: mass_p
+    dbghead(vertical_velocity)
 
-    dbghead(velocity)
+    debug(time)
+    debug(p%depth1)
+    debug(p%w1)
 
-    ! Temporary!!!
-    velocity = u_env
+    i = p%ir0
+    j = p%jr0
+    k = p%kr0
 
-    ! mass_p = rho_p * (4./3.) * pi * rad_p**3
-    ! if (mass_p <= 0.0d0) call throw_warning("velocity", "Particle mass is 0 or negative.")
+    ! Density
+    select case (density_method)
+    case (DENSITY)
+      rho = fieldset%get("RHO", time, i, j, k)
+    case (TEMP_SALT)
+      T = fieldset%get("TEMP", time, i, j, k)
+      S = fieldset%get("SALT", time, i, j, k)
+      rho = seawater_density_from_temp_and_salt(T, S, p%depth0)
+    case (DEFAULT_DENSITY)
+      rho = rho_default
+    end select
 
-    ! velocity = (fdrag(u_env, u_p, rad_p, rho_env, visc_env) &
-    !             ! + other forces &
-    !             ) / (mass_p) * dt
+    ! Viscosity
+    select case (viscosity_method)
+    case (.true.)
+      mu = fieldset%get("VISC", time, i, j, k)
+    case (.false.)
+      mu = mu_default
+    end select
+    kin_visc = mu / rho
 
-    dbgtail(velocity)
+    kooi_vel = Kooi_vertical_velocity(p%rho, p%radius, rho, kin_visc)
+
+    p%depth1 = p%depth1 + (kooi_vel * dt)
+    p%w1 = p%w1 + kooi_vel
+
+    debug(p%depth1)
+    debug(p%w1)
+
+    dbgtail(vertical_velocity)
     return
-  end function velocity
+  end subroutine vertical_velocity
   !===========================================
-  real(rk) function vertical_velocity(rho_p, rad_p, rho_env)
+  real(rk) function Kooi_vertical_velocity(rho_p, rad_p, rho_env, kin_visc) result(res)
     !---------------------------------------------
     ! Calculate vertical velocity
     ! Reference: Kooi 2017
     !---------------------------------------------
-    real(rk), intent(in) :: rho_p
-    real(rk), intent(in) :: rad_p
-    real(rk), intent(in) :: rho_env
+    real(rk), intent(in) :: rho_p, rad_p, rho_env
+    real(rk), intent(in) :: kin_visc  ! Kinematic viscosity
     real(rk)             :: d_star    ! Dimensionless diameter
     real(rk)             :: w_star    ! Dimensionless settling velocity
-    real(rk)             :: kin_visc  ! Kinematic viscosity
     real(rk)             :: delta_rho ! Density difference
 
-    dbghead(vertical_velocity)
+    dbghead(Kooi_vertical_velocity)
 
     debug(rho_p); debug(rad_p); 
     debug(rho_env)
 
-    kin_visc = mu / rho_env ! NOT USING VISCOSITY???
+    ! kin_visc = mu_env / rho_env ! NOT USING VISCOSITY???
     delta_rho = rho_p - rho_env
 
-    debug(mu); debug(kin_visc); 
+    debug(kin_visc); 
     debug(delta_rho)
 
     d_star = (delta_rho * g * (2.*rad_p)**3.) / (rho_env * (kin_visc**2.)) ! g negative?
@@ -100,60 +117,30 @@ contains
 
     debug(d_star); debug(w_star)
 
-    if (delta_rho > 0.0d0) then
+    if (delta_rho > ZERO) then
       DBG, "delta_rho > 0"; debug(delta_rho / rho_env)
-      vertical_velocity = -1.0 * ((delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
+      res = -1.0 * ((delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
     else
       DBG, "delta_rho < 0"; debug(delta_rho / rho_env)
-      vertical_velocity = (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
+      res = (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
     end if
 
-    debug(vertical_velocity)
+    debug(res)
 
-    dbgtail(vertical_velocity)
+    dbgtail(Kooi_vertical_velocity)
     return
-  end function vertical_velocity
+  end function Kooi_vertical_velocity
   !===========================================
-  real(rk) function fdrag(u, u_p, r_p, rho_f, visc_f)
-    !---------------------------------------------
-    ! Drag force
-    !---------------------------------------------
+  subroutine diffuse(xin, yin, zin)
 
-    real(rk), intent(in) :: u, u_p, r_p, rho_f, visc_f
+    real(rk), intent(inout) :: xin, yin, zin
 
-    dbghead(fdrag)
+    xin = xin + normal_random() * sqrt(2 * Ah * dt)
+    yin = yin + normal_random() * sqrt(2 * Ah * dt)
+    if (run_3d) zin = zin + normal_random() * sqrt(2 * kv * dt)
 
-    fdrag = (pi * (r_p)**2) * 0.5 * rho_f * &
-            C_drag(u, u_p, r_p, rho_f, visc_f) * abs(u - u_p) * (u - u_p)
-    debug(fdrag)
-
-    dbgtail(fdrag)
     return
-  end function fdrag
-  !===========================================
-  real(rk) function C_drag(u, u_p, r_p, rho_f, visc_f)
-    !---------------------------------------------
-    ! Drag coefficient using the Schiller-Naumann drag model
-    !---------------------------------------------
-
-    real(rk), intent(in) :: u, u_p, r_p, rho_f, visc_f
-    real(rk)             :: Reynolds
-
-    dbghead(C_drag)
-
-    Reynolds = rho_f * (2 * r_p) * abs(u_p - u) / visc_f
-    debug(Reynolds)
-    if (Reynolds < 1000.0d0) then
-      C_drag = 24.0d0 / Reynolds * (1.0d0 + 0.15 * Reynolds**(0.687))
-      dbgtail(C_drag)
-      return
-    end if
-
-    C_drag = 0.44
-
-    dbgtail(C_drag)
-    return
-  end function C_drag
+  end subroutine diffuse
   !===========================================
   real(rk) function seawater_density_from_temp_and_salt(T, S, Z)
     !---------------------------------------------
@@ -163,19 +150,19 @@ contains
     !---------------------------------------------
 
     real(rk), intent(in) :: T, S, Z
-    real(rk) :: SAu, CTu, Zu, deltaS
-    real(rk) :: R000, R100, R200, R300, R400, &
-                R500, R600, R010, R110, R210, &
-                R310, R410, R510, R020, R120, &
-                R220, R320, R420, R030, R130, &
-                R230, R330, R040, R140, R240, &
-                R050, R150, R060, R001, R101, &
-                R201, R301, R401, R011, R111, &
-                R211, R311, R021, R121, R221, &
-                R031, R131, R041, R002, R102, &
-                R202, R012, R112, R022, R003, &
-                R103, R013
-    real(rk) :: ss, tt, rz3, rz2, rz1, rz0, zz
+    real(rk)             :: SAu, CTu, Zu, deltaS
+    real(rk)             :: R000, R100, R200, R300, R400, &
+                            R500, R600, R010, R110, R210, &
+                            R310, R410, R510, R020, R120, &
+                            R220, R320, R420, R030, R130, &
+                            R230, R330, R040, R140, R240, &
+                            R050, R150, R060, R001, R101, &
+                            R201, R301, R401, R011, R111, &
+                            R211, R311, R021, R121, R221, &
+                            R031, R131, R041, R002, R102, &
+                            R202, R012, R112, R022, R003, &
+                            R103, R013
+    real(rk)             :: ss, tt, rz3, rz2, rz1, rz0, zz
 
     dbghead(seawater_density_from_temp_and_salt)
 
@@ -241,4 +228,4 @@ contains
 
     return
   end function normal_random
-end module physics
+end module mod_physics
