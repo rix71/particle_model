@@ -131,13 +131,14 @@ contains
     return
   end function Kooi_vertical_velocity
   !===========================================
-  subroutine diffuse(xin, yin, zin)
+  subroutine diffuse(xin, yin, zin, dif_3d)
 
     real(rk), intent(inout) :: xin, yin, zin
+    logical, intent(in)     :: dif_3d
 
     xin = xin + normal_random() * sqrt(2 * Ah * dt)
     yin = yin + normal_random() * sqrt(2 * Ah * dt)
-    if (run_3d) zin = zin + normal_random() * sqrt(2 * kv * dt)
+    if (dif_3d) zin = zin + normal_random() * sqrt(2 * kv * dt)
 
     return
   end subroutine diffuse
@@ -150,19 +151,19 @@ contains
     !---------------------------------------------
 
     real(rk), intent(in) :: T, S, Z
-    real(rk)             :: SAu, CTu, Zu, deltaS
-    real(rk)             :: R000, R100, R200, R300, R400, &
-                            R500, R600, R010, R110, R210, &
-                            R310, R410, R510, R020, R120, &
-                            R220, R320, R420, R030, R130, &
-                            R230, R330, R040, R140, R240, &
-                            R050, R150, R060, R001, R101, &
-                            R201, R301, R401, R011, R111, &
-                            R211, R311, R021, R121, R221, &
-                            R031, R131, R041, R002, R102, &
-                            R202, R012, R112, R022, R003, &
-                            R103, R013
-    real(rk)             :: ss, tt, rz3, rz2, rz1, rz0, zz
+    real(rk) :: SAu, CTu, Zu, deltaS
+    real(rk) :: R000, R100, R200, R300, R400, &
+                R500, R600, R010, R110, R210, &
+                R310, R410, R510, R020, R120, &
+                R220, R320, R420, R030, R130, &
+                R230, R330, R040, R140, R240, &
+                R050, R150, R060, R001, R101, &
+                R201, R301, R401, R011, R111, &
+                R211, R311, R021, R121, R221, &
+                R031, R131, R041, R002, R102, &
+                R202, R012, R112, R022, R003, &
+                R103, R013
+    real(rk) :: ss, tt, rz3, rz2, rz1, rz0, zz
 
     dbghead(seawater_density_from_temp_and_salt)
 

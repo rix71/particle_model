@@ -120,9 +120,9 @@ contains
     ! Add attribute to variable
     !---------------------------------------------
 
-    character(len=*), intent(in) :: FILE_NAME
-    character(len=*), intent(in) :: varname, attrname, attrval
-    integer                      :: ncid, varid
+    character(len=*), intent(in)   :: FILE_NAME
+    character(len=*), intent(in)   :: varname, attrname, attrval
+    integer                        :: ncid, varid
 
     FMT1, "======== Add netCDF attribute ========"
     FMT2, "Adding attribute ", trim(attrname), " to ", trim(FILE_NAME)

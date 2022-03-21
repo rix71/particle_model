@@ -18,7 +18,6 @@ NETCDF_INC=-I${NETCDF_DIR}/include
 NETCDF_LIB=-L${NETCDF_DIR}/lib
 
 FFLAGS += $(NETCDF_INC)
-# FFLAGS += -Iinclude
 
 LIBS = ${NETCDF_LIB} -lnetcdff -lnetcdf
 
@@ -33,30 +32,7 @@ SRCS = precdefs.f90 errors.f90 \
        init.f90 loop.f90 postprocessing.f90 \
 	   main.f90 
 
-# SRCS = Utils/precdefs.f90 \
-#        Utils/errors.f90 \
-#        Utils/interp.f90 \
-# 	   Utils/nc_manager.f90 \
-# 	   Utils/datetime.f90
-
-# SRCS += Unknown/vars.f90 Unknown/physics.f90
-
-# SRCS += Field/domain.f90 \
-#         Field/fields.f90 
-
-# SRCS += Particle/particle.f90
-
-# SRCS += Unknown/output.f90 \
-#         Core/init.f90 \
-#         Core/loop_particle.f90 \
-#         Unknown/mod_postprocessing.f90 \
-#         Core/main.f90
-        
-
-
 OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
-# OBJS = $(patsubst %.f90, %.o, $(SRCS))
-# OBJ_DIRS = $(OBJ) $(OBJ)/Utils $(OBJ)/Field $(OBJ)/Particle $(OBJ)/Core $(OBJ)/Unknown
 #--------------------------------------------------
 PROGRAM = $(BIN)/main
 
@@ -77,4 +53,3 @@ clean:
 
 show:
 	@ echo $(OBJS)
-	@ echo $(OBJ_DIRS)

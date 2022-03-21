@@ -55,10 +55,10 @@ contains
     use nc_manager
     integer :: nc_x_dimid, nc_y_dimid
 #endif
-    integer, intent(in)          :: nx, ny
+    integer, intent(in) :: nx, ny
     character(len=*), intent(in) :: topofile
     character(len=*), intent(in) :: lon, lat, bathy ! Variable names
-    integer                      :: ii, jj
+    integer :: ii, jj
 
     dbghead(init_domain)
 
@@ -160,8 +160,8 @@ contains
   end function ctor_domain
   !===========================================
   function get_lons_whole(this) result(res)
-    class(t_domain), intent(in)  :: this
-    real(rk), dimension(this%nx) :: res
+    class(t_domain), intent(in) :: this
+    real(rk), dimension(this%nx):: res
 
     dbghead(get_lons_whole)
 
@@ -189,13 +189,24 @@ contains
 
     debug(idx)
 
+#ifndef SNAP_TO_BOUNDS
+    if (idx >= real(this%nx, rk)) then
+      call throw_error("domain :: get_lons_interp", "Index out of bounds!")
+    end if
+#endif
+
     i0 = float(floor(idx)); debug(i0)
     i1 = float(floor(idx) + 1); debug(i1)
 
     debug(this%lons(int(i0)))
     debug(this%lons(int(i1)))
 
-    res = (i1 - idx) / (i1 - i0) * this%lons(int(i0)) + (idx - i0) / (i1 - i0) * this%lons(int(i1))
+    if (idx < real(this%nx, rk)) then
+      res = (i1 - idx) / (i1 - i0) * this%lons(int(i0)) + (idx - i0) / (i1 - i0) * this%lons(int(i1))
+    else
+      ! I guess this is a kinda acceptable solution to index errors
+      res = (i1 - idx) / (i1 - i0) * this%lons(int(i0)) + (idx - i0) / (i1 - i0) * (this%lons(int(i0)) + this%dlon)
+    end if
 
     debug(res)
 
@@ -232,6 +243,11 @@ contains
     dbghead(get_lats_interp)
 
     debug(idx)
+#ifndef SNAP_TO_BOUNDS
+    if (idx >= real(this%ny, rk)) then
+      call throw_error("domain :: get_lats_interp", "Index out of bounds!")
+    end if
+#endif
 
     i0 = float(floor(idx)); debug(i0)
     i1 = float(floor(idx) + 1); debug(i1)
@@ -239,7 +255,11 @@ contains
     debug(this%lats(int(i0)))
     debug(this%lats(int(i1)))
 
-    res = (i1 - idx) / (i1 - i0) * this%lats(int(i0)) + (idx - i0) / (i1 - i0) * this%lats(int(i1))
+    if (idx < real(this%ny, rk)) then
+      res = (i1 - idx) / (i1 - i0) * this%lats(int(i0)) + (idx - i0) / (i1 - i0) * this%lats(int(i1))
+    else
+      res = (i1 - idx) / (i1 - i0) * this%lats(int(i0)) + (idx - i0) / (i1 - i0) * (this%lats(int(i0)) + this%dlat)
+    end if
 
     debug(res)
 
@@ -248,7 +268,7 @@ contains
   end function get_lats_interp
   !===========================================
   function get_bathymetry_whole(this) result(res)
-    class(t_domain), intent(in)           :: this
+    class(t_domain), intent(in) :: this
     real(rk), dimension(this%nx, this%ny) :: res
 
     res = this%depdata
@@ -258,8 +278,8 @@ contains
   !===========================================
   function get_bathymetry_idx(this, i, j) result(res)
     class(t_domain), intent(in) :: this
-    integer, intent(in)         :: i, j
-    real(rk)                    :: res
+    integer, intent(in) :: i, j
+    real(rk) :: res
 
     res = this%depdata(i, j)
 
@@ -294,7 +314,7 @@ contains
   end function get_bathymetry_idx_interp
   !===========================================
   function get_seamask_whole(this) result(res)
-    class(t_domain), intent(in)          :: this
+    class(t_domain), intent(in) :: this
     integer, dimension(this%nx, this%ny) :: res
 
     res = this%seamask
@@ -313,8 +333,8 @@ contains
   !===========================================
   subroutine lonlat2xy(this, lon, lat, x, y)
     class(t_domain), intent(in) :: this
-    real(rk), intent(in)        :: lon, lat
-    real(rk), intent(out)       :: x, y
+    real(rk), intent(in)  :: lon, lat
+    real(rk), intent(out) :: x, y
 
     x = (lon - this%lon0) / this%dlon * this%dx
     y = (lat - this%lat0) / this%dlat * this%dy
@@ -324,8 +344,8 @@ contains
   !===========================================
   subroutine xy2lonlat(this, x, y, lon, lat)
     class(t_domain), intent(in) :: this
-    real(rk), intent(in)        :: x, y
-    real(rk), intent(out)       :: lon, lat
+    real(rk), intent(in) :: x, y
+    real(rk), intent(out) :: lon, lat
 
     lon = x / this%dx * this%dlon + this%lon0
     lat = y / this%dy * this%dlat + this%lat0
@@ -337,7 +357,8 @@ contains
     !---------------------------------------------
     ! Should integer indices be int(irt) or nint(irt) (nearest)?
     !---------------------------------------------
-    class(t_domain), intent(in)     :: this
+    class(t_domain), intent(in) :: this
+
     real(rk), intent(in)            :: lon, lat
     integer, optional, intent(out)  :: i, j
     real(rk), optional, intent(out) :: ir, jr

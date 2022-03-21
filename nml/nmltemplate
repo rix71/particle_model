@@ -1,7 +1,7 @@
 !===============================
 ! Run parameters
 !-------------------------------
-! runid - [char] Name of the run
+! runid   - [char] Name of the run
 ! dry_run - [bool] Start loop
 !===============================
 &run_params
@@ -11,15 +11,22 @@
 !===============================
 ! Physical parameters
 !-------------------------------
-! do_diffusion - [bool] Diffuse particles if True
-! do_velocity  - [bool] Calculate particles' own velocity (True)
-!                or advect with current speed (False)
-! Ah           - [float] Horisontal diffusion constant
-! kv           - [float] Vertical diffusion constant
+! do_diffusion     - [bool]  Diffuse particles if True
+! do_velocity      - [bool]  Calculate particles' own velocity (True)
+!                            or advect with current speed (False)
+! run_3d           - [bool]  Do 3D simulation
+! advection_method - [int]   Advection scheme
+!                            0 - no advection
+!                            1 - explicit Euler
+!                            2 - RK2
+! Ah               - [float] Horisontal diffusion constant
+! kv               - [float] Vertical diffusion constant
 !===============================
 &params
   do_diffusion = .false.
   do_velocity = .false.
+  run_3d = .false.
+  advection_method = 2
   Ah = 0.01
   kv = 0.0001
 /
@@ -30,8 +37,8 @@
 ! bathyvarname - [char] Name of bathymetry variable in topofile
 ! lonvarname   - [char] Name of longitude variable in topofile
 ! latvarname   - [char] Name of latitude variable in topofile
-! nx           - [int] Number of x-points
-! ny           - [int] Number of y-points
+! nx           - [int]  Number of x-points
+! ny           - [int]  Number of y-points
 !===============================
 &domain_vars
   topofile = 'topo.nc'
@@ -44,14 +51,15 @@
 !===============================
 ! Particle variables
 !-------------------------------
-! inputstep     - [int] Interval at which particles will be released
-! init_method   - [int] 1 - initialise from text file
-!                       2 - initialise from netCDF
-! coordfile     - [char] Particle initialisation file
-! max_age       - [float] Life time of (all) particles in timesteps
-!                     -1 to achieve immortality!
-! kill_beached  - [bool] Set beached particle as inactive
-! kill_boundary - [bool] Set particle on boundary as inactive
+! inputstep     - [int]   Interval at which particles will be released
+! init_method   - [int]   Particle initialisation method
+!                         1 - initialise from text file
+!                         2 - initialise from netCDF
+! coordfile     - [char]  Particle initialisation file
+! max_age       - [float] Life time of (all) particles in seconds
+!                         < 0 - immortality
+! kill_beached  - [bool]  Set beached particle as inactive
+! kill_boundary - [bool]  Set particle on boundary as inactive
 !===============================
 &particle_vars
   inputstep = 1800
@@ -64,8 +72,8 @@
 !===============================
 ! Time variables
 !-------------------------------
-! run_start - [char] Start of simulation
-! run_end   - [char] End of simulation
+! run_start - [char]  Start of simulation
+! run_end   - [char]  End of simulation
 ! dt        - [float] Time step
 !===============================
 &time_vars
@@ -77,21 +85,22 @@
 ! Field variables
 !-------------------------------
 ! GETMPATH       - [char] Path to GETM data
-! pmapfile       - [char] Parallel setup file, only needed if has_subdomains=.true.
+! pmapfile       - [char] Parallel setup file
+!                         only needed if has_subdomains=.true.
 ! has_subdomains - [bool] Data in multiple files or one file
-!                  If .true., will search for directories (named as start dates e.g. 20190131) "GETMPATH/*/"
-!                  If .false., will assume all files are in one directory
-!                  and search for file names "GETMPATH/[prefix]*[suffix]*.nc"
+!                         .true.  - search for directories (named as start dates e.g. 20190131) "GETMPATH/*/"
+!                         .false. - assume all files are in one directory and search for file names "GETMPATH/[prefix]*[suffix]*.nc"
 ! file_prefix    - [char] Before processor number
 ! file_suffix    - [char] After processor number
-! nlevels        - [int] Number of levels
+! nlevels        - [int]  Number of vertical levels
 ! uvarname       - [char] Name of current x-component variable in GETM data
 ! vvarname       - [char] Name of current y-component variable in GETM data
 ! wvarname       - [char] Name of current z-component variable in GETM data
 ! zaxvarname     - [char] Name of vertical layer depth variable in GETM data
 ! elevvarname    - [char] Name of elevation variable in GETM data
-! zax_style      - [int] Depth values (1) or layer thickness (2)
-! run_3d         - [bool] Do 3D simulation
+! zax_style      - [int]  Vertical coordinate values 
+!                         1 - depth values 
+!                         2 - layer thickness
 !===============================
 &field_vars
   GETMPATH = './data'
@@ -106,17 +115,16 @@
   zaxvarname = 'zcn'
   elevvarname = ''
   zax_style = 1
-  run_3d = .false.
 /
 !===============================
 ! Output variables
 !-------------------------------
-! outDir                 - [char] Where do I save the data?
-! outputstep             - [int] How often to save the data?
+! outDir                 - [char]  Where to save the data
+! outputstep             - [int]   How often to save the data
 ! snap_interval          - [float] Snapshot interval (in seconds)
-! write_all_particles    - [bool] Write all (active and inactive) particles
-! write_active_particles - [bool] Write only active particles
-! write_snapshot         - [bool] Save a particle by age (in intervals of snap_interval)
+! write_all_particles    - [bool]  Write all (active and inactive) particles
+! write_active_particles - [bool]  Write only active particles
+! write_snapshot         - [bool]  Save a particle by age (in intervals of snap_interval)
 !===============================
 &output_vars
   outDir = './'

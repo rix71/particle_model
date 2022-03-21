@@ -7,9 +7,9 @@ module mod_output
   use mod_errors
   use mod_particle
   use run_params, only: runid
+  use mod_params, only: run_3d
   use mod_particle_vars, only: particles
   use time_vars, only: theDate, nTimes, dt
-  use field_vars, only: run_3d
   use netcdf
   use nc_manager, only: nc_write, nc_initialise, &
                         nc_add_dimension, nc_add_variable, &
@@ -26,9 +26,9 @@ module mod_output
             write_data_snapshot, outDir, write_snapshot
   !---------------------------------------------
   integer                     :: outputstep
-  character(len=LEN_CHAR_L)   :: outDir
+  character(len=LEN_CHAR_L)          :: outDir
   integer                     :: nc_t_dimid, nc_p_dimid
-  character(len=LEN_CHAR_L)   :: nc_fileout_all, nc_fileout_active, nc_fileout_snap
+  character(len=LEN_CHAR_L)          :: nc_fileout_all, nc_fileout_active, nc_fileout_snap
   logical                     :: write_all_particles, write_active_particles, write_snapshot
   real(rk)                    :: snap_interval
   namelist /output_vars/ outDir, outputstep, snap_interval, write_all_particles, write_active_particles, write_snapshot
@@ -357,10 +357,10 @@ contains
   subroutine write_data_snapshot(p, particle_num)
 
     class(t_particle), intent(in) :: p
-    integer, intent(in)           :: particle_num
-    integer                       :: ncid, varid
-    integer, save                 :: nc_itime_out = 0
-    real(rk)                      :: var1d(1), dateval(1)
+    integer, intent(in) :: particle_num
+    integer             :: ncid, varid
+    integer, save       :: nc_itime_out = 0
+    real(rk)            :: var1d(1), dateval(1)
 
     nc_itime_out = nc_itime_out + 1
     call nc_check(trim(nc_fileout_snap), nf90_open(trim(nc_fileout_snap), nf90_write, ncid), "write_data_snap :: open")

@@ -91,7 +91,7 @@ contains
   !===========================================
   real(rk) function time_interp_scalar(this, f1, f2, t) result(res)
     class(t_field), intent(in) :: this
-    real(rk), intent(in)       :: f1, f2, t
+    real(rk), intent(in) :: f1, f2, t
 
     res = f1 + (f2 - f1) * (t / this%timestep)
 
@@ -99,11 +99,11 @@ contains
   end function time_interp_scalar
   !===========================================
   function time_interp_vector(this, f1, f2, t, n) result(res)
-    class(t_field), intent(in)         :: this
-    integer, intent(in)                :: n
+    class(t_field), intent(in) :: this
+    integer, intent(in) :: n
     real(rk), dimension(n), intent(in) :: f1, f2
-    real(rk), intent(in)               :: t
-    real(rk)                           :: res(n)
+    real(rk), intent(in) :: t
+    real(rk) :: res(n)
 
     res = f1 + (f2 - f1) * (t / this%timestep)
 
@@ -135,10 +135,31 @@ contains
     i = floor(x); debug(i)
     x1 = float(floor(x)); debug(x1)
     x2 = float(floor(x) + 1); debug(x2)
+    if (x >= real(this%nx, rk)) then
+#ifdef SNAP_TO_BOUNDS
+      ! Right boundary
+      ! can only be trusted when the SNAP_TO_BOUNDS flag is on
+      i = i - 1
+      x1 = x1 - ONE
+      x2 = x2 - ONE
+#else
+      call throw_error("field :: get_interp", "Index (i) out of bounds!")
+#endif
+    end if
 
     j = floor(y); debug(j)
     y1 = float(floor(y)); debug(y1)
     y2 = float(floor(y) + 1); debug(y2)
+    if (y >= real(this%ny, rk)) then
+#ifdef SNAP_TO_BOUNDS
+      ! Top boundary
+      j = j - 1
+      y1 = y1 - ONE
+      y2 = y2 - ONE
+#else
+      call throw_error("field :: get_interp", "Index (j) out of bounds!")
+#endif
+    end if
 
     if (present(z)) then
       debug(z)
@@ -202,11 +223,11 @@ contains
     !---------------------------------------------
     ! Getter function with integer indices
     !---------------------------------------------
-    class(t_field), intent(in)    :: this
-    integer, intent(in)           :: t, i, j
+    class(t_field), intent(in) :: this
+    integer, intent(in) :: t, i, j
     integer, optional, intent(in) :: k
     ! logical, optional :: interp_time
-    real(rk), intent(out)         :: res
+    real(rk), intent(out) :: res
 
     ! if (.not.present(interp_time)) interp_time=.true.
 
@@ -228,14 +249,14 @@ contains
   end subroutine get_nointerp
   !===========================================
   subroutine get_array_1D(this, t, i, j, n, dim, res)
-    class(t_field), intent(in)    :: this
-    real(rk), intent(in)          :: t
-    integer, intent(in)           :: i, j
-    integer, intent(in)           :: n
+    class(t_field), intent(in) :: this
+    real(rk), intent(in) :: t
+    integer, intent(in) :: i, j
+    integer, intent(in) :: n
     integer, optional, intent(in) :: dim
-    real(rk), intent(out)         :: res(n)
-    real(rk)                      :: f1(n), f2(n)
-    integer                       :: idim
+    real(rk), intent(out) :: res(n)
+    real(rk) :: f1(n), f2(n)
+    integer :: idim
 
     dbghead(get_array_1D)
 
@@ -273,7 +294,7 @@ contains
   !===========================================
   subroutine set(this, data)
     class(t_field), intent(inout) :: this
-    real(rk), intent(in)          :: data(this%nx, this%ny, this%nz)
+    real(rk), intent(in) :: data(this%nx, this%ny, this%nz)
 
     if (.not. this%set_t1) then
       DBG, "--> T1"
@@ -292,7 +313,7 @@ contains
   !===========================================
   function get_array_pointer(this) result(p_data)
     class(t_field), intent(inout) :: this
-    real(rk), pointer             :: p_data(:, :, :)
+    real(rk), pointer :: p_data(:, :, :)
 
     if (.not. this%set_t1) then
       DBG, "--> T1"

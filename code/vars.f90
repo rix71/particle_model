@@ -19,7 +19,9 @@ module mod_params
   use mod_precdefs
 
   logical             :: do_diffusion, &
-                         do_velocity               ! Calculate particles' own velocity
+                         do_velocity, &            ! Calculate particles' own velocity
+                         run_3d                    ! 2D or 3D
+  integer             :: advection_method          
   real(rk)            :: Ah, kv                    ! Horisontal and vertical diffusion coefs
   real(rk), parameter :: pi = 4.*atan(1.), &       ! 3, plus a little extra
                          g = 9.81, &
@@ -70,8 +72,7 @@ module field_vars
   use mod_fieldset
 
   logical                   :: has_subdomains, &               ! Is the data in multiple files (true) or one file (false)?
-                               has_viscosity, &
-                               run_3d                          ! 2D or 3D
+                               has_viscosity
   integer                   :: nlevels, &
                                zax_style, &                    ! Depth values (1) or layer thickness (2)
                                has_density                     ! 0 - default density, 1 - has variable, 2 - calculate from T/S

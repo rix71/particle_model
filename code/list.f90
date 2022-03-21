@@ -184,10 +184,10 @@ contains
   end function l_key_exists
   !===========================================
   integer function l_node_loc(this, key) result(res)
-    class(t_list), intent(in)    :: this
+    class(t_list), intent(in) :: this
     character(len=*), intent(in) :: key
-    type(t_node), pointer        :: current_node
-    integer                      :: count
+    type(t_node), pointer :: current_node
+    integer :: count
 
     res = 0
     count = 1

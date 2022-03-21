@@ -33,6 +33,7 @@ module mod_fieldset
     ! netCDF read variables
     logical                   :: read_first = .true.
     integer                   :: read_idx
+    integer                   :: read_idx_increment = 1
     character(len=LEN_CHAR_L) :: current_path   ! Path to current data
     integer                   :: current_ntimes ! Current timestep index
     integer                   :: dirlist_idx
@@ -59,6 +60,7 @@ module mod_fieldset
     procedure, public :: set_zax
     procedure, public :: get_zax
     procedure, public :: set_start_time
+    procedure, public :: set_simulation_timestep
     procedure, public :: get_folder, get_file
     procedure, public :: get_time
     procedure, public :: find_folder, find_file
@@ -90,12 +92,12 @@ contains
   type(t_fieldset) function ctor_fieldset(nx, ny, nz, file_prefix, file_suffix, domain, path, pmap) result(f)
 #undef PROC0
 #define PROC0 "/"//trim(f%file_prefix)//"0000"//trim(f%file_suffix)//".nc"
-    integer, intent(in)                :: nx, ny, nz
-    character(*), intent(in)           :: file_prefix, file_suffix
+    integer, intent(in) :: nx, ny, nz
+    character(*), intent(in) :: file_prefix, file_suffix
     type(t_domain), target, intent(in) :: domain
     character(*), optional, intent(in) :: path, pmap
-    character(len=LEN_CHAR_L)          :: init_path
-    real(rk)                           :: t1, t2
+    character(len=LEN_CHAR_L) :: init_path
+    real(rk) :: t1, t2
 
     f%nx = nx
     f%ny = ny
@@ -240,8 +242,8 @@ contains
   !===========================================
   subroutine set_zax(this, zax_name, zax_style)
     class(t_fieldset), intent(inout) :: this
-    character(*), intent(in)         :: zax_name
-    integer, intent(in)              :: zax_style
+    character(*), intent(in) :: zax_name
+    integer, intent(in) :: zax_style
 
     dbghead(set_zax)
 
@@ -285,9 +287,23 @@ contains
     return
   end subroutine set_start_time
   !===========================================
+  subroutine set_simulation_timestep(this, dt)
+    class(t_fieldset), intent(inout) :: this
+    real(rk), intent(in)             :: dt
+
+    if (dt <= this%nc_timestep) then
+      this%read_idx_increment = 1
+    else
+      if (mod(dt,this%nc_timestep) .ne. 0) call throw_error("fieldset :: set_simulation_timestep", "Time step should be divisible by netCDF time step")
+      this%read_idx_increment = int(dt/this%nc_timestep)
+    end if
+
+    return
+  end subroutine set_simulation_timestep
+  !===========================================
   real(rk) function get_time(this, date) result(res)
     class(t_fieldset), intent(in) :: this
-    type(t_datetime), intent(in)  :: date
+    type(t_datetime), intent(in) :: date
 
     res = date_diff(this%date_t1, date)
 
@@ -295,7 +311,7 @@ contains
   !===========================================
   character(len=LEN_CHAR_L) function get_folder(this, idx) result(res)
     class(t_fieldset), intent(in) :: this
-    integer, intent(in)           :: idx
+    integer, intent(in) :: idx
 
     if (idx < 1) call throw_error("fieldset :: get_folder", "Index out of bounds (idx < 1)")
     if (idx > this%nentries) call throw_error("fieldset :: get_folder", "Index out of bounds (idx > number of folders)")
@@ -306,7 +322,7 @@ contains
   !===========================================
   character(len=LEN_CHAR_L) function get_file(this, idx) result(res)
     class(t_fieldset), intent(in) :: this
-    integer, intent(in)           :: idx
+    integer, intent(in) :: idx
 
     if (idx < 1) call throw_error("fieldset :: get_file", "Index out of bounds (idx < 1)")
     if (idx > this%nentries) call throw_error("fieldset :: get_file", "Index out of bounds (idx > number of files)")
@@ -327,8 +343,8 @@ contains
     !       would not depend on ls getting it right.
     !---------------------------------------------
     class(t_fieldset), intent(inout) :: this
-    logical                          :: dirlist_exists
-    integer                          :: idir
+    logical :: dirlist_exists
+    integer :: idir
 
     FMT1, "======== Init dirlist ========"
     inquire (file=trim(dirinfile), exist=dirlist_exists)
@@ -386,10 +402,10 @@ contains
     ! EDIT: This is called from init_model only if this%has_subdomains=.true.
     !---------------------------------------------
     class(t_fieldset), intent(inout) :: this
-    integer                          :: imax, jmax ! Total size of the domain
-    integer                          :: ioff, joff ! Subdomain offset
-    integer                          :: pnum, iend, jend
-    integer                          :: i, j, iproc
+    integer :: imax, jmax ! Total size of the domain
+    integer :: ioff, joff ! Subdomain offset
+    integer :: pnum, iend, jend
+    integer :: i, j, iproc
 
     FMT1, "======== Init subdomains ========"
 
@@ -447,7 +463,7 @@ contains
     ! (it's private otherwise)
     !---------------------------------------------
     class(t_fieldset), intent(in) :: this
-    integer, intent(inout)        :: pmapout(this%nproc, 2)
+    integer, intent(inout) :: pmapout(this%nproc, 2)
 
     pmapout = this%pmap
 
@@ -815,10 +831,11 @@ contains
       end do
     end if
 
-    this%read_idx = this%read_idx + 1
+    this%read_idx = this%read_idx + this%read_idx_increment
     if (this%read_idx > this%current_ntimes) then
-      this%read_idx = 1
-      this%dirlist_idx = this%dirlist_idx + 1
+      this%read_idx = this%read_idx - this%current_ntimes
+      ! Hopefully noone will be skipping whole files
+      this%dirlist_idx = this%dirlist_idx + 1 
       if (this%has_subdomains) then
         this%current_path = this%get_folder(this%dirlist_idx)
         call nc_get_dim(trim(this%current_path)//PROC0, 'time', this%current_ntimes)
@@ -846,7 +863,7 @@ contains
   !===========================================
   subroutine read_first_timesteps(this, date)
     class(t_fieldset), intent(inout) :: this
-    type(t_datetime), intent(in)     :: date
+    type(t_datetime), intent(in)    :: date
 
     dbghead(read_first_timesteps)
 
@@ -858,14 +875,14 @@ contains
   end subroutine read_first_timesteps
   !===========================================
   subroutine read_field_subdomains(this, p_field)
-    class(t_fieldset), intent(in)             :: this
-    type(t_field), target, intent(inout)      :: p_field
-    character(len=LEN_CHAR_S)                 :: varname
-    character(len=LEN_CHAR_L)                 :: subdom_filename
-    integer                                   :: n_dims
-    real(rk), dimension(:, :, :), allocatable :: buffer, tmp_arr
-    integer, allocatable                      :: start(:), count(:)
-    integer                                   :: i, j, i_subdom, ioff, joff, istart, jstart
+    class(t_fieldset), intent(in)                :: this
+    type(t_field), target, intent(inout)         :: p_field
+    character(len=LEN_CHAR_S)                    :: varname
+    character(len=LEN_CHAR_L)                    :: subdom_filename
+    integer                                      :: n_dims
+    real(rk), dimension(:, :, :), allocatable    :: buffer, tmp_arr
+    integer, allocatable                         :: start(:), count(:)
+    integer                                      :: i, j, i_subdom, ioff, joff, istart, jstart
 
     varname = p_field%get_varname()
     n_dims = p_field%n_dims

@@ -5,10 +5,10 @@ module mod_loop
   !----------------------------------------------------------------
   use mod_precdefs
   use mod_errors
-  use mod_params, only: do_velocity
+  use mod_params, only: do_velocity, run_3d, advection_method
   use mod_advection
   use mod_physics
-  use field_vars, only: fieldset, run_3d, has_density, has_viscosity
+  use field_vars, only: fieldset, has_density, has_viscosity
   use mod_particle, only: t_particle
   use mod_domain_vars, only: domain
   use mod_particle_vars, only: particles, init_coords, inputstep, &
@@ -100,13 +100,13 @@ contains
         DBG, "----------------------------------------"
         !---------------------------------------------
         ! Skip inactive particles
-        if (.not. particles(ipart)%is_active) cycle 
+        if (.not. particles(ipart)%is_active) cycle
         DBG, "Still active :)"
         !---------------------------------------------
         ! Advect only if the particle is alive (is_active=.true.) and active (state=0)
         if (particles(ipart)%state == ACTIVE) then
           ! - do advection
-          call advect(particles(ipart), fieldset, time, run_3d)
+          call advect(particles(ipart), fieldset, time, advection_method, run_3d)
           ! - do Kooi vertical velocity
           if (do_velocity .and. run_3d) call vertical_velocity(particles(ipart), fieldset, time, has_density, has_viscosity)
           ! - do diffusion

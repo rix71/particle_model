@@ -154,7 +154,7 @@ contains
   !===========================================
   subroutine print_short_date(this)
 
-    character(len=19)             :: datestr
+    character(len=19)           :: datestr
     class(t_datetime), intent(in) :: this
 
     write (datestr, "(i4,a,i2.2,a,i2.2,1x,i2.2,a,i2.2,a,i2.2)") &
@@ -172,7 +172,7 @@ contains
     !---------------------------------------------
 
     class(t_datetime), intent(inout) :: this
-    real(rk), intent(in)             :: dt
+    real(rk), intent(in)           :: dt
 
     call reset_DIM
     call this%isleap
@@ -210,7 +210,7 @@ contains
     ! without updating the original date
     !---------------------------------------------
     class(t_datetime), intent(in) :: this
-    real(rk), intent(in)          :: dt
+    real(rk), intent(in)        :: dt
 
     nextDate = this
     call nextDate%update(dt)
@@ -271,7 +271,7 @@ contains
     !---------------------------------------------
     ! Gives date as 'seconds from 1900-01-01 00:00:00'
     !---------------------------------------------
-    integer                       :: year
+    integer                     :: year
     class(t_datetime), intent(in) :: this
 
     dbghead(date2num)

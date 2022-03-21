@@ -8,7 +8,7 @@ module mod_particle
   ! use mod_domain_vars, only: x0, y0, dx, dy, seamask, depdata, nx, ny
   ! Pass loop vars into functions rather than import?
   use time_vars, only: dt
-  use field_vars, only: run_3d
+  use mod_params, only: run_3d
   use mod_domain, only: t_domain
   use mod_fieldset, only: t_fieldset
   implicit none
@@ -19,14 +19,14 @@ module mod_particle
   !---------------------------------------------
   ! Particle type
   type t_particle
-    logical  :: is_active = .true.   ! Skip particle in loop if is_active == .false.
-    logical  :: kill_bch, kill_bdy   ! Set is_active=.false. if beached or on boundary?
+    logical  :: is_active = .true.    ! Skip particle in loop if is_active == .false.
+    logical  :: kill_bch, kill_bdy    ! Set is_active=.false. if beached or on boundary?
     integer  :: warnings = 0
-    integer  :: state = ACTIVE       ! 0 - active, 1 - beached, 2 - on boundary, 3 - bottom
-    integer  :: i0, j0, k0           ! Particle position (grid cell indices, original)
-    real(rk) :: ir0, jr0, kr0        ! Particle position (real indices, original)
-    integer  :: i1, j1, k1           ! Particle position (grid cell indices, t + dt)
-    real(rk) :: ir1, jr1, kr1        ! Particle position (real indices, t + dt)
+    integer  :: state = ACTIVE        ! 0 - active, 1 - beached, 2 - on boundary, 3 - bottom
+    integer  :: i0, j0, k0            ! Particle position (grid cell indices, original)
+    real(rk) :: ir0, jr0, kr0         ! Particle position (real indices, original)
+    integer  :: i1, j1, k1            ! Particle position (grid cell indices, t + dt)
+    real(rk) :: ir1, jr1, kr1         ! Particle position (real indices, t + dt)
     real(rk) :: lon0 = ZERO          ! Particle position (original)
     real(rk) :: lat0 = ZERO          ! Particle position (original)
     real(rk) :: depth0 = ZERO        ! Particle position (original)
@@ -45,8 +45,8 @@ module mod_particle
     real(rk) :: max_age = ZERO       ! Particle maximum age
     real(rk) :: traj_len = ZERO      ! Particle trajectory length
     real(rk) :: time_on_beach = ZERO ! Time spent in the beach area
-    real(rk) :: beaching_time        ! Different particles may essentialy have different beaching times
-    real(rk) :: id                   ! Origin of particle, number
+    real(rk) :: beaching_time         ! Different particles may essentialy have different beaching times
+    real(rk) :: id                    ! Origin of particle, number
 
   contains
     procedure :: update
@@ -179,12 +179,12 @@ contains
   !===========================================
   subroutine bounce(this, fieldset)
     class(t_particle), intent(inout) :: this
-    class(t_fieldset), intent(in)    :: fieldset
-    integer                          :: i0, i1, j0, j1
-    real(rk)                         :: ir0, ir1, jr0, jr1
-    integer                          :: di, dj
-    real(rk)                         :: dx0, dx1, dxp
-    real(rk)                         :: dy0, dy1, dyp
+    class(t_fieldset), intent(in) :: fieldset
+    integer :: i0, i1, j0, j1
+    real(rk) :: ir0, ir1, jr0, jr1
+    integer :: di, dj
+    real(rk) :: dx0, dx1, dxp
+    real(rk) :: dy0, dy1, dyp
 
     dbghead(bounce)
 
@@ -217,7 +217,7 @@ contains
       dx0 = floor(ir1) - ir0
       dx1 = ir1 - floor(ir1)
       dxp = dx0 - dx1
-      ir1 = ir0 + dxp
+      ir1 = ir0 + (dxp / abs(di))
       ! i1 = i1 - 1
       i1 = int(ir1)
     else if (di < ZERO) then
@@ -226,7 +226,7 @@ contains
       dx0 = ir0 - floor(ir0)
       dx1 = floor(ir0) - ir1
       dxp = dx0 - dx1
-      ir1 = ir0 - dxp
+      ir1 = ir0 - (dxp / abs(di))
       ! i1 = i1 + 1
       i1 = int(ir1)
     end if
@@ -237,7 +237,7 @@ contains
       dy0 = floor(jr1) - jr0
       dy1 = jr1 - floor(jr1)
       dyp = dy0 - dy1
-      jr1 = jr0 + dyp
+      jr1 = jr0 + (dyp / abs(dj))
       ! j1 = j1 - 1
       j1 = int(jr1)
     else if (dj < ZERO) then
@@ -246,7 +246,7 @@ contains
       dy0 = jr0 - floor(jr0)
       dy1 = floor(jr0) - jr1
       dyp = dy0 - dy1
-      jr1 = jr0 - dyp
+      jr1 = jr0 - (dyp / abs(dj))
       ! j1 = j1 + 1
       j1 = int(jr1)
     end if
@@ -312,6 +312,7 @@ contains
         if (n_bounce > max_bounce) exit
       end do
       debug(n_bounce)
+
 #ifdef DEBUG
       lon_t2 = this%lon1
       lat_t2 = this%lat1
@@ -428,7 +429,7 @@ contains
   !===========================================
   subroutine allocate_n_init_particles(this)
     class(t_initial_position), intent(inout) :: this
-    integer                                  :: n_init_p
+    integer :: n_init_p
 
     n_init_p = this%n_particles
 
@@ -444,7 +445,7 @@ contains
   !===========================================
   subroutine check_initial_coordinates(this)
     class(t_initial_position), intent(in) :: this
-    integer                               :: ipart, i, j, on_land = 0
+    integer :: ipart, i, j, on_land = 0
 
     do ipart = 1, this%n_particles
       if ((this%x(ipart) < domain%get_lons(1)) .or. (this%x(ipart) > domain%get_lons(domain%nx)) .or. &
@@ -508,7 +509,7 @@ contains
     !---------------------------------------------
     ! Allocate array for estimated amount of particles
     !---------------------------------------------
-    integer               :: itime
+    integer :: itime
     real(rk), allocatable :: nInitParticles(:)
 
     FMT1, "======== Init particles ========"

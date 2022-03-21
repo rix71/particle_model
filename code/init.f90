@@ -10,7 +10,7 @@ module mod_initialise
   use mod_fieldset
   use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, has_density, has_viscosity, &
                         file_prefix, file_suffix, nlevels, &
-                        uvarname, vvarname, wvarname, zaxvarname, elevvarname, zax_style, run_3d, fieldset
+                        uvarname, vvarname, wvarname, zaxvarname, elevvarname, zax_style, fieldset
   use mod_domain_vars, only: TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny, domain
   use mod_domain
   ! use fields, only: init_dirlist, init_fields, find_file, find_folder
@@ -21,7 +21,7 @@ module mod_initialise
                                init_particles_from_netcdf, init_particles_from_coordfile
   use time_vars
   use mod_datetime
-  use mod_params, only: do_diffusion, do_velocity, Ah, kv
+  use mod_params, only: do_diffusion, do_velocity, advection_method, Ah, kv, run_3d
   implicit none
   private
   !===================================================
@@ -50,23 +50,23 @@ contains
     !---------------------------------------------
     ! Namelists
     !---------------------------------------------
-    namelist /params/ do_diffusion, do_velocity, Ah, kv
+    namelist /params/ do_diffusion, do_velocity, run_3d, advection_method, Ah, kv
     namelist /domain_vars/ TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny
     namelist /particle_vars/ inputstep, particle_init_method, coordfile, max_age, kill_beached, kill_boundary
     namelist /time_vars/ run_start, run_end, dt
     namelist /field_vars/ GETMPATH, PMAPFILE, has_subdomains, &
       file_prefix, file_suffix, nlevels, &
-      uvarname, vvarname, wvarname, zaxvarname, elevvarname, zax_style, run_3d
+      uvarname, vvarname, wvarname, zaxvarname, elevvarname, zax_style
 
     FMT1, "======== Init namelist ========"
 
     open (NMLFILE, file=NMLFILENAME, action='read', iostat=ierr)
     if (ierr .ne. 0) call throw_error('initialise :: init_namelist', "Failed to open "//NMLFILENAME, ierr)
-    read (NMLFILE, nml=params)
-    read (NMLFILE, nml=domain_vars)
-    read (NMLFILE, nml=particle_vars)
-    read (NMLFILE, nml=time_vars)
-    read (NMLFILE, nml=field_vars)
+    read (NMLFILE, nml=params, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'params' namelist", ierr)
+    read (NMLFILE, nml=domain_vars, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'domain_vars' namelist", ierr)
+    read (NMLFILE, nml=particle_vars, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'particle_vars' namelist", ierr)
+    read (NMLFILE, nml=time_vars, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'time_vars' namelist", ierr)
+    read (NMLFILE, nml=field_vars, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'field_vars' namelist", ierr)
     close (NMLFILE, iostat=ierr)
     if (ierr .ne. 0) call throw_error('initialise :: init_namelist', "Failed to close "//NMLFILENAME, ierr)
 
@@ -74,6 +74,8 @@ contains
     FMT2, "&params"
     FMT3, var2val(do_diffusion)
     FMT3, var2val(do_velocity)
+    FMT3, var2val(run_3d)
+    FMT3, var2val(advection_method)
     FMT3, var2val(Ah)
     FMT3, var2val(kv)
     FMT2, LINE
@@ -105,7 +107,6 @@ contains
     FMT3, var2val_char(zaxvarname)
     FMT3, var2val_char(elevvarname)
     FMT3, var2val(zax_style)
-    FMT3, var2val(run_3d)
 
     FMT2, "Finished init namelist"
 
@@ -123,7 +124,6 @@ contains
     character(len=LEN_CHAR_S), parameter :: startName = "Start"
     character(len=LEN_CHAR_S), parameter :: endName = "End"
     character(len=LEN_CHAR_S), parameter :: simName = "Simulation time"
-    ! real(rk)                     :: t1, t2
 
     FMT1, "======== Init time ========"
 
@@ -138,25 +138,11 @@ contains
     ! Number of iterations
     nTimes = int(date_diff(run_start_dt, run_end_dt) / dt)
 
-    ! ! Time increment in netCDF input
-    ! select case (has_subdomains)
-    ! case (.true.)
-    !   call find_folder(theDate, initPath)
-    !   call nc_read_time_val(trim(initPath)//PROC0, 1, t1)
-    !   call nc_read_time_val(trim(initPath)//PROC0, 2, t2)
-    ! case (.false.)
-    !   call find_file(theDate, initPath)
-    !   call nc_read_time_val(trim(initPath), 1, t1)
-    !   call nc_read_time_val(trim(initPath), 2, t2)
-    ! end select
-    ! nc_timestep = t2 - t1
-
     FMT2, "Model runs from"
     call run_start_dt%print_short_date
     FMT2, "to"
     call run_end_dt%print_short_date
     FMT2, "Timestep: ", dt, " seconds, ", nTimes, " iterations"
-    ! FMT2, "netCDF timestep: ", nc_timestep, " seconds"
 
     FMT2, "Finished init time"
 
@@ -180,6 +166,7 @@ contains
     FMT1, "======== Init fields ========"
 
     field_mem = (nx * ny * nlevels * 2) * sizeof(real_var)
+    FMT2, "Using full domain"
     FMT2, "Allocating fields of size (nx, ny, nz): (", nx, ", ", ny, ", ", nlevels, ")", &
       field_mem, " bytes per field"
     if (has_subdomains) then
@@ -195,6 +182,7 @@ contains
     end if
 
     call fieldset%set_start_time(run_start_dt)
+    call fieldset%set_simulation_timestep(dt)
 
     select case (has_subdomains)
     case (.true.)
@@ -260,7 +248,7 @@ contains
           has_density = TEMP_SALT
           field_count = field_count + 2
         else
-          call throw_warning("initialise :: init_fieldset", "Could not find temperature or salinity ('temp'/'salt') in "//trim(filename)// &
+  call throw_warning("initialise :: init_fieldset", "Could not find temperature or salinity ('temp'/'salt') in "//trim(filename)// &
                              ". Using default density.")
           has_density = DEFAULT_DENSITY
         end if

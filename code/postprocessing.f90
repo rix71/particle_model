@@ -1,4 +1,3 @@
-! #define DEBUG
 #include "cppdefs.h"
 module mod_postprocessing
   use mod_precdefs
@@ -16,7 +15,7 @@ module mod_postprocessing
   public :: postprocess
   !---------------------------------------------
   character(len=LEN_CHAR_L) :: nc_fileout_post
-  integer                   :: nc_x_dimid, nc_y_dimid, nc_t_dimid
+  integer            :: nc_x_dimid, nc_y_dimid, nc_t_dimid
   !===================================================
 contains
   !===========================================
@@ -175,11 +174,11 @@ contains
 
     if (write_active_particles) then
       active: block
-        character(len=LEN_CHAR_L) :: timeunit
-        integer                   :: counts(nx, ny), ntimes
-        real(rk)                  :: mean_age_time(nx, ny)
-        ! integer, allocatable    :: counts_time(:, :, :)
-        real(rk), allocatable     :: timevals(:) !, mean_age_time(:, :, :)
+        character(len=LEN_CHAR_L)    :: timeunit
+        integer               :: counts(nx, ny), ntimes
+        real(rk)              :: mean_age_time(nx, ny)
+        ! integer, allocatable  :: counts_time(:, :, :)
+        real(rk), allocatable :: timevals(:) !, mean_age_time(:, :, :)
 
         call process_active_file(counts, ntimes, timevals, timeunit, mean_age_time, nx, ny)
 
