@@ -3,12 +3,25 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 	 -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
+# Print everything to .stdout file
 FFLAGS += -DWRITESTDOUT
+
+# Print debug messages
 # FFLAGS += -DDEBUG
+
+# Silence all messages (except warnings and errors)
+# FFLAGS += -DSAY_LESS
+
+# Disable system calls (call system(...))
 # FFLAGS += -DNOSYSCALLS
+
+# Do not allow too big indices (needed when the time step is big or domain has northern/eastern boundaries)
 FFLAGS += -DSNAP_TO_BOUNDS
 
+# Use OpenMP
+FFLAGS += -DUSE_OMP -fopenmp
 
+#--------------------------------------------------
 MOD=./mod
 OBJ=./obj
 BIN=../bin
@@ -33,6 +46,7 @@ SRCS = precdefs.f90 errors.f90 \
 	   main.f90 
 
 OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
+
 #--------------------------------------------------
 PROGRAM = $(BIN)/main
 

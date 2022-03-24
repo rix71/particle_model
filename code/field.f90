@@ -22,7 +22,9 @@ module mod_field
 
   contains
     private
-    procedure, public :: get => get_interp, get_nointerp
+    generic, public   :: get => get_interp, get_nointerp
+    procedure         :: get_interp, get_nointerp
+    ! procedure, public :: get => get_interp, get_nointerp
     procedure, public :: set
     procedure, public :: swap
     procedure, public :: get_varname
@@ -219,32 +221,29 @@ contains
     return
   end subroutine get_interp
   !===========================================
-  subroutine get_nointerp(this, t, i, j, k, res) ! , interp_time)
+  subroutine get_nointerp(this, t, i, j, k, res)
     !---------------------------------------------
     ! Getter function with integer indices
     !---------------------------------------------
     class(t_field), intent(in) :: this
-    integer, intent(in) :: t, i, j
+    real(rk), intent(in) :: t
+    integer, intent(in) :: i, j
     integer, optional, intent(in) :: k
-    ! logical, optional :: interp_time
     real(rk), intent(out) :: res
+    real(rk) :: f1, f2
 
-    ! if (.not.present(interp_time)) interp_time=.true.
-
+    dbghead(get_nointerp)
+    
     if (present(k)) then
-      if (t == 1) then
-        res = this%data_t1(i, j, k)
-      else
-        res = this%data_t2(i, j, k)
-      end if
+      f1 = this%data_t1(i, j, k)
+      f2 = this%data_t2(i, j, k)
     else
-      if (t == 1) then
-        res = this%data_t1(i, j, 1)
-      else
-        res = this%data_t2(i, j, 1)
-      end if
+      f1 = this%data_t1(i, j, 1)
+      f2 = this%data_t2(i, j, 1)
     end if
-
+    res = this%time_interp(f1, f2, t)
+    
+    dbgtail(get_nointerp)
     return
   end subroutine get_nointerp
   !===========================================

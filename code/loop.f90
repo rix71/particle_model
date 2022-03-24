@@ -3,9 +3,12 @@ module mod_loop
   !----------------------------------------------------------------
   ! Main loop
   !----------------------------------------------------------------
+#ifdef USE_OMP
+  use omp_lib
+#endif
   use mod_precdefs
   use mod_errors
-  use mod_params, only: do_velocity, run_3d, advection_method
+  use mod_params, only: do_velocity, do_diffusion, run_3d, advection_method
   use mod_advection
   use mod_physics
   use field_vars, only: fieldset, has_density, has_viscosity
@@ -29,15 +32,21 @@ contains
   subroutine loop
     integer           :: itime = 0
     integer           :: ipart, i_release = 1
-    integer           :: active_particles, inactive_particles
     real(rk)          :: time
     character(len=8)  :: d
     character(len=10) :: t
+#ifndef SAY_LESS
+    integer           :: active_particles, inactive_particles
+#endif
 
     dbghead(loop)
 
-    call date_and_time(date=d, time=t)
     FMT1, "======== Starting time loop ========"
+    call date_and_time(date=d, time=t)
+    FMT2, t(1:2), ":", t(3:4), ":", t(5:10)
+#ifdef USE_OMP
+    FMT2, "Using OpenMP with ", omp_get_num_procs(), " processes"
+#endif
 
     ! Read appropriate fields:
     call fieldset%read_first_timesteps(run_start_dt)
@@ -71,7 +80,7 @@ contains
         i_release = init_coords(i_release)%next_idx
       end if
 
-#ifndef SAYLESS
+#ifndef SAY_LESS
       if (mod(itime, PROGRESSINFO) .eq. 0) then
         call theDate%print_short_date
         call date_and_time(date=d, time=t)
@@ -79,6 +88,9 @@ contains
         if (itime .ne. 0) then
           active_particles = 0
           inactive_particles = 0
+#ifdef USE_OMP
+          !$omp parallel do reduction(+: active_particles, inactive_particles)
+#endif
           do ipart = 1, runparts
             if (particles(ipart)%is_active) then
               active_particles = active_particles + 1
@@ -86,6 +98,9 @@ contains
               inactive_particles = inactive_particles + 1
             end if
           end do
+#ifdef USE_OMP
+          !$omp end parallel do
+#endif
           FMT2, active_particles, " active particles"
           FMT2, inactive_particles, " inactive particles"
         end if
@@ -94,6 +109,9 @@ contains
 
       !---------------------------------------------
       ! Start particle loop
+#ifdef USE_OMP
+      !$omp parallel do shared(particles, fieldset, domain)
+#endif
       do ipart = 1, runparts
         DBG, "----------------------------------------"
         DBG, "    Particle nr: ", ipart, "            "
@@ -110,6 +128,7 @@ contains
           ! - do Kooi vertical velocity
           if (do_velocity .and. run_3d) call vertical_velocity(particles(ipart), fieldset, time, has_density, has_viscosity)
           ! - do diffusion
+          if (do_diffusion) call diffuse(particles(ipart), fieldset, time, run_3d)
         end if
 
         !---------------------------------------------
@@ -126,12 +145,18 @@ contains
         call particles(ipart)%print_info()
 #endif
 
+#ifndef USE_OMP
         !---------------------------------------------
         ! Write snapshot
+        ! Cannot use this with openMP (parallel io?)
         if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
           call write_data_snapshot(particles(ipart), ipart)
         end if
+#endif
       end do
+#ifdef USE_OMP
+      !$omp end parallel do
+#endif
 
       !---------------------------------------------
       ! Write output
@@ -147,6 +172,7 @@ contains
 
     call date_and_time(date=d, time=t)
     FMT2, LINE
+    FMT2, t(1:2), ":", t(3:4), ":", t(5:10)
     FMT2, "Finished all time steps (", itime, ")"
     FMT2, LINE
 

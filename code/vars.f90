@@ -21,8 +21,9 @@ module mod_params
   logical             :: do_diffusion, &
                          do_velocity, &            ! Calculate particles' own velocity
                          run_3d                    ! 2D or 3D
-  integer             :: advection_method          
-  real(rk)            :: Ah, kv                    ! Horisontal and vertical diffusion coefs
+  integer             :: advection_method
+  real(rk)            :: diffusion_hor_const, diffusion_vert_const, &                 ! Horisontal and vertical diffusion coefs
+                         Cm_smagorinsky            ! Used in Ah calculation (Smagorinsky)
   real(rk), parameter :: pi = 4.*atan(1.), &       ! 3, plus a little extra
                          g = 9.81, &
                          mu_default = 0.0010016, & ! Default dynamic viscosity of water at 20 degrees Celcius [N s/m2]

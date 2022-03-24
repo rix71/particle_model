@@ -16,7 +16,7 @@ module mod_physics
   private
   !===================================================
   !---------------------------------------------
-  public :: vertical_velocity
+  public :: vertical_velocity, diffuse
   !===================================================
 contains
   !===========================================
@@ -131,14 +131,152 @@ contains
     return
   end function Kooi_vertical_velocity
   !===========================================
-  subroutine diffuse(xin, yin, zin, dif_3d)
+  subroutine Ah_Smagorinsky(fieldset, time, i, j, k, Ah_s)
+    type(t_fieldset), intent(in)  :: fieldset
+    real(rk), intent(in)          :: time
+    integer, intent(in)           :: i, j
+    integer, intent(in), optional :: k
+    real(rk), intent(out)         :: Ah_s
+    real(rk)                      :: dx, dy
+    real(rk)                      :: i0, j0, i1, j1, ih, jh, kh
+    real(rk)                      :: uh0, vh0, uh1, vh1, u0h, v0h, u1h, v1h
+    real(rk)                      :: dudx, dudy, dvdx, dvdy
 
-    real(rk), intent(inout) :: xin, yin, zin
-    logical, intent(in)     :: dif_3d
+    dbghead(Ah_Smagorinsky)
 
-    xin = xin + normal_random() * sqrt(2 * Ah * dt)
-    yin = yin + normal_random() * sqrt(2 * Ah * dt)
-    if (dif_3d) zin = zin + normal_random() * sqrt(2 * kv * dt)
+    debug(time); debug(i); debug(j)
+
+    i0 = real(i, rk); debug(i0)
+    j0 = real(j, rk); debug(j0)
+
+    i1 = real(i, rk) + ONE; debug(i1)
+    j1 = real(j, rk) + ONE; debug(j1)
+
+    ih = real(i, rk) + HALF; debug(ih)
+    jh = real(j, rk) + HALF; debug(jh)
+
+    if (present(k)) then
+      debug(k)
+      kh = real(k, rk) + HALF; debug(kh)
+
+      uh0 = fieldset%get("U", time, ih, j0, kh); debug(uh0)
+      vh0 = fieldset%get("V", time, ih, j0, kh); debug(vh0)
+
+      uh1 = fieldset%get("U", time, ih, j1, kh); debug(uh1)
+      vh1 = fieldset%get("V", time, ih, j1, kh); debug(vh1)
+
+      u0h = fieldset%get("U", time, i0, jh, kh); debug(u0h)
+      v0h = fieldset%get("V", time, i0, jh, kh); debug(v0h)
+
+      u1h = fieldset%get("U", time, i1, jh, kh); debug(u1h)
+      v1h = fieldset%get("V", time, i1, jh, kh); debug(v1h)
+    else
+      uh0 = fieldset%get("U", time, ih, j0); debug(uh0)
+      vh0 = fieldset%get("V", time, ih, j0); debug(vh0)
+
+      uh1 = fieldset%get("U", time, ih, j1); debug(uh1)
+      vh1 = fieldset%get("V", time, ih, j1); debug(vh1)
+
+      u0h = fieldset%get("U", time, i0, jh); debug(u0h)
+      v0h = fieldset%get("V", time, i0, jh); debug(v0h)
+
+      u1h = fieldset%get("U", time, i1, jh); debug(u1h)
+      v1h = fieldset%get("V", time, i1, jh); debug(v1h)
+    end if
+
+    dx = fieldset%domain%dx
+    dy = fieldset%domain%dy
+
+    dudx = (u1h - u0h) / dx; debug(dudx)
+    dudy = (uh1 - uh0) / dy; debug(dudy)
+    dvdx = (v1h - v0h) / dx; debug(dvdx)
+    dvdy = (vh1 - vh0) / dy; debug(dvdy)
+
+    ! Ah_s = Cm_smagorinsky * sqrt(HALF * (dudx - dvdy)**2 + HALF * (dudy + dvdx)**2)
+    Ah_s = Cm_smagorinsky * (dx * dy) * sqrt(dudx**2 + dvdy**2 + HALF * (dudy + dvdx)**2)
+
+    debug(Ah_s)
+
+    dbgtail(Ah_Smagorinsky)
+    return
+  end subroutine Ah_Smagorinsky
+  !===========================================
+  subroutine diffuse_2D(p, fieldset, time)
+
+    type(t_particle), intent(inout) :: p
+    type(t_fieldset), intent(in)    :: fieldset
+    real(rk), intent(in)            :: time
+    real(rk)                        :: Ah
+    integer                         :: i, j
+    real(rk)                        :: x0, x1, &
+                                       y0, y1
+
+    dbghead(diffuse_2D)
+
+    i = p%i1
+    j = p%j1
+
+    call fieldset%domain%lonlat2xy(p%lon1, p%lat1, x0, y0)
+
+    call Ah_Smagorinsky(fieldset, time, i, j, Ah_s=Ah)
+
+    x1 = x0 + normal_random() * sqrt(2 * Ah * dt)
+    y1 = y0 + normal_random() * sqrt(2 * Ah * dt)
+
+    call fieldset%domain%xy2lonlat(x1, y1, p%lon1, p%lat1)
+    call fieldset%search_indices(x=p%lon1, y=p%lat1, i=p%i1, j=p%j1, ir=p%ir1, jr=p%jr1)
+
+    dbgtail(diffuse_2D)
+    return
+  end subroutine diffuse_2D
+  !===========================================
+  subroutine diffuse_3D(p, fieldset, time)
+
+    type(t_particle), intent(inout) :: p
+    type(t_fieldset), intent(in) :: fieldset
+    real(rk), intent(in) :: time
+    real(rk)                        :: Ah, kv
+    integer                         :: i, j, k
+    real(rk)                        :: x0, x1, &
+                                       y0, y1, &
+                                       z0, z1
+
+    dbghead(diffuse_3D)
+
+    i = p%i1
+    j = p%j1
+    k = p%k1
+
+    call fieldset%domain%lonlat2xy(p%lon1, p%lat1, x0, y0)
+    z0 = p%depth1
+
+    call Ah_Smagorinsky(fieldset, time, i, j, k=k, Ah_s=Ah)
+    kv = diffusion_vert_const
+
+    x1 = x0 + normal_random() * sqrt(2 * Ah * dt)
+    y1 = y0 + normal_random() * sqrt(2 * Ah * dt)
+    z1 = z0 + normal_random() * sqrt(2 * kv * dt)
+
+    call fieldset%domain%xy2lonlat(x1, y1, p%lon1, p%lat1)
+    call fieldset%search_indices(x=p%lon1, y=p%lat1, i=p%i1, j=p%j1, ir=p%ir1, jr=p%jr1)
+
+    dbgtail(diffuse_3D)
+    return
+  end subroutine diffuse_3D
+  !===========================================
+  subroutine diffuse(p, fieldset, time, dif_3d)
+
+    type(t_particle), intent(inout) :: p
+    type(t_fieldset), intent(in) :: fieldset
+    real(rk), intent(in) :: time
+    logical, intent(in)             :: dif_3d
+
+    select case (dif_3d)
+    case (.true.)
+      call diffuse_3D(p, fieldset, time)
+    case (.false.)
+      call diffuse_2D(p, fieldset, time)
+    end select
 
     return
   end subroutine diffuse

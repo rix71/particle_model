@@ -1,4 +1,4 @@
-#define SAYLESS
+#define SAY_LESS
 #include "cppdefs.h"
 module nc_manager
   !----------------------------------------------------------------

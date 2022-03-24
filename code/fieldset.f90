@@ -72,8 +72,8 @@ module mod_fieldset
     procedure         :: init_dirlist
     generic, public   :: set => set_value_key, set_value_idx
     procedure         :: set_value_key, set_value_idx
-    generic, public   :: get => get_value_key, get_value_idx
-    procedure         :: get_value_key, get_value_idx
+    generic, public   :: get => get_value_key_real_idx, get_value_key_int_idx, get_value_idx_real_idx, get_value_idx_int_idx
+    procedure         :: get_value_key_real_idx, get_value_key_int_idx, get_value_idx_real_idx, get_value_idx_int_idx
     procedure         :: read_field
     procedure         :: read_field_subdomains
     procedure, public :: update
@@ -190,14 +190,14 @@ contains
 
   end subroutine set_value_idx
   !===========================================
-  real(rk) function get_value_key(this, field_name, t, i, j, k) result(res)
+  real(rk) function get_value_key_real_idx(this, field_name, t, i, j, k) result(res)
     class(t_fieldset), intent(in)  :: this
     character(*), intent(in)       :: field_name
     real(rk), intent(in)           :: t, i, j
     real(rk), optional, intent(in) :: k
     type(t_field), pointer         :: p_field
 
-    dbghead(get_value_key)
+    dbghead(get_value_key_real_idx)
 
     debug(trim(field_name)); debug(t); debug(i); debug(j)
 
@@ -213,11 +213,39 @@ contains
 
     debug(res)
 
-    dbgtail(get_value_key)
+    dbgtail(get_value_key_real_idx)
     return
-  end function get_value_key
+  end function get_value_key_real_idx
   !===========================================
-  real(rk) function get_value_idx(this, idx, t, i, j, k) result(res)
+  real(rk) function get_value_key_int_idx(this, field_name, t, i, j, k) result(res)
+    class(t_fieldset), intent(in)  :: this
+    character(*), intent(in)       :: field_name
+    real(rk), intent(in)           :: t
+    integer, intent(in)            :: i, j
+    integer, optional, intent(in)  :: k
+    type(t_field), pointer         :: p_field
+
+    dbghead(get_value_key_int_idx)
+
+    debug(trim(field_name)); debug(t); debug(i); debug(j)
+
+    call this%fields%get_item(field_name, p_field)
+    if (present(k)) then
+      DBG, "Getting 3D"
+      debug(k)
+      call p_field%get(t=t, i=i, j=j, k=k, res=res)
+    else
+      DBG, "Getting 2D"
+      call p_field%get(t=t, i=i, j=j, res=res)
+    end if
+
+    debug(res)
+
+    dbgtail(get_value_key_int_idx)
+    return
+  end function get_value_key_int_idx
+  !===========================================
+  real(rk) function get_value_idx_real_idx(this, idx, t, i, j, k) result(res)
     class(t_fieldset), intent(in)  :: this
     integer, intent(in)            :: idx
     real(rk), intent(in)           :: t, i, j
@@ -231,7 +259,24 @@ contains
       call p_field%get(t, i, j, res=res)
     end if
 
-  end function get_value_idx
+  end function get_value_idx_real_idx
+  !===========================================
+  real(rk) function get_value_idx_int_idx(this, idx, t, i, j, k) result(res)
+    class(t_fieldset), intent(in)  :: this
+    integer, intent(in)            :: idx
+    real(rk), intent(in)           :: t
+    integer, intent(in)            :: i, j
+    integer, optional, intent(in)  :: k
+    type(t_field), pointer         :: p_field
+
+    call this%fields%get_item(idx, p_field)
+    if (present(k)) then
+      call p_field%get(t, i=i, j=j, k=k, res=res)
+    else
+      call p_field%get(t, i=i, j=j, res=res)
+    end if
+
+  end function get_value_idx_int_idx
   !===========================================
   subroutine list_fields(this)
     class(t_fieldset), intent(in) :: this
@@ -295,7 +340,7 @@ contains
       this%read_idx_increment = 1
     else
       if (mod(dt,this%nc_timestep) .ne. 0) call throw_error("fieldset :: set_simulation_timestep", "Time step should be divisible by netCDF time step")
-      this%read_idx_increment = int(dt/this%nc_timestep)
+      this%read_idx_increment = int(dt / this%nc_timestep)
     end if
 
     return
@@ -835,7 +880,7 @@ contains
     if (this%read_idx > this%current_ntimes) then
       this%read_idx = this%read_idx - this%current_ntimes
       ! Hopefully noone will be skipping whole files
-      this%dirlist_idx = this%dirlist_idx + 1 
+      this%dirlist_idx = this%dirlist_idx + 1
       if (this%has_subdomains) then
         this%current_path = this%get_folder(this%dirlist_idx)
         call nc_get_dim(trim(this%current_path)//PROC0, 'time', this%current_ntimes)

@@ -13,7 +13,6 @@ module mod_initialise
                         uvarname, vvarname, wvarname, zaxvarname, elevvarname, zax_style, fieldset
   use mod_domain_vars, only: TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny, domain
   use mod_domain
-  ! use fields, only: init_dirlist, init_fields, find_file, find_folder
   use nc_manager, only: nc_read_time_val, nc_var_exists
   use mod_particle_vars, only: inputstep, particle_init_method, coordfile, &
                                max_age, &
@@ -21,7 +20,8 @@ module mod_initialise
                                init_particles_from_netcdf, init_particles_from_coordfile
   use time_vars
   use mod_datetime
-  use mod_params, only: do_diffusion, do_velocity, advection_method, Ah, kv, run_3d
+  use mod_params, only: do_diffusion, do_velocity, advection_method, &
+                        diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky
   implicit none
   private
   !===================================================
@@ -50,7 +50,7 @@ contains
     !---------------------------------------------
     ! Namelists
     !---------------------------------------------
-    namelist /params/ do_diffusion, do_velocity, run_3d, advection_method, Ah, kv
+    namelist /params/ do_diffusion, do_velocity, run_3d, advection_method, diffusion_hor_const, diffusion_vert_const, Cm_smagorinsky
     namelist /domain_vars/ TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny
     namelist /particle_vars/ inputstep, particle_init_method, coordfile, max_age, kill_beached, kill_boundary
     namelist /time_vars/ run_start, run_end, dt
@@ -76,8 +76,9 @@ contains
     FMT3, var2val(do_velocity)
     FMT3, var2val(run_3d)
     FMT3, var2val(advection_method)
-    FMT3, var2val(Ah)
-    FMT3, var2val(kv)
+    FMT3, var2val(diffusion_hor_const)
+    FMT3, var2val(diffusion_vert_const)
+    FMT3, var2val(Cm_smagorinsky)
     FMT2, LINE
     FMT2, "&domain_vars"
     FMT3, var2val_char(TOPOFILE)

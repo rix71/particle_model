@@ -24,7 +24,7 @@ module mod_domain
     real(rk), allocatable :: depdata(:, :)
     integer, allocatable  :: seamask(:, :)
     real(rk)              :: lon0, lat0, lon1, lat1
-    real(rk)              :: dlon, dlat, dx, dy ! Could be arrays
+    real(rk), public      :: dlon, dlat, dx, dy ! Could be arrays
   contains
     private
     procedure, public :: lonlat2xy, xy2lonlat

@@ -77,6 +77,9 @@ contains
     end if
 
     if (write_snapshot) then
+#ifdef USE_OMP
+      call throw_warning("output :: init_output", "Cannot write snapshot in parallel mode!")
+#else
       nc_fileout_snap = trim(outDir)//'/'//trim(runid)//'.snap.nc'
       call nc_initialise(nc_fileout_snap)
       call nc_add_dimension(nc_fileout_snap, "particle", nc_p_dimid)
@@ -116,6 +119,7 @@ contains
       call nc_add_attr(nc_fileout_snap, "trajectory", "name", "distance travelled")
 
       call nc_add_variable(nc_fileout_snap, "particle_num", "int", 1, [nc_p_dimid])
+#endif
     end if
 
     return

@@ -11,24 +11,26 @@
 !===============================
 ! Physical parameters
 !-------------------------------
-! do_diffusion     - [bool]  Diffuse particles if True
-! do_velocity      - [bool]  Calculate particles' own velocity (True)
-!                            or advect with current speed (False)
-! run_3d           - [bool]  Do 3D simulation
-! advection_method - [int]   Advection scheme
-!                            0 - no advection
-!                            1 - explicit Euler
-!                            2 - RK2
-! Ah               - [float] Horisontal diffusion constant
-! kv               - [float] Vertical diffusion constant
+! do_diffusion        - [bool]  Diffuse particles if True
+! do_velocity         - [bool]  Calculate particles' own velocity (True)
+!                               or advect with current speed (False)
+! run_3d              - [bool]  Do 3D simulation
+! advection_method    - [int]   Advection scheme
+!                               0 - no advection
+!                               1 - explicit Euler
+!                               2 - RK2
+! diffusion_hor_const - [float] Horisontal diffusion constant
+! diffusion_vert_const                  - [float] Vertical diffusion constant
+! Cm_smagorinsky      - [float] Empirical parameter in Smagorinsky 
 !===============================
 &params
   do_diffusion = .false.
   do_velocity = .false.
   run_3d = .false.
   advection_method = 2
-  Ah = 0.01
-  kv = 0.0001
+  diffusion_hor_const = 0.01
+  diffusion_vert_const = 0.0001
+  Cm_smagorinsky = 0.2
 /
 !===============================
 ! Domain variables
