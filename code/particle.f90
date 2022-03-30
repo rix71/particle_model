@@ -19,42 +19,44 @@ module mod_particle
   !---------------------------------------------
   ! Particle type
   type t_particle
-    logical  :: is_active = .true.    ! Skip particle in loop if is_active == .false.
-    logical  :: kill_bch, kill_bdy    ! Set is_active=.false. if beached or on boundary?
+    logical  :: is_active = .true.          ! Skip particle in loop if is_active == .false.
+    logical  :: kill_beached, kill_boundary ! Set is_active=.false. if beached or on boundary?
     integer  :: warnings = 0
-    integer  :: state = ACTIVE        ! 0 - active, 1 - beached, 2 - on boundary, 3 - bottom
-    integer  :: i0, j0, k0            ! Particle position (grid cell indices, original)
-    real(rk) :: ir0, jr0, kr0         ! Particle position (real indices, original)
-    integer  :: i1, j1, k1            ! Particle position (grid cell indices, t + dt)
-    real(rk) :: ir1, jr1, kr1         ! Particle position (real indices, t + dt)
-    real(rk) :: lon0 = ZERO          ! Particle position (original)
-    real(rk) :: lat0 = ZERO          ! Particle position (original)
-    real(rk) :: depth0 = ZERO        ! Particle position (original)
-    real(rk) :: lon1 = ZERO          ! Particle position (t + dt)
-    real(rk) :: lat1 = ZERO          ! Particle position (t + dt)
-    real(rk) :: depth1 = ZERO        ! Particle position (t + dt)
-    real(rk) :: u0 = ZERO            ! Particle velocity (original)
-    real(rk) :: v0 = ZERO            ! Particle velocity (original)
-    real(rk) :: w0 = ZERO            ! Particle velocity (original)
-    real(rk) :: u1 = ZERO            ! Particle velocity (t + dt)
-    real(rk) :: v1 = ZERO            ! Particle velocity (t + dt)
-    real(rk) :: w1 = ZERO            ! Particle velocity (t + dt)
-    real(rk) :: rho = ZERO           ! Particle density
-    real(rk) :: radius = ZERO        ! Particle radius
-    real(rk) :: age = ZERO           ! Particle age
-    real(rk) :: max_age = ZERO       ! Particle maximum age
-    real(rk) :: traj_len = ZERO      ! Particle trajectory length
-    real(rk) :: time_on_beach = ZERO ! Time spent in the beach area
-    real(rk) :: beaching_time         ! Different particles may essentialy have different beaching times
-    real(rk) :: id                    ! Origin of particle, number
+    integer  :: state = ACTIVE              ! 0 - active, 1 - beached, 2 - on boundary, 3 - bottom
+    integer  :: i0, j0, k0                  ! Particle position (grid cell indices, original)
+    real(rk) :: ir0, jr0, kr0               ! Particle position (real indices, original)
+    integer  :: i1, j1, k1                  ! Particle position (grid cell indices, t + dt)
+    real(rk) :: ir1, jr1, kr1               ! Particle position (real indices, t + dt)
+    real(rk) :: lon0 = ZERO                 ! Particle position (original)
+    real(rk) :: lat0 = ZERO                 ! Particle position (original)
+    real(rk) :: depth0 = ZERO               ! Particle position (original)
+    real(rk) :: lon1 = ZERO                 ! Particle position (t + dt)
+    real(rk) :: lat1 = ZERO                 ! Particle position (t + dt)
+    real(rk) :: depth1 = ZERO               ! Particle position (t + dt)
+    real(rk) :: u0 = ZERO                   ! Particle velocity (original)
+    real(rk) :: v0 = ZERO                   ! Particle velocity (original)
+    real(rk) :: w0 = ZERO                   ! Particle velocity (original)
+    real(rk) :: u1 = ZERO                   ! Particle velocity (t + dt)
+    real(rk) :: v1 = ZERO                   ! Particle velocity (t + dt)
+    real(rk) :: w1 = ZERO                   ! Particle velocity (t + dt)
+    real(rk) :: rho = ZERO                  ! Particle density
+    real(rk) :: radius = ZERO               ! Particle radius
+    real(rk) :: age = ZERO                  ! Particle age
+    real(rk) :: max_age = ZERO              ! Particle maximum age
+    real(rk) :: traj_len = ZERO             ! Particle trajectory length
+    real(rk) :: time_on_beach = ZERO        ! Time spent in the beach area
+    real(rk) :: beaching_time               ! Different particles may essentialy have different beaching times
+    real(rk) :: id                          ! Origin of particle, number
 
   contains
-    procedure :: update
-    procedure :: check_boundaries
-    procedure :: check_age
-    procedure :: check_depth
-    procedure :: bounce
-    procedure :: print_info
+    private
+    procedure, public :: update
+    procedure         :: check_boundaries
+    procedure         :: check_age
+    procedure         :: check_depth
+    procedure         :: bounce
+    procedure         :: redirect
+    procedure, public :: print_info
   end type t_particle
 
   interface t_particle
@@ -64,13 +66,13 @@ module mod_particle
   !===================================================
 contains
   !===========================================
-  type(t_particle) function ctor_particle(lon, lat, depth, id, beaching_time, rho, radius, max_age, kill_bch, kill_bdy, fieldset, time) result(p)
+  type(t_particle) function ctor_particle(lon, lat, depth, id, beaching_time, rho, radius, max_age, kill_beached, kill_boundary, fieldset, time) result(p)
     real(rk), intent(in)         :: lon, lat, depth
     real(rk), intent(in)         :: id
     real(rk), intent(in)         :: beaching_time
     real(rk), intent(in)         :: rho, radius
     real(rk), intent(in)         :: max_age
-    logical, intent(in)          :: kill_bch, kill_bdy
+    logical, intent(in)          :: kill_beached, kill_boundary
     type(t_fieldset), intent(in) :: fieldset
     real(rk), intent(in)         :: time
 
@@ -82,8 +84,8 @@ contains
     p%rho = rho
     p%radius = radius
     p%max_age = max_age
-    p%kill_bch = kill_bch
-    p%kill_bdy = kill_bdy
+    p%kill_beached = kill_beached
+    p%kill_boundary = kill_boundary
 
     call fieldset%search_indices(time, lon, lat, depth, i=p%i0, j=p%j0, k=p%k0, ir=p%ir0, jr=p%jr0, kr=p%kr0)
 
@@ -94,6 +96,8 @@ contains
     class(t_particle), intent(inout) :: this
     class(t_fieldset), intent(in)    :: fieldset
     real(rk), intent(in)             :: time
+    real(rk)                         :: x0, y0
+    real(rk)                         :: x1, y1
 
     this%age = this%age + dt
     call this%check_age()
@@ -102,6 +106,13 @@ contains
     if (this%state .ne. ACTIVE) return
 
     call this%check_boundaries(fieldset, time)
+
+    call fieldset%domain%lonlat2xy(this%lon0, this%lat0, x0, y0)
+    call fieldset%domain%lonlat2xy(this%lon1, this%lat1, x1, y1)
+    this%traj_len = this%traj_len + &
+                    sqrt((x1 - x0)**2 + &
+                         (y1 - y0)**2 + &
+                         (this%depth1 - this%depth0)**2) ! This will always be 0 if run_3d=.false.
 
     this%i0 = this%i1
     this%j0 = this%j1
@@ -117,11 +128,6 @@ contains
     this%u0 = this%u1
     this%v0 = this%v1
     this%w0 = this%w1
-
-    this%traj_len = this%traj_len + &
-                    sqrt((this%u0 * dt)**2 + &
-                         (this%v0 * dt)**2 + &
-                         (this%w0 * dt)**2) ! This will always be 0 if run_3d=.false.
 
     return
   end subroutine update
@@ -169,7 +175,7 @@ contains
       zval = -1.0 * dep
       if (change_state) then
         this%state = BOTTOM
-        if (this%kill_bdy) this%is_active = .false.
+        if (this%kill_boundary) this%is_active = .false.
       end if
     end if
     this%depth1 = zval
@@ -180,13 +186,20 @@ contains
   subroutine bounce(this, fieldset)
     class(t_particle), intent(inout) :: this
     class(t_fieldset), intent(in) :: fieldset
-    integer :: i0, i1, j0, j1
-    real(rk) :: ir0, ir1, jr0, jr1
+    integer :: i0, i1, i_orig, &
+               j0, j1, j_orig
+    real(rk) :: ir0, ir1, ir_orig, &
+                jr0, jr1, jr_orig
     integer :: di, dj
     real(rk) :: dx0, dx1, dxp
     real(rk) :: dy0, dy1, dyp
+    integer :: n_iter, seamask_val
+    integer, parameter :: max_iter = 10
 
     dbghead(bounce)
+
+    ! We can initialise seamask_val like this, since this is the reason we're in this subroutine in the first place
+    seamask_val = LAND
 
     i0 = this%i0; debug(i0)
     i1 = this%i1; debug(i1)
@@ -198,58 +211,77 @@ contains
     jr0 = this%jr0; debug(jr0)
     jr1 = this%jr1; debug(jr1)
 
-    di = i1 - i0
-    dj = j1 - j0
+    i_orig = i0
+    j_orig = j0
+    ir_orig = ir0
+    jr_orig = jr0
+
+    n_iter = 1
+    do while (seamask_val == LAND)
+      di = i1 - i0
+      dj = j1 - j0
 
 #ifdef DEBUG
-    if ((abs(di) > 1) .or. (abs(dj) > 1)) then
-      DBG, "|di| > 1"
-      debug(di)
-      debug(dj)
-      call throw_warning("particle :: bounce", "di or dj greater than 1!")
-      ! return ! then what?
-    end if
+      if ((abs(di) > 1) .or. (abs(dj) > 1)) then
+        DBG, "|di| > 1"
+        debug(di)
+        debug(dj)
+        call throw_warning("particle :: bounce", "di or dj greater than 1!")
+        ! return ! then what?
+      end if
 #endif
 
-    if (di > ZERO) then
-      ! has moved right
-      DBG, "RIGHT"
-      dx0 = floor(ir1) - ir0
-      dx1 = ir1 - floor(ir1)
-      dxp = dx0 - dx1
-      ir1 = ir0 + (dxp / abs(di))
-      ! i1 = i1 - 1
-      i1 = int(ir1)
-    else if (di < ZERO) then
-      ! has moved left
-      DBG, "LEFT"
-      dx0 = ir0 - floor(ir0)
-      dx1 = floor(ir0) - ir1
-      dxp = dx0 - dx1
-      ir1 = ir0 - (dxp / abs(di))
-      ! i1 = i1 + 1
-      i1 = int(ir1)
-    end if
+      if (di > ZERO) then
+        ! has moved right
+        DBG, "RIGHT"
+        dx0 = floor(ir1) - ir0
+        dx1 = ir1 - floor(ir1)
+        dxp = dx0 - dx1
+        ir1 = ir0 + (dxp / abs(di))
+        ! i1 = i1 - 1
+        i1 = int(ir1)
+      else if (di < ZERO) then
+        ! has moved left
+        DBG, "LEFT"
+        dx0 = ir0 - floor(ir0)
+        dx1 = floor(ir0) - ir1
+        dxp = dx0 - dx1
+        ir1 = ir0 - (dxp / abs(di))
+        ! i1 = i1 + 1
+        i1 = int(ir1)
+      end if
 
-    if (dj > ZERO) then
-      ! has moved up
-      DBG, "UP"
-      dy0 = floor(jr1) - jr0
-      dy1 = jr1 - floor(jr1)
-      dyp = dy0 - dy1
-      jr1 = jr0 + (dyp / abs(dj))
-      ! j1 = j1 - 1
-      j1 = int(jr1)
-    else if (dj < ZERO) then
-      ! has moved down
-      DBG, "DOWN"
-      dy0 = jr0 - floor(jr0)
-      dy1 = floor(jr0) - jr1
-      dyp = dy0 - dy1
-      jr1 = jr0 - (dyp / abs(dj))
-      ! j1 = j1 + 1
-      j1 = int(jr1)
-    end if
+      if (dj > ZERO) then
+        ! has moved up
+        DBG, "UP"
+        dy0 = floor(jr1) - jr0
+        dy1 = jr1 - floor(jr1)
+        dyp = dy0 - dy1
+        jr1 = jr0 + (dyp / abs(dj))
+        ! j1 = j1 - 1
+        j1 = int(jr1)
+      else if (dj < ZERO) then
+        ! has moved down
+        DBG, "DOWN"
+        dy0 = jr0 - floor(jr0)
+        dy1 = floor(jr0) - jr1
+        dyp = dy0 - dy1
+        jr1 = jr0 - (dyp / abs(dj))
+        ! j1 = j1 + 1
+        j1 = int(jr1)
+      end if
+
+      seamask_val = fieldset%domain%get_seamask(i1, j1)
+      if (n_iter > max_iter) then
+        i1 = i_orig
+        j1 = j_orig
+        ir1 = ir_orig
+        jr1 = jr_orig
+        exit
+      end if
+
+    end do
+    debug(n_iter)
 
     this%i1 = i1; debug(i1)
     this%j1 = j1; debug(j1)
@@ -263,6 +295,184 @@ contains
     return
   end subroutine bounce
   !===========================================
+  subroutine redirect(this, fieldset)
+    class(t_particle), intent(inout) :: this
+    class(t_fieldset), intent(in) :: fieldset
+    integer :: i0, i1, i2, i_orig, &
+               j0, j1, j2, j_orig
+    real(rk) :: ir0, ir1, ir2, ir_orig, &
+                jr0, jr1, jr2, jr_orig
+    integer :: di, dj
+    real(rk) :: dir, djr
+    real(rk) :: dx0, dx1, dxp
+    real(rk) :: dy0, dy1, dyp
+    integer :: rot
+    integer :: seamask_val
+    integer :: n_iter
+    integer, parameter :: max_iter = 10
+
+    dbghead(redirect)
+
+    i0 = this%i0; debug(i0)
+    i1 = this%i1; debug(i1)
+    j0 = this%j0; debug(j0)
+    j1 = this%j1; debug(j1)
+
+    i2 = i0
+    j2 = j0
+    i_orig = i0
+    j_orig = j0
+
+    ir0 = this%ir0; debug(ir0)
+    ir1 = this%ir1; debug(ir1)
+    jr0 = this%jr0; debug(jr0)
+    jr1 = this%jr1; debug(jr1)
+
+    ir2 = ir0
+    jr2 = jr0
+    ir_orig = ir0
+    jr_orig = jr0
+
+    di = i1 - i0; debug(di)
+    dj = j1 - j0; debug(dj)
+    dir = ir1 - ir0; debug(dir)
+    djr = jr1 - jr0; debug(djr)
+
+    seamask_val = fieldset%domain%get_seamask(i1, j1)
+
+    n_iter = 1
+    do while (seamask_val == LAND)
+      if (dj > ZERO) then
+        ! Up
+        DBG, "UP"
+        if (dir > ZERO) then
+          rot = 1
+        else
+          rot = -1
+        end if
+        debug(rot)
+        dy0 = floor(jr1) - jr0; debug(dy0)
+        dy1 = jr1 - floor(jr1); debug(dy1)
+        dxp = abs((dir / djr) * dy1); debug(dxp)
+        dxp = max(dxp, SMALL); debug(dxp)
+        dyp = dy0 - min(dxp, dy0); debug(dyp)
+        ir2 = ir0 + dir + (dxp * rot); debug(ir2)
+        jr2 = jr0 + dyp; debug(jr2)
+        i0 = i1
+        j0 = j1
+        ir0 = ir1
+        jr0 = jr1
+        ir1 = ir2
+        jr1 = jr2
+      else if (dj < ZERO) then
+        ! Down
+        DBG, "DOWN"
+        if (dir < ZERO) then
+          rot = -1
+        else
+          rot = 1
+        end if
+        debug(rot)
+        dy0 = jr0 - floor(jr0); debug(dy0)
+        dy1 = floor(jr0) - jr1; debug(dy1)
+        dxp = abs((dir / djr) * dy1); debug(dxp)
+        dxp = max(dxp, SMALL); debug(dxp)
+        dyp = dy0 - min(dxp, dy0); debug(dyp)
+        ir2 = ir0 + dir + (dxp * rot); debug(ir2)
+        jr2 = jr0 - dyp; debug(jr2)
+        i0 = i1
+        j0 = j1
+        ir0 = ir1
+        jr0 = jr1
+        ir1 = ir2
+        jr1 = jr2
+      end if
+      DBG, "AFTER UP/DOWN:"
+      i1 = int(ir1); debug(i1)
+      j1 = int(jr1); debug(j1)
+      di = i1 - i0; debug(di)
+      dj = j1 - j0; debug(dj)
+      dir = ir1 - ir0; debug(dir)
+      djr = jr1 - jr0; debug(djr)
+
+      seamask_val = fieldset%domain%get_seamask(i1, j1); debug(seamask_val)
+      if (seamask_val /= LAND) then
+        exit
+      end if
+
+      if (di > ZERO) then
+        ! Right
+        DBG, "RIGHT"
+        if (djr < ZERO) then
+          rot = -1
+        else
+          rot = 1
+        end if
+        debug(rot)
+        dx0 = floor(ir1) - ir0; debug(dx0)
+        dx1 = ir1 - floor(ir1); debug(dx1)
+        dyp = abs((djr / dir) * dx0); debug(dyp)
+        dyp = max(dyp, SMALL); debug(dyp)
+        dxp = dx0 - min(dyp, dx0); debug(dxp)
+        ir1 = ir0 + dxp; debug(ir1)
+        jr1 = jr0 + djr + (dyp * rot); debug(jr1)
+      else if (di < ZERO) then
+        ! Left
+        DBG, "LEFT"
+        if (djr > ZERO) then
+          rot = 1
+        else
+          rot = -1
+        end if
+        debug(rot)
+        dx0 = ir0 - floor(ir0); debug(dx0)
+        dx1 = floor(ir0) - ir1; debug(dx1)
+        dyp = abs((djr / dir) * dx0); debug(dyp)
+        dyp = max(dyp, SMALL); debug(dyp)
+        dxp = dx0 - min(dyp, dx0); debug(dxp)
+        ir1 = ir0 - dxp; debug(ir1)
+        jr1 = jr0 + djr + (dyp * rot); debug(jr1)
+      end if
+
+      i0 = i_orig
+      j0 = j_orig
+      ir0 = ir_orig
+      jr0 = jr_orig
+
+      DBG, "AFTER RIGHT/LEFT:"
+      i1 = int(ir1); debug(i1)
+      j1 = int(jr1); debug(j1)
+      di = i1 - i0; debug(di)
+      dj = j1 - j0; debug(dj)
+      dir = ir1 - ir0; debug(dir)
+      djr = jr1 - jr0; debug(djr)
+
+      seamask_val = fieldset%domain%get_seamask(i1, j1); debug(seamask_val)
+
+      n_iter = n_iter + 1
+      if (n_iter > max_iter) then
+        DBG, "max_iter exceeded. Exiting."
+        i1 = i_orig
+        j1 = j_orig
+        ir1 = ir_orig
+        jr1 = jr_orig
+        exit
+      end if
+    end do
+    debug(n_iter)
+
+    this%i1 = i1; debug(i1)
+    this%j1 = j1; debug(j1)
+    this%ir1 = ir1; debug(ir1)
+    this%jr1 = jr1; debug(jr1)
+
+    this%lon1 = fieldset%domain%get_lons(ir1); debug(this%lon1)
+    this%lat1 = fieldset%domain%get_lats(jr1); debug(this%lat1)
+
+    dbgtail(redirect)
+    return
+  end subroutine redirect
+  !===========================================
   subroutine check_boundaries(this, fieldset, time)
 
     class(t_particle), intent(inout) :: this
@@ -270,8 +480,6 @@ contains
     real(rk), intent(in)             :: time
     integer                          :: i, j
     integer                          :: seamask_val
-    integer                          :: n_bounce
-    integer, parameter               :: max_bounce = 100
 #ifdef DEBUG
     real(rk)                         :: lon_t0 = 0., lat_t0 = 0.
     real(rk)                         :: lon_t1 = 0., lat_t1 = 0.
@@ -297,23 +505,29 @@ contains
       !---------------------------------------------
       ! Change state if beaching time exceeded or on boundary
       if (this%time_on_beach >= this%beaching_time) then
-        if (this%kill_bch) this%is_active = .false.
+        if (this%kill_beached) this%is_active = .false.
         this%state = BEACHED
       end if
     case (LAND)
       DBG, "Case LAND"
-      n_bounce = 0
-      do while (seamask_val == LAND)
-        call this%bounce(fieldset)
-        i = this%i1
-        j = this%j1
-        seamask_val = fieldset%domain%get_seamask(i, j)
-        n_bounce = n_bounce + 1
-        if (n_bounce > max_bounce) exit
-      end do
-      debug(n_bounce)
+#if defined PARTICLE_BOUNCE
+      call this%bounce(fieldset)
+#elif defined PARTICLE_REDIRECT
+      call this%redirect(fieldset)
+#elif defined PARTICLE_BEACH_IMMEDIATELY
+      if (this%kill_beached) this%is_active = .false.
+      this%state = BEACHED
+#else
+      this%i1 = this%i0
+      this%j1 = this%j0
+      this%ir1 = this%ir0
+      this%jr1 = this%jr0
+      this%lon1 = this%lon0
+      this%lat1 = this%lat0
+      this%depth1 = this%depth0
+#endif
 
-#ifdef DEBUG
+#if defined DEBUG && (defined PARTICLE_BOUNCE || defined PARTICLE_REDIRECT)
       lon_t2 = this%lon1
       lat_t2 = this%lat1
       if ((lon_t0 == lon_t2) .and. (lat_t0 == lat_t2)) then
@@ -332,7 +546,7 @@ contains
       !---------------------------------------------
       ! Change state if beaching time exceeded or on boundary
       if (this%time_on_beach >= this%beaching_time) then
-        if (this%kill_bch) this%is_active = .false.
+        if (this%kill_beached) this%is_active = .false.
         this%state = BEACHED
       end if
     case (SEA)
@@ -340,7 +554,7 @@ contains
       this%time_on_beach = ZERO
     case (BOUNDARY)
       DBG, "Case BOUNDARY"
-      if (this%kill_bdy) this%is_active = .false.
+      if (this%kill_boundary) this%is_active = .false.
       this%state = ON_BOUNDARY
     end select
 
