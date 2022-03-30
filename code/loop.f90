@@ -70,8 +70,8 @@ contains
                                                    rho=init_coords(i_release)%rho(ipart), &
                                                    radius=init_coords(i_release)%radius(ipart), &
                                                    max_age=max_age, &
-                                                   kill_bch=kill_beached, &
-                                                   kill_bdy=kill_boundary, &
+                                                   kill_beached=kill_beached, &
+                                                   kill_boundary=kill_boundary, &
                                                    fieldset=fieldset, &
                                                    time=time)
         end do

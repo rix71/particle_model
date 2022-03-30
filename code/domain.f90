@@ -1,3 +1,6 @@
+#ifdef SNAP_TO_BOUNDS
+#warning SNAP_TO_BOUNDS defined, indices can be modified
+#endif
 #include "cppdefs.h"
 module mod_domain
   !----------------------------------------------------------------
@@ -173,7 +176,22 @@ contains
   !===========================================
   real(rk) function get_lons_idx(this, idx) result(res)
     class(t_domain), intent(in) :: this
-    integer, intent(in) :: idx
+    integer AIM_INTENT :: idx
+
+    if (idx < 1) then
+#ifdef SNAP_TO_BOUNDS
+      idx = 1
+#else
+      call throw_error("domain :: get_lons_idx", "Index out of bounds! (Less than 1)")
+#endif
+    end if
+    if (idx > this%nx) then
+#ifdef SNAP_TO_BOUNDS
+      idx = this%nx
+#else
+      call throw_error("domain :: get_lons_idx", "Index out of bounds! (Greater than nx)")
+#endif
+    end if
 
     res = this%lons(idx)
 
@@ -182,14 +200,17 @@ contains
   !===========================================
   real(rk) function get_lons_interp(this, idx) result(res)
     class(t_domain), intent(in) :: this
-    real(rk), intent(in) :: idx
+    real(rk) AIM_INTENT :: idx
     real(rk) :: i0, i1
 
     dbghead(get_lons_interp)
 
     debug(idx)
 
-#ifndef SNAP_TO_BOUNDS
+#ifdef SNAP_TO_BOUNDS
+    if (idx < ONE) idx = ONE
+    if (idx > real(this%nx, rk)) idx = real(this%nx, rk)
+#else
     if (idx >= real(this%nx, rk)) then
       call throw_error("domain :: get_lons_interp", "Index out of bounds!")
     end if
@@ -201,7 +222,7 @@ contains
     debug(this%lons(int(i0)))
     debug(this%lons(int(i1)))
 
-    if (idx < real(this%nx, rk)) then
+    if (int(i1) <= this%nx) then
       res = (i1 - idx) / (i1 - i0) * this%lons(int(i0)) + (idx - i0) / (i1 - i0) * this%lons(int(i1))
     else
       ! I guess this is a kinda acceptable solution to index errors
@@ -226,25 +247,43 @@ contains
     return
   end function get_lats_whole
   !===========================================
-  real(rk) function get_lats_idx(this, i) result(res)
+  real(rk) function get_lats_idx(this, idx) result(res)
     class(t_domain), intent(in) :: this
-    integer, intent(in) :: i
+    integer AIM_INTENT :: idx
 
-    res = this%lats(i)
+    if (idx < 1) then
+#ifdef SNAP_TO_BOUNDS
+      idx = 1
+#else
+      call throw_error("domain :: get_lats_idx", "Index out of bounds! (Less than 1)")
+#endif
+    end if
+    if (idx > this%nx) then
+#ifdef SNAP_TO_BOUNDS
+      idx = this%nx
+#else
+      call throw_error("domain :: get_lats_idx", "Index out of bounds! (Greater than ny)")
+#endif
+    end if
+
+    res = this%lats(idx)
 
     return
   end function get_lats_idx
   !===========================================
   real(rk) function get_lats_interp(this, idx) result(res)
     class(t_domain), intent(in) :: this
-    real(rk), intent(in) :: idx
+    real(rk) AIM_INTENT :: idx
     real(rk) :: i0, i1
 
     dbghead(get_lats_interp)
 
     debug(idx)
-#ifndef SNAP_TO_BOUNDS
-    if (idx >= real(this%ny, rk)) then
+#ifdef SNAP_TO_BOUNDS
+    if (idx < ONE) idx = ONE
+    if (idx > real(this%ny, rk)) idx = real(this%ny, rk)
+#else
+    if ((idx >= real(this%ny, rk)).or.(idx < ONE)) then
       call throw_error("domain :: get_lats_interp", "Index out of bounds!")
     end if
 #endif
@@ -255,7 +294,7 @@ contains
     debug(this%lats(int(i0)))
     debug(this%lats(int(i1)))
 
-    if (idx < real(this%ny, rk)) then
+    if (int(i1) <= this%ny) then
       res = (i1 - idx) / (i1 - i0) * this%lats(int(i0)) + (idx - i0) / (i1 - i0) * this%lats(int(i1))
     else
       res = (i1 - idx) / (i1 - i0) * this%lats(int(i0)) + (idx - i0) / (i1 - i0) * (this%lats(int(i0)) + this%dlat)
@@ -278,8 +317,20 @@ contains
   !===========================================
   function get_bathymetry_idx(this, i, j) result(res)
     class(t_domain), intent(in) :: this
-    integer, intent(in) :: i, j
+    integer AIM_INTENT :: i, j
     real(rk) :: res
+
+#ifdef SNAP_TO_BOUNDS
+    if (i < 1) i = 1
+    if (i > this%nx) i = this%nx
+    if (j < 1) j = 1
+    if (j > this%ny) j = this%ny
+#endif
+
+    if (i < 1) call throw_error("domain :: get_bathymetry_idx", "i is less than 1")
+    if (i > this%nx) call throw_error("domain :: get_bathymetry_idx", "i is greater than nx")
+    if (j < 1) call throw_error("domain :: get_bathymetry_idx", "j is less than 1")
+    if (j > this%ny) call throw_error("domain :: get_bathymetry_idx", "j is greater than ny")
 
     res = this%depdata(i, j)
 
@@ -323,8 +374,20 @@ contains
   !===========================================
   function get_seamask_idx(this, i, j) result(res)
     class(t_domain), intent(in) :: this
-    integer, intent(in)         :: i, j
+    integer AIM_INTENT          :: i, j
     integer                     :: res
+
+#ifdef SNAP_TO_BOUNDS
+    if (i < 1) i = 1
+    if (i > this%nx) i = this%nx
+    if (j < 1) j = 1
+    if (j > this%ny) j = this%ny
+#endif
+
+    if (i < 1) call throw_error("domain :: get_seamask_idx", "i is less than 1")
+    if (i > this%nx) call throw_error("domain :: get_seamask_idx", "i is greater than nx")
+    if (j < 1) call throw_error("domain :: get_seamask_idx", "j is less than 1")
+    if (j > this%ny) call throw_error("domain :: get_seamask_idx", "j is greater than ny")
 
     res = this%seamask(i, j)
 

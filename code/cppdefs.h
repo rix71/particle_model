@@ -49,6 +49,14 @@
 #define DBG !just a comment...
 #endif
 !---------------------------------------------
+! Allow index modification
+#ifdef SNAP_TO_BOUNDS
+#define AIM_INTENT 
+#else
+! If not allowed, some subroutines should have intent(in) instead
+#define AIM_INTENT , intent(in)
+#endif
+!---------------------------------------------
 !File numbers
 #define NMLFILE 10
 #define COORDFILE 11
@@ -66,6 +74,7 @@
 #define ZERO 0.0d0
 #define HALF 0.5d0
 #define ONE 1.0d0
+#define SMALL 0.0001d0
 !---------------------------------------------
 !Enumerations
 !--------------

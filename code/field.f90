@@ -1,3 +1,6 @@
+#ifdef SNAP_TO_BOUNDS
+#warning SNAP_TO_BOUNDS defined, indices can be modified
+#endif
 #include "cppdefs.h"
 module mod_field
   use mod_errors
@@ -69,8 +72,8 @@ contains
       allocate (g%data_t2(nx, ny, 1), stat=ierr)
       if (ierr .ne. 0) call throw_error("field :: field", "Could not allocate", ierr)
     end if
-    g%data_t1 = 0.
-    g%data_t2 = 0.
+    g%data_t1 = ZERO
+    g%data_t2 = ZERO
     g%timestep = timestep
     if (present(nc_varname)) g%nc_varname = nc_varname
 
@@ -119,7 +122,8 @@ contains
     ! Input t: time between t1 and t2 (t1 <= t <= t2 or 0 <= t <= timestep)
     !---------------------------------------------
     class(t_field), intent(in)     :: this
-    real(rk), intent(in)           :: t, x, y
+    real(rk), intent(in)           :: t
+    real(rk) AIM_INTENT            ::  x, y
     real(rk), optional, intent(in) :: z
     real(rk), intent(out)          :: res
     integer                        :: i, j, k
@@ -140,10 +144,23 @@ contains
     if (x >= real(this%nx, rk)) then
 #ifdef SNAP_TO_BOUNDS
       ! Right boundary
-      ! can only be trusted when the SNAP_TO_BOUNDS flag is on
-      i = i - 1
-      x1 = x1 - ONE
-      x2 = x2 - ONE
+      ! can only be trusted when the SNAP_TO_BOUNDS flag is defined
+      i = this%nx - 1
+      x = real(this%nx, rk)
+      x1 = real(this%nx, rk) - ONE
+      x2 = real(this%nx, rk)
+#else
+      call throw_error("field :: get_interp", "Index (i) out of bounds!")
+#endif
+    end if
+    if (x < ONE) then
+#ifdef SNAP_TO_BOUNDS
+      ! Left boundary
+      ! can only be trusted when the SNAP_TO_BOUNDS flag is defined
+      i = 1
+      x = ONE
+      x1 = ONE
+      x2 = 2.*ONE
 #else
       call throw_error("field :: get_interp", "Index (i) out of bounds!")
 #endif
@@ -155,9 +172,21 @@ contains
     if (y >= real(this%ny, rk)) then
 #ifdef SNAP_TO_BOUNDS
       ! Top boundary
-      j = j - 1
-      y1 = y1 - ONE
-      y2 = y2 - ONE
+      j = this%nx - 1
+      y = real(this%ny, rk)
+      y1 = real(this%ny, rk) - ONE
+      y2 = real(this%ny, rk)
+#else
+      call throw_error("field :: get_interp", "Index (j) out of bounds!")
+#endif
+    end if
+    if (y < ONE) then
+#ifdef SNAP_TO_BOUNDS
+      ! Bottom boundary
+      j = 1
+      y = ONE
+      y1 = ONE
+      y2 = 2.*ONE
 #else
       call throw_error("field :: get_interp", "Index (j) out of bounds!")
 #endif
@@ -233,7 +262,7 @@ contains
     real(rk) :: f1, f2
 
     dbghead(get_nointerp)
-    
+
     if (present(k)) then
       f1 = this%data_t1(i, j, k)
       f2 = this%data_t2(i, j, k)
@@ -242,7 +271,7 @@ contains
       f2 = this%data_t2(i, j, 1)
     end if
     res = this%time_interp(f1, f2, t)
-    
+
     dbgtail(get_nointerp)
     return
   end subroutine get_nointerp

@@ -18,6 +18,11 @@ FFLAGS += -DWRITESTDOUT
 # Do not allow too big indices (needed when the time step is big or domain has northern/eastern boundaries)
 FFLAGS += -DSNAP_TO_BOUNDS
 
+# Land interaction methods
+# FFLAGS += -DPARTICLE_BOUNCE
+FFLAGS += -DPARTICLE_REDIRECT
+# FFLAGS += -DPARTICLE_BEACH_IMMEDIATELY
+
 # Use OpenMP
 FFLAGS += -DUSE_OMP -fopenmp
 
