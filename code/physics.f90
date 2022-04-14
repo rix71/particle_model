@@ -7,6 +7,8 @@ module mod_physics
   ! - biofouling
   ! - drag
   !----------------------------------------------------------------
+  use mod_errors
+  use mod_interp
   use mod_precdefs
   use mod_params
   use time_vars, only: dt
@@ -16,7 +18,11 @@ module mod_physics
   private
   !===================================================
   !---------------------------------------------
-  public :: vertical_velocity, diffuse
+  public :: vertical_velocity, init_diffusion, diffuse, update_Ah_Smagorinsky_full_field
+  !---------------------------------------------
+  real(rk), allocatable :: Ah_field(:, :, :)
+  !---------------------------------------------
+  integer :: ierr
   !===================================================
 contains
   !===========================================
@@ -131,6 +137,214 @@ contains
     return
   end function Kooi_vertical_velocity
   !===========================================
+  subroutine init_diffusion(nx, ny, nz)
+    integer, intent(in) :: nx, ny, nz
+
+    dbghead(init_diffusion)
+
+    FMT1, "======== Init diffusion ========"
+
+    FMT2, "Allocating field for Ah (nx, ny, nz): (", nx, ", ", ny, ", ", nz, ")"
+    allocate (Ah_field(nx, ny, nz), stat=ierr)
+    if (ierr .ne. 0) call throw_error("physics :: init_diffusion", "Could not allocate!")
+
+    ! Random seed!!!
+
+    dbgtail(init_diffusion)
+    return
+  end subroutine init_diffusion
+  !===========================================
+  subroutine update_Ah_Smagorinsky_full_field(fieldset, time, nx, ny, nz)
+    type(t_fieldset), intent(in) :: fieldset
+    real(rk), intent(in) :: time
+    integer, intent(in) :: nx, ny, nz
+    real(rk), dimension(nx, ny, nz) :: dudx, dudy, dvdx, dvdy
+    real(rk) :: dx, dy
+    ! real(rk) :: Ah_s_full(nx, ny, nz)
+
+    dbghead(update_Ah_Smagorinsky_full_field)
+
+    dudx = fieldset%get_gradient("U", time, 1)
+    dudy = fieldset%get_gradient("U", time, 2)
+    dvdx = fieldset%get_gradient("V", time, 1)
+    dvdy = fieldset%get_gradient("V", time, 2)
+
+    dx = fieldset%domain%dx
+    dy = fieldset%domain%dy
+
+    Ah_field = Cm_smagorinsky * (dx * dy) * sqrt(dudx**2 + dvdy**2 + HALF * (dudy + dvdx)**2)
+
+    dbgtail(update_Ah_Smagorinsky_full_field)
+    return
+  end subroutine update_Ah_Smagorinsky_full_field
+  !===========================================
+  function get_Ah_Smagorinsky_full_field(fieldset, x, y, z) result(Ah_s)
+    type(t_fieldset), intent(in)   :: fieldset
+    real(rk) AIM_INTENT            :: x, y
+    real(rk), optional, intent(in) :: z
+    integer                        :: i, j, k
+    real(rk)                       :: f1
+    real(rk)                       :: x1, x2, &
+                                      y1, y2, &
+                                      z1, z2, &
+                                      c11, c12, c21, c22, &
+                                      c111, c121, c211, c221, c112, c122, c212, c222
+    real(rk) :: Ah_s
+    integer :: inbr
+    integer :: seamask(fieldset%nx, fieldset%ny)
+
+    dbghead(get_Ah_Smagorinsky_full_field)
+
+    debug(x); debug(y)
+
+    i = floor(x); debug(i)
+    x1 = float(floor(x)); debug(x1)
+    x2 = float(floor(x) + 1); debug(x2)
+    if (x >= real(fieldset%nx, rk)) then
+#ifdef SNAP_TO_BOUNDS
+      ! Right boundary
+      ! can only be trusted when the SNAP_TO_BOUNDS flag is defined
+      DBG, "Snapping x down"
+      i = fieldset%nx - 1; debug(i)
+      x = real(fieldset%nx, rk); debug(x)
+      x1 = real(fieldset%nx, rk) - ONE; debug(x1)
+      x2 = real(fieldset%nx, rk); debug(x2)
+#else
+      call throw_error("physics :: get_Ah_Smagorinsky_full_field", "Index (i) out of bounds!")
+#endif
+    end if
+    if (x < ONE) then
+#ifdef SNAP_TO_BOUNDS
+      ! Left boundary
+      ! can only be trusted when the SNAP_TO_BOUNDS flag is defined
+      DBG, "Snapping x up"
+      i = 1; debug(i)
+      x = ONE; debug(x)
+      x1 = ONE; debug(x1)
+      x2 = 2.*ONE; debug(x2)
+#else
+      call throw_error("physics :: get_Ah_Smagorinsky_full_field", "Index (i) out of bounds!")
+#endif
+    end if
+
+    j = floor(y); debug(j)
+    y1 = float(floor(y)); debug(y1)
+    y2 = float(floor(y) + 1); debug(y2)
+    if (y >= real(fieldset%ny, rk)) then
+#ifdef SNAP_TO_BOUNDS
+      ! Top boundary
+      DBG, "Snapping y down"
+      j = fieldset%ny - 1; debug(j)
+      y = real(fieldset%ny, rk); debug(y)
+      y1 = real(fieldset%ny, rk) - ONE; debug(y1)
+      y2 = real(fieldset%ny, rk); debug(y2)
+#else
+      call throw_error("physics :: get_Ah_Smagorinsky_full_field", "Index (j) out of bounds!")
+#endif
+    end if
+    if (y < ONE) then
+#ifdef SNAP_TO_BOUNDS
+      ! Bottom boundary
+      DBG, "Snapping y up"
+      j = 1; debug(j)
+      y = ONE; debug(y)
+      y1 = ONE; debug(y1)
+      y2 = 2.*ONE; debug(y2)
+#else
+      call throw_error("physics :: get_Ah_Smagorinsky_full_field", "Index (j) out of bounds!")
+#endif
+    end if
+
+    seamask = fieldset%domain%get_seamask()
+
+    if (present(z)) then
+      debug(z)
+      DBG, "Spatial intepolation 3D"
+
+      k = floor(z); debug(k)
+      z1 = float(floor(z)); debug(z1)
+      z2 = float(floor(z) + 1); debug(z2)
+
+      if (seamask(i, j) == LAND) then
+        DBG, "Nearest neighbour"
+        f1 = Ah_field(i, j, k)
+        do inbr = 1, 8
+          if (seamask(i + nbrs(1, inbr), j + nbrs(2, inbr)) .ne. LAND) then
+            f1 = Ah_field(i + nbrs(1, inbr), j + nbrs(2, inbr), k)
+            DBG, "Stopped neighbour search"
+            DBG, "Data from: ", i + nbrs(1, inbr), j + nbrs(2, inbr), k
+            debug(inbr)
+            exit
+          end if
+        end do
+        debug(f1)
+
+      else if (seamask(i, j) == BEACH) then
+        DBG, "Single cell value"
+        f1 = Ah_field(i, j, k); debug(f1)
+
+      else
+        DBG, "Trilinear interpolation"
+
+        if (k == fieldset%nz) then
+          ! Use the lower layer if the particle is exactly at the surface
+          k = k - 1
+          z1 = z1 - ONE
+          z2 = z2 - ONE
+        end if
+
+        c111 = Ah_field(i, j, k); debug(c111)
+        c121 = Ah_field(i, j + 1, k); debug(c121)
+        c211 = Ah_field(i + 1, j, k); debug(c211)
+        c221 = Ah_field(i + 1, j + 1, k); debug(c221)
+        c112 = Ah_field(i, j, k + 1); debug(c112)
+        c122 = Ah_field(i, j + 1, k + 1); debug(c122)
+        c212 = Ah_field(i + 1, j, k + 1); debug(c212)
+        c222 = Ah_field(i + 1, j + 1, k + 1); debug(c222)
+
+        call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f1)
+        debug(f1)
+      end if
+    else
+      DBG, "Spatial intepolation 2D"
+
+      if (seamask(i, j) == LAND) then
+        DBG, "Nearest neighbour"
+        f1 = Ah_field(i, j, 1)
+        do inbr = 1, 8
+          if (seamask(i + nbrs(1, inbr), j + nbrs(2, inbr)) .ne. LAND) then
+            f1 = Ah_field(i + nbrs(1, inbr), j + nbrs(2, inbr), 1)
+            DBG, "Stopped neighbour search"
+            DBG, "Data from: ", i + nbrs(1, inbr), j + nbrs(2, inbr), 1
+            debug(inbr)
+            exit
+          end if
+        end do
+        debug(f1)
+
+      else if (seamask(i, j) == BEACH) then
+        DBG, "Single cell value"
+        f1 = Ah_field(i, j, 1); debug(f1)
+
+      else
+        DBG, "Bilinear interpolation"
+
+        c11 = Ah_field(i, j, 1); debug(c11)
+        c12 = Ah_field(i, j + 1, 1); debug(c12)
+        c21 = Ah_field(i + 1, j, 1); debug(c21)
+        c22 = Ah_field(i + 1, j + 1, 1); debug(c22)
+
+        call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f1)
+      end if
+    end if
+
+    Ah_s = f1
+    debug(Ah_s)
+
+    dbgtail(get_Ah_Smagorinsky_full_field)
+    return
+  end function get_Ah_Smagorinsky_full_field
+  !===========================================
   subroutine Ah_Smagorinsky(fieldset, time, i, j, k, Ah_s)
     type(t_fieldset), intent(in)  :: fieldset
     real(rk), intent(in)          :: time
@@ -207,18 +421,19 @@ contains
     type(t_fieldset), intent(in)    :: fieldset
     real(rk), intent(in)            :: time
     real(rk)                        :: Ah
-    integer                         :: i, j
+    real(rk)                        :: i, j
     real(rk)                        :: x0, x1, &
                                        y0, y1
 
     dbghead(diffuse_2D)
 
-    i = p%i1
-    j = p%j1
+    i = p%ir1
+    j = p%jr1
 
     call fieldset%domain%lonlat2xy(p%lon1, p%lat1, x0, y0)
 
-    call Ah_Smagorinsky(fieldset, time, i, j, Ah_s=Ah)
+    ! call Ah_Smagorinsky(fieldset, time, i, j, Ah_s=Ah)
+    Ah = get_Ah_Smagorinsky_full_field(fieldset, i, j)
 
     x1 = x0 + normal_random() * sqrt(2 * Ah * dt)
     y1 = y0 + normal_random() * sqrt(2 * Ah * dt)
@@ -236,26 +451,31 @@ contains
     type(t_fieldset), intent(in) :: fieldset
     real(rk), intent(in) :: time
     real(rk)                        :: Ah, kv
-    integer                         :: i, j, k
+    real(rk)                        :: i, j, k
     real(rk)                        :: x0, x1, &
                                        y0, y1, &
                                        z0, z1
 
     dbghead(diffuse_3D)
 
-    i = p%i1
-    j = p%j1
-    k = p%k1
+    i = p%ir1
+    j = p%jr1
+    k = p%kr1
 
     call fieldset%domain%lonlat2xy(p%lon1, p%lat1, x0, y0)
     z0 = p%depth1
 
-    call Ah_Smagorinsky(fieldset, time, i, j, k=k, Ah_s=Ah)
+    ! call Ah_Smagorinsky(fieldset, time, i, j, k=k, Ah_s=Ah)
+    Ah = get_Ah_Smagorinsky_full_field(fieldset, i, j, k)
     kv = diffusion_vert_const
 
     x1 = x0 + normal_random() * sqrt(2 * Ah * dt)
     y1 = y0 + normal_random() * sqrt(2 * Ah * dt)
+#ifdef DIFFUSE_VERTICAL
     z1 = z0 + normal_random() * sqrt(2 * kv * dt)
+#else
+    z1 = z0
+#endif
 
     call fieldset%domain%xy2lonlat(x1, y1, p%lon1, p%lat1)
     call fieldset%search_indices(x=p%lon1, y=p%lat1, i=p%i1, j=p%j1, ir=p%ir1, jr=p%jr1)

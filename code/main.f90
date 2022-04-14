@@ -57,8 +57,48 @@ contains
   end subroutine command_line
   !===========================================
   subroutine print_compile_info()
+    use iso_fortran_env
 
     FMT1, "Compiled: "//__DATE__//" "//__TIME__
+    FMT1, "Compiler: "//compiler_version()
+    FMT1, "Compiler options: "//compiler_options()
+    FMT1, "Used flags:"
+#ifdef WRITESTDOUT
+    FMT2, "-WRITESTDOUT"
+#endif
+#ifdef USE_OMP
+    FMT2, "-USE_OMP"
+#endif
+#ifdef DEBUG
+    FMT2, "-DEBUG"
+#endif
+#ifdef SAY_LESS
+    FMT2, "-SAY_LESS"
+#endif
+#ifdef NOSYSCALLS
+    FMT2, "-NOSYSCALLS"
+#endif
+#ifdef SNAP_TO_BOUNDS
+    FMT2, "-SNAP_TO_BOUNDS"
+#endif
+#ifdef PARTICLE_BOUNCE
+    FMT2, "-PARTICLE_BOUNCE"
+#endif
+#ifdef PARTICLE_REDIRECT
+    FMT2, "-PARTICLE_REDIRECT"
+#endif
+#ifdef PARTICLE_BEACH_IMMEDIATELY
+    FMT2, "-PARTICLE_BEACH_IMMEDIATELY"
+#endif
+#ifdef PARTICLE_SNAP_SEALVL
+    FMT2, "-PARTICLE_SNAP_SEALVL"
+#endif
+#ifdef ADVECT_VERTICAL
+    FMT2, "-ADVECT_VERTICAL"
+#endif
+#ifdef DIFFUSE_VERTICAL
+    FMT2, "-DIFFUSE_VERTICAL"
+#endif
 
     return
   end subroutine print_compile_info

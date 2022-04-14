@@ -1,4 +1,4 @@
-#ifdef SNAP_TO_BOUNDS
+#if (defined(SNAP_TO_BOUNDS) && defined(DEBUG))
 #warning SNAP_TO_BOUNDS defined, indices can be modified
 #endif
 #include "cppdefs.h"
@@ -283,7 +283,7 @@ contains
     if (idx < ONE) idx = ONE
     if (idx > real(this%ny, rk)) idx = real(this%ny, rk)
 #else
-    if ((idx >= real(this%ny, rk)).or.(idx < ONE)) then
+    if ((idx >= real(this%ny, rk)) .or. (idx < ONE)) then
       call throw_error("domain :: get_lats_interp", "Index out of bounds!")
     end if
 #endif
@@ -425,35 +425,93 @@ contains
     real(rk), intent(in)            :: lon, lat
     integer, optional, intent(out)  :: i, j
     real(rk), optional, intent(out) :: ir, jr
+    integer                         :: it, jt
     real(rk)                        :: irt, jrt
 
     dbghead(get_indices_2d)
 
     debug(lon); debug(lat)
 
-    irt = (lon - this%lon0) / this%dlon
-    jrt = (lat - this%lat0) / this%dlat
+    it = minloc(abs(this%lons - lon), dim=1); debug(it)
+    jt = minloc(abs(this%lats - lat), dim=1); debug(jt)
+    ! if (this%lons(it) > lon) it = it - 1
+    ! if (this%lats(jt) > lat) jt = jt - 1
 
+    if (it == this%nx) then
+      DBG, "it == nx"
+      if (lon > this%lons(this%nx)) then
 #ifdef SNAP_TO_BOUNDS
-    ! This is probably only necessary in case of large time steps
-    if (irt <= ONE) irt = ONE
-    if (irt > real(this%nx, rk)) irt = real(this%nx, rk)
-
-    if (jrt <= ONE) jrt = ONE
-    if (jrt > real(this%ny, rk)) jrt = real(this%ny, rk)
+        DBG, "Snapping irt down"
+        irt = real(this%nx, rk)
+#else
+        call throw_error("domain :: get_indices_2d", "it is greater than nx")
 #endif
+      else
+        if (this%lons(it) > lon) it = it - 1 ! This is probably always true
+        irt = it + (lon - this%lons(it)) / (this%lons(it + 1) - this%lons(it))
+      end if
+    else if (it == 1) then
+      DBG, "it == 1"
+      if (lon < this%lons(1)) then
+#ifdef SNAP_TO_BOUNDS
+        DBG, "Snapping irt up"
+        irt = ONE
+#else
+        call throw_error("domain :: get_indices_2d", "it is less than 1")
+#endif
+      else
+        ! if (this%lons(it) > lon) it = it - 1
+        irt = it + (lon - this%lons(it)) / (this%lons(it + 1) - this%lons(it))
+      end if
+    else
+      if (this%lons(it) > lon) it = it - 1
+      irt = it + (lon - this%lons(it)) / (this%lons(it + 1) - this%lons(it))
+    end if
 
+    if (jt == this%ny) then
+      DBG, "jt == ny"
+      if (lat > this%lats(this%ny)) then
+#ifdef SNAP_TO_BOUNDS
+        DBG, "Snapping jrt down"
+        jrt = real(this%ny, rk)
+#else
+        call throw_error("domain :: get_indices_2d", "jt is greater than ny")
+#endif
+      else
+        if (this%lats(jt) > lat) jt = jt - 1 ! Also always true
+        jrt = jt + (lat - this%lats(jt)) / (this%lats(jt + 1) - this%lats(jt))
+      end if
+    else if (jt == 1) then
+      DBG, "jt == 1"
+      if (lat < this%lats(1)) then
+#ifdef SNAP_TO_BOUNDS
+        DBG, "Snapping jrt up"
+        jrt = ONE
+#else
+        call throw_error("domain :: get_indices_2d", "jt is less than 1")
+#endif
+      else
+        ! if (this%lats(jt) > lat) jt = jt - 1
+        jrt = jt + (lat - this%lats(jt)) / (this%lats(jt + 1) - this%lats(jt))
+      end if
+    else
+      if (this%lats(jt) > lat) jt = jt - 1
+      jrt = jt + (lat - this%lats(jt)) / (this%lats(jt + 1) - this%lats(jt))
+    end if
+
+    debug(it)
+    debug(jt)
     debug(irt)
     debug(jrt)
 
     if (present(i)) then
-      i = int(irt); debug(i)
+      i = it; debug(i)
       if (i < 1) call throw_error("domain :: get_indices_2d", "i is less than 1")
       if (i > this%nx) call throw_error("domain :: get_indices_2d", "i is greater than nx")
     end if
 
     if (present(j)) then
-      j = int(jrt); debug(j)
+      j = jt; debug(j)
       if (j < 1) call throw_error("domain :: get_indices_2d", "j is less than 1")
       if (j > this%ny) call throw_error("domain :: get_indices_2d", "j is greater than ny")
     end if
@@ -473,5 +531,92 @@ contains
     dbgtail(get_indices_2d)
     return
   end subroutine get_indices_2d
+  !===========================================
+  subroutine nearest_point(this, val, i, j, in, jn)
+    !---------------------------------------------
+    ! Find closest seamask point with value val
+    !---------------------------------------------
+    class(t_domain), intent(in) :: this
+    integer, intent(in) :: val
+    integer, intent(in) :: i, j
+    integer, intent(out) :: in, jn
+    integer :: arr(2, 8)
+
+    arr = reshape([0, 1, -1, 0, 1, 1, -1, -1, 1, 0, 0, -1, 1, -1, -1, 1], [2, 8])
+
+    ! [0, 1],
+    ! [1, 0],
+    ! [-1, 0],
+    ! [0, -1],
+    ! [1, 1],
+    ! [1, -1],
+    ! [-1, -1],
+    ! [-1, 1]
+
+    if (this%seamask(i, j) == val) then
+      in = i
+      jn = j
+      return
+    end if
+
+  end subroutine nearest_point
+  !===========================================
+!   subroutine get_indices_2d(this, lon, lat, i, j, ir, jr)
+!     !---------------------------------------------
+!     ! Should integer indices be int(irt) or nint(irt) (nearest)?
+!     !---------------------------------------------
+!     class(t_domain), intent(in) :: this
+
+!     real(rk), intent(in)            :: lon, lat
+!     integer, optional, intent(out)  :: i, j
+!     real(rk), optional, intent(out) :: ir, jr
+!     real(rk)                        :: irt, jrt
+
+!     dbghead(get_indices_2d)
+
+!     debug(lon); debug(lat)
+
+!     irt = (lon - this%lon0) / this%dlon
+!     jrt = (lat - this%lat0) / this%dlat
+
+! #ifdef SNAP_TO_BOUNDS
+!     ! This is probably only necessary in case of large time steps
+!     if (irt <= ONE) irt = ONE
+!     if (irt > real(this%nx, rk)) irt = real(this%nx, rk)
+
+!     if (jrt <= ONE) jrt = ONE
+!     if (jrt > real(this%ny, rk)) jrt = real(this%ny, rk)
+! #endif
+
+!     debug(irt)
+!     debug(jrt)
+
+!     if (present(i)) then
+!       i = int(irt); debug(i)
+!       if (i < 1) call throw_error("domain :: get_indices_2d", "i is less than 1")
+!       if (i > this%nx) call throw_error("domain :: get_indices_2d", "i is greater than nx")
+!     end if
+
+!     if (present(j)) then
+!       j = int(jrt); debug(j)
+!       if (j < 1) call throw_error("domain :: get_indices_2d", "j is less than 1")
+!       if (j > this%ny) call throw_error("domain :: get_indices_2d", "j is greater than ny")
+!     end if
+
+!     if (present(ir)) then
+!       ir = irt; debug(ir)
+!       if (ir < ONE) call throw_error("domain :: get_indices_2d", "ir is less than 1")
+!       if (ir > real(this%nx, rk)) call throw_error("domain :: get_indices_2d", "ir is greater than nx")
+!     end if
+
+!     if (present(jr)) then
+!       jr = jrt; debug(jr)
+!       if (jr < ONE) call throw_error("domain :: get_indices_2d", "jr is less than 1")
+!       if (jr > real(this%ny, rk)) call throw_error("domain :: get_indices_2d", "jr is greater than ny")
+!     end if
+
+!     dbgtail(get_indices_2d)
+!     return
+!   end subroutine get_indices_2d
 
 end module mod_domain

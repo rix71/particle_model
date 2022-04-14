@@ -1,11 +1,11 @@
-#ifdef SNAP_TO_BOUNDS
+#if (defined(SNAP_TO_BOUNDS) && defined(DEBUG))
 #warning SNAP_TO_BOUNDS defined, indices can be modified
 #endif
 #include "cppdefs.h"
 module mod_field
   use mod_errors
   use mod_precdefs
-  use mod_interp, only: bilinearinterp, trilinearinterp
+  use mod_interp, only: bilinearinterp, trilinearinterp, nbrs
   implicit none
   private
   !===================================================
@@ -32,8 +32,9 @@ module mod_field
     procedure, public :: swap
     procedure, public :: get_varname
     procedure, public :: get_array_pointer
-    generic           :: time_interp => time_interp_scalar, time_interp_vector
-    procedure         :: time_interp_scalar, time_interp_vector
+    procedure, public :: gradient
+    generic           :: time_interp => time_interp_scalar, time_interp_vector, time_interp_matrix
+    procedure         :: time_interp_scalar, time_interp_vector, time_interp_matrix
     procedure, public :: get_array_1D
     final             :: dtor_field
   end type t_field
@@ -115,7 +116,19 @@ contains
     return
   end function time_interp_vector
   !===========================================
-  subroutine get_interp(this, t, x, y, z, res)
+  function time_interp_matrix(this, f1, f2, t, n, m, k) result(res)
+    class(t_field), intent(in) :: this
+    integer, intent(in) :: n, m, k
+    real(rk), dimension(n, m, k), intent(in) :: f1, f2
+    real(rk), intent(in) :: t
+    real(rk) :: res(n, m, k)
+
+    res = f1 + (f2 - f1) * (t / this%timestep)
+
+    return
+  end function time_interp_matrix
+  !===========================================
+  subroutine get_interp(this, t, x, y, z, seamask, res)
     !---------------------------------------------
     ! Getter function
     ! Get (interpolated) values from the field using real indices
@@ -123,10 +136,12 @@ contains
     !---------------------------------------------
     class(t_field), intent(in)     :: this
     real(rk), intent(in)           :: t
-    real(rk) AIM_INTENT            ::  x, y
+    real(rk) AIM_INTENT            :: x, y
     real(rk), optional, intent(in) :: z
+    integer, intent(in)            :: seamask(this%nx, this%ny)
     real(rk), intent(out)          :: res
     integer                        :: i, j, k
+    integer                        :: inbr
     real(rk)                       :: f1, f2
     real(rk)                       :: x1, x2, &
                                       y1, y2, &
@@ -145,10 +160,11 @@ contains
 #ifdef SNAP_TO_BOUNDS
       ! Right boundary
       ! can only be trusted when the SNAP_TO_BOUNDS flag is defined
-      i = this%nx - 1
-      x = real(this%nx, rk)
-      x1 = real(this%nx, rk) - ONE
-      x2 = real(this%nx, rk)
+      DBG, "Snapping x down"
+      i = this%nx - 1; debug(i)
+      x = real(this%nx, rk); debug(x)
+      x1 = real(this%nx, rk) - ONE; debug(x1)
+      x2 = real(this%nx, rk); debug(x2)
 #else
       call throw_error("field :: get_interp", "Index (i) out of bounds!")
 #endif
@@ -157,10 +173,11 @@ contains
 #ifdef SNAP_TO_BOUNDS
       ! Left boundary
       ! can only be trusted when the SNAP_TO_BOUNDS flag is defined
-      i = 1
-      x = ONE
-      x1 = ONE
-      x2 = 2.*ONE
+      DBG, "Snapping x up"
+      i = 1; debug(i)
+      x = ONE; debug(x)
+      x1 = ONE; debug(x1)
+      x2 = 2.*ONE; debug(x2)
 #else
       call throw_error("field :: get_interp", "Index (i) out of bounds!")
 #endif
@@ -172,10 +189,11 @@ contains
     if (y >= real(this%ny, rk)) then
 #ifdef SNAP_TO_BOUNDS
       ! Top boundary
-      j = this%nx - 1
-      y = real(this%ny, rk)
-      y1 = real(this%ny, rk) - ONE
-      y2 = real(this%ny, rk)
+      DBG, "Snapping y down"
+      j = this%ny - 1; debug(j)
+      y = real(this%ny, rk); debug(y)
+      y1 = real(this%ny, rk) - ONE; debug(y1)
+      y2 = real(this%ny, rk); debug(y2)
 #else
       call throw_error("field :: get_interp", "Index (j) out of bounds!")
 #endif
@@ -183,10 +201,11 @@ contains
     if (y < ONE) then
 #ifdef SNAP_TO_BOUNDS
       ! Bottom boundary
-      j = 1
-      y = ONE
-      y1 = ONE
-      y2 = 2.*ONE
+      DBG, "Snapping y up"
+      j = 1; debug(j)
+      y = ONE; debug(y)
+      y1 = ONE; debug(y1)
+      y2 = 2.*ONE; debug(y2)
 #else
       call throw_error("field :: get_interp", "Index (j) out of bounds!")
 #endif
@@ -194,53 +213,112 @@ contains
 
     if (present(z)) then
       debug(z)
-      DBG, "spatial intepolation 3D"
+      DBG, "Spatial intepolation 3D"
 
       k = floor(z); debug(k)
       z1 = float(floor(z)); debug(z1)
       z2 = float(floor(z) + 1); debug(z2)
 
-      c111 = this%data_t1(i, j, k); debug(c111)
-      c121 = this%data_t1(i, j + 1, k); debug(c121)
-      c211 = this%data_t1(i + 1, j, k); debug(c211)
-      c221 = this%data_t1(i + 1, j + 1, k); debug(c221)
-      c112 = this%data_t1(i, j, k + 1); debug(c112)
-      c122 = this%data_t1(i, j + 1, k + 1); debug(c122)
-      c212 = this%data_t1(i + 1, j, k + 1); debug(c212)
-      c222 = this%data_t1(i + 1, j + 1, k + 1); debug(c222)
+      if (seamask(i, j) == LAND) then
+        DBG, "Nearest neighbour"
+        f1 = this%data_t1(i, j, k)
+        f2 = this%data_t2(i, j, k)
+        do inbr = 1, 8
+          if (seamask(i + nbrs(1, inbr), j + nbrs(2, inbr)) .ne. LAND) then
+            f1 = this%data_t1(i + nbrs(1, inbr), j + nbrs(2, inbr), k)
+            f2 = this%data_t2(i + nbrs(1, inbr), j + nbrs(2, inbr), k)
+            DBG, "Stopped neighbour search"
+            DBG, "Data from: ", i + nbrs(1, inbr), j + nbrs(2, inbr), k
+            debug(inbr)
+            exit
+          end if
+        end do
+        debug(f1)
+        debug(f2)
 
-      call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f1)
-      debug(f1)
+      else if (seamask(i, j) == BEACH) then
+        DBG, "Single cell value"
+        f1 = this%data_t1(i, j, k); debug(f1)
+        f2 = this%data_t2(i, j, k); debug(f2)
 
-      c111 = this%data_t2(i, j, k); debug(c111)
-      c121 = this%data_t2(i, j + 1, k); debug(c121)
-      c211 = this%data_t2(i + 1, j, k); debug(c211)
-      c221 = this%data_t2(i + 1, j + 1, k); debug(c221)
-      c112 = this%data_t2(i, j, k + 1); debug(c112)
-      c122 = this%data_t2(i, j + 1, k + 1); debug(c122)
-      c212 = this%data_t2(i + 1, j, k + 1); debug(c212)
-      c222 = this%data_t2(i + 1, j + 1, k + 1); debug(c222)
+      else
+        DBG, "Trilinear interpolation"
 
-      call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f2)
-      debug(f2)
+        if (k == this%nz) then
+          ! Use the lower layer if the particle is exactly at the surface
+          k = k - 1
+          z1 = z1 - ONE
+          z2 = z2 - ONE
+        end if
+
+        c111 = this%data_t1(i, j, k); debug(c111)
+        c121 = this%data_t1(i, j + 1, k); debug(c121)
+        c211 = this%data_t1(i + 1, j, k); debug(c211)
+        c221 = this%data_t1(i + 1, j + 1, k); debug(c221)
+        c112 = this%data_t1(i, j, k + 1); debug(c112)
+        c122 = this%data_t1(i, j + 1, k + 1); debug(c122)
+        c212 = this%data_t1(i + 1, j, k + 1); debug(c212)
+        c222 = this%data_t1(i + 1, j + 1, k + 1); debug(c222)
+
+        call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f1)
+        debug(f1)
+
+        c111 = this%data_t2(i, j, k); debug(c111)
+        c121 = this%data_t2(i, j + 1, k); debug(c121)
+        c211 = this%data_t2(i + 1, j, k); debug(c211)
+        c221 = this%data_t2(i + 1, j + 1, k); debug(c221)
+        c112 = this%data_t2(i, j, k + 1); debug(c112)
+        c122 = this%data_t2(i, j + 1, k + 1); debug(c122)
+        c212 = this%data_t2(i + 1, j, k + 1); debug(c212)
+        c222 = this%data_t2(i + 1, j + 1, k + 1); debug(c222)
+
+        call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f2)
+        debug(f2)
+      end if
     else
-      DBG, "spatial intepolation 2D"
+      DBG, "Spatial intepolation 2D"
 
-      c11 = this%data_t1(i, j, 1); debug(c11)
-      c12 = this%data_t1(i, j + 1, 1); debug(c12)
-      c21 = this%data_t1(i + 1, j, 1); debug(c21)
-      c22 = this%data_t1(i + 1, j + 1, 1); debug(c22)
+      if (seamask(i, j) == LAND) then
+        DBG, "Nearest neighbour"
+        f1 = this%data_t1(i, j, 1)
+        f2 = this%data_t2(i, j, 1)
+        do inbr = 1, 8
+          if (seamask(i + nbrs(1, inbr), j + nbrs(2, inbr)) .ne. LAND) then
+            f1 = this%data_t1(i + nbrs(1, inbr), j + nbrs(2, inbr), 1)
+            f2 = this%data_t2(i + nbrs(1, inbr), j + nbrs(2, inbr), 1)
+            DBG, "Stopped neighbour search"
+            DBG, "Data from: ", i + nbrs(1, inbr), j + nbrs(2, inbr), 1
+            debug(inbr)
+            exit
+          end if
+        end do
+        debug(f1)
+        debug(f2)
 
-      call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f1)
-      debug(f1)
+      else if (seamask(i, j) == BEACH) then
+        DBG, "Single cell value"
+        f1 = this%data_t1(i, j, 1); debug(f1)
+        f2 = this%data_t2(i, j, 1); debug(f2)
 
-      c11 = this%data_t2(i, j, 1)
-      c12 = this%data_t2(i, j + 1, 1)
-      c21 = this%data_t2(i + 1, j, 1)
-      c22 = this%data_t2(i + 1, j + 1, 1)
+      else
+        DBG, "Bilinear interpolation"
 
-      call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f2)
-      debug(f2)
+        c11 = this%data_t1(i, j, 1); debug(c11)
+        c12 = this%data_t1(i, j + 1, 1); debug(c12)
+        c21 = this%data_t1(i + 1, j, 1); debug(c21)
+        c22 = this%data_t1(i + 1, j + 1, 1); debug(c22)
+
+        call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f1)
+        debug(f1)
+
+        c11 = this%data_t2(i, j, 1)
+        c12 = this%data_t2(i, j + 1, 1)
+        c21 = this%data_t2(i + 1, j, 1)
+        c22 = this%data_t2(i + 1, j + 1, 1)
+
+        call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f2)
+        debug(f2)
+      end if
     end if
 
     res = this%time_interp(f1, f2, t)
@@ -357,6 +435,30 @@ contains
 
     return
   end function get_array_pointer
+  !===========================================
+  function gradient(this, t, dx, dim) result(grad)
+    class(t_field), intent(in) :: this
+    real(rk), intent(in) :: t, dx
+    integer, intent(in) :: dim
+    real(rk), dimension(this%nx, this%ny, this%nz) :: grad
+    real(rk) :: data_t(this%nx, this%ny, this%nz)
+
+    data_t = this%time_interp(this%data_t1, this%data_t2, t, this%nx, this%ny, this%nz)
+
+    select case (dim)
+    case (1)
+      grad(:this%nx - 1, :, :) = (data_t(2:, :, :) - data_t(:this%nx - 1, :, :))
+      grad(this%nx, :, :) = grad(this%nx - 1, :, :)
+    case (2)
+      grad(:, :this%ny - 1, :) = (data_t(:, 2:, :) - data_t(:, :this%ny - 1, :))
+      grad(:, this%ny, :) = grad(:, this%ny - 1, :)
+    case default
+      call throw_error("field :: gradient", "Dimension must be 1 or 2")
+    end select
+
+    grad = grad / dx
+
+  end function gradient
   !===========================================
   subroutine swap(this)
     class(t_field), intent(inout) :: this

@@ -78,7 +78,9 @@ module field_vars
                                zax_style, &                    ! Depth values (1) or layer thickness (2)
                                has_density                     ! 0 - default density, 1 - has variable, 2 - calculate from T/S
   character(len=LEN_CHAR_S) :: uvarname, vvarname, wvarname, & ! Names of the variables. Necessary?
-                               zaxvarname, elevvarname         ! Names of the variables. Necessary?
+                               zaxvarname, elevvarname, &      
+                               rhovarname, tempvarname, &
+                               saltvarname, viscvarname
   character(len=LEN_CHAR_L) :: file_prefix, file_suffix        ! What comes before and after the proc. number?
   character(len=LEN_CHAR_L) :: GETMPATH, PMAPFILE              ! Path to GETM output and processor map
   type(t_fieldset)          :: fieldset

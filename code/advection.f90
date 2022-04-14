@@ -71,7 +71,11 @@ contains
 
     u = fieldset%get("U", time, i, j, k)
     v = fieldset%get("V", time, i, j, k)
+#ifdef ADVECT_VERTICAL
     w = fieldset%get("W", time, i, j, k)
+#else
+    w = ZERO
+#endif
 
     x1 = x0 + u * dt
     y1 = y0 + v * dt
@@ -160,7 +164,11 @@ contains
 
     u1 = fieldset%get("U", time, i=i, j=j, k=k)
     v1 = fieldset%get("V", time, i=i, j=j, k=k)
+#ifdef ADVECT_VERTICAL
     w1 = fieldset%get("W", time, i=i, j=j, k=k)
+#else
+    w1 = ZERO
+#endif
 
     x1 = x0 + u1 * dt
     y1 = y0 + v1 * dt
@@ -171,7 +179,11 @@ contains
 
     u2 = fieldset%get("U", time + dt, i, j, k)
     v2 = fieldset%get("V", time + dt, i, j, k)
+#ifdef ADVECT_VERTICAL
     w2 = fieldset%get("W", time + dt, i, j, k)
+#else
+    w2 = ZERO
+#endif
 
     x2 = x0 + 0.5 * (u1 + u2) * dt
     y2 = y0 + 0.5 * (v1 + v2) * dt

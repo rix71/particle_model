@@ -100,6 +100,10 @@
 ! wvarname       - [char] Name of current z-component variable in GETM data
 ! zaxvarname     - [char] Name of vertical layer depth variable in GETM data
 ! elevvarname    - [char] Name of elevation variable in GETM data
+! rhovarname     - [char] Name of density variable in GETM data
+! tempvarname    - [char] Name of temperature variable in GETM data
+! saltvarname    - [char] Name of salinity variable in GETM data
+! viscvarname    - [char] Name of viscosity variable in GETM data
 ! zax_style      - [int]  Vertical coordinate values 
 !                         1 - depth values 
 !                         2 - layer thickness
@@ -116,6 +120,10 @@
   wvarname = 'w'
   zaxvarname = 'zcn'
   elevvarname = ''
+  rhovarname = 'rho'
+  tempvarname = 'temp'
+  saltvarname = 'salt'
+  viscvarname = 'nuh'
   zax_style = 1
 /
 !===============================

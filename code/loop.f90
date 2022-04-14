@@ -57,6 +57,7 @@ contains
       !   - update fields
       call fieldset%update(theDate)
       time = fieldset%get_time(theDate)
+      if (do_diffusion) call update_Ah_Smagorinsky_full_field(fieldset, time, fieldset%nx, fieldset%ny, fieldset%nz)
 
       !   - release particles
       if (mod(itime, inputstep) .eq. 0) then

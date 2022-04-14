@@ -10,7 +10,8 @@ module mod_initialise
   use mod_fieldset
   use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, has_density, has_viscosity, &
                         file_prefix, file_suffix, nlevels, &
-                        uvarname, vvarname, wvarname, zaxvarname, elevvarname, zax_style, fieldset
+                        uvarname, vvarname, wvarname, zaxvarname, elevvarname, rhovarname, &
+                        tempvarname, saltvarname, viscvarname, zax_style, fieldset
   use mod_domain_vars, only: TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny, domain
   use mod_domain
   use nc_manager, only: nc_read_time_val, nc_var_exists
@@ -22,6 +23,7 @@ module mod_initialise
   use mod_datetime
   use mod_params, only: do_diffusion, do_velocity, advection_method, &
                         diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky
+  use mod_physics, only: init_diffusion
   implicit none
   private
   !===================================================
@@ -56,7 +58,8 @@ contains
     namelist /time_vars/ run_start, run_end, dt
     namelist /field_vars/ GETMPATH, PMAPFILE, has_subdomains, &
       file_prefix, file_suffix, nlevels, &
-      uvarname, vvarname, wvarname, zaxvarname, elevvarname, zax_style
+      uvarname, vvarname, wvarname, zaxvarname, elevvarname, rhovarname, &
+      tempvarname, saltvarname, viscvarname, zax_style
 
     FMT1, "======== Init namelist ========"
 
@@ -107,6 +110,10 @@ contains
     FMT3, var2val_char(vvarname)
     FMT3, var2val_char(zaxvarname)
     FMT3, var2val_char(elevvarname)
+    FMT3, var2val_char(rhovarname)
+    FMT3, var2val_char(tempvarname)
+    FMT3, var2val_char(saltvarname)
+    FMT3, var2val_char(viscvarname)
     FMT3, var2val(zax_style)
 
     FMT2, "Finished init namelist"
@@ -236,16 +243,16 @@ contains
     if (do_velocity) then
       !---------------------------------------------
       ! Field for density
-      if (nc_var_exists(trim(filename), "rho")) then
-        call fieldset%add_field("RHO", "rho")
+      if (nc_var_exists(trim(filename), trim(rhovarname))) then
+        call fieldset%add_field("RHO", rhovarname)
         has_density = DENSITY
         field_count = field_count + 1
       else
         call throw_warning("initialise :: init_fieldset", "Could not find density ('rho') in "//trim(filename))
-        if (nc_var_exists(trim(filename), "temp") .and. &
-            nc_var_exists(trim(filename), "salt")) then
-          call fieldset%add_field("TEMP", "temp")
-          call fieldset%add_field("SALT", "salt")
+        if (nc_var_exists(trim(filename), trim(tempvarname)) .and. &
+            nc_var_exists(trim(filename), trim(saltvarname))) then
+          call fieldset%add_field("TEMP", tempvarname)
+          call fieldset%add_field("SALT", saltvarname)
           has_density = TEMP_SALT
           field_count = field_count + 2
         else
@@ -256,14 +263,20 @@ contains
       end if
       !---------------------------------------------
       ! Field for viscosity
-      if (nc_var_exists(trim(filename), "nuh")) then
-        call fieldset%add_field("VISC", "nuh")
+      if (nc_var_exists(trim(filename), trim(viscvarname))) then
+        call fieldset%add_field("VISC", viscvarname)
         has_viscosity = .true.
         field_count = field_count + 1
       else
         call throw_warning("initialise :: init_fieldset", "Could not find viscosity ('nuh') in "//trim(filename)// &
                            ". Using default viscosity.")
       end if
+    end if
+    !---------------------------------------------
+    ! Diffusion coeficient
+    if (do_diffusion) then
+      call init_diffusion(nx, ny, nlevels)
+      field_count = field_count + 1
     end if
     !---------------------------------------------
     ! if (has_subdomains) call fieldset%init_proc_mask()

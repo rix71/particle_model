@@ -20,7 +20,7 @@ module mod_fieldset
     !---------------------------------------------
     type(t_list)                    :: fields
     integer                         :: num_fields = 0
-    integer                         :: nx, ny, nz
+    integer, public                 :: nx, ny, nz
     real(rk)                        :: nc_timestep
     ! real(rk), allocatable         :: bathymetry(:, :)
     type(t_domain), pointer, public :: domain
@@ -59,6 +59,7 @@ module mod_fieldset
     procedure, public :: list_fields
     procedure, public :: set_zax
     procedure, public :: get_zax
+    procedure, public :: get_gradient
     procedure, public :: set_start_time
     procedure, public :: set_simulation_timestep
     procedure, public :: get_folder, get_file
@@ -205,10 +206,10 @@ contains
     if (present(k)) then
       DBG, "Getting 3D"
       debug(k)
-      call p_field%get(t=t, x=i, y=j, z=k, res=res)
+      call p_field%get(t=t, x=i, y=j, z=k, seamask=this%domain%get_seamask(), res=res)
     else
       DBG, "Getting 2D"
-      call p_field%get(t=t, x=i, y=j, res=res)
+      call p_field%get(t=t, x=i, y=j, seamask=this%domain%get_seamask(), res=res)
     end if
 
     debug(res)
@@ -254,9 +255,9 @@ contains
 
     call this%fields%get_item(idx, p_field)
     if (present(k)) then
-      call p_field%get(t, i, j, z=k, res=res)
+      call p_field%get(t, i, j, z=k, seamask=this%domain%get_seamask(), res=res)
     else
-      call p_field%get(t, i, j, res=res)
+      call p_field%get(t, i, j, seamask=this%domain%get_seamask(), res=res)
     end if
 
   end function get_value_idx_real_idx
@@ -687,8 +688,8 @@ contains
     debug(zax)
 
     if (z > zax(this%nz)) then
-      if (present(k)) k = this%nz - 1
-      if (present(kr)) kr = real(this%nz - 1, kind=rk) + 0.99
+      if (present(k)) k = this%nz
+      if (present(kr)) kr = real(this%nz, kind=rk)
 #ifdef DEBUG
       DBG, "Particle above surface"
       debug(k); debug(kr)
@@ -807,6 +808,26 @@ contains
     return
   end function get_zax
   !===========================================
+  function get_gradient(this, field_name, t, dim) result(res)
+    class(t_fieldset), intent(in) :: this
+    character(*), intent(in) :: field_name
+    real(rk), intent(in) :: t
+    integer, intent(in) :: dim
+    type(t_field), pointer :: p_field
+    real(rk) :: res(this%nx, this%ny, this%nz)
+
+    call this%fields%get_item(field_name, p_field)
+    select case (dim)
+    case (1)
+      res = p_field%gradient(t, this%domain%dx, dim)
+    case (2)
+      res = p_field%gradient(t, this%domain%dy, dim)
+    case default
+      call throw_error("fieldset :: get_gradient", "Dimension must be 1 or 2")
+    end select
+
+  end function get_gradient
+  !===========================================
   real(rk) function sealevel(this, t, i, j) result(res)
     !---------------------------------------------
     ! Should I keep this here?
@@ -822,7 +843,7 @@ contains
     res = 0.
     if (this%fields%key_exists("ELEV")) then
       call this%fields%get_item("ELEV", p_field)
-      call p_field%get(t, i, j, res=res)
+      call p_field%get(t, i, j, seamask=this%domain%get_seamask(), res=res)
     else
       zax = this%get_zax(t, nint(i), nint(j))
       res = zax(this%nz)
