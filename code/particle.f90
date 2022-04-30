@@ -42,7 +42,9 @@ module mod_particle
     real(rk) :: u1 = ZERO                   ! Particle velocity (t + dt)
     real(rk) :: v1 = ZERO                   ! Particle velocity (t + dt)
     real(rk) :: w1 = ZERO                   ! Particle velocity (t + dt)
+    real(rk) :: vel_vertical = ZERO         ! Vertical velocity (Kooi)
     real(rk) :: rho = ZERO                  ! Particle density
+    real(rk) :: delta_rho = ZERO            ! Density difference
     real(rk) :: radius = ZERO               ! Particle radius
     real(rk) :: age = ZERO                  ! Particle age
     real(rk) :: max_age = ZERO              ! Particle maximum age
@@ -139,7 +141,7 @@ contains
 
     class(t_particle), intent(inout) :: this
 
-    if ((this%max_age > 0) .and. (this%age > this%max_age)) then
+    if ((this%max_age > ZERO) .and. (this%age > this%max_age)) then
       this%is_active = .false.
     end if
 
@@ -655,7 +657,7 @@ contains
       this%state = ON_BOUNDARY
     end select
 
-    if (run_3d) call this%check_depth(fieldset, time, .true.)
+    if (run_3d) call this%check_depth(fieldset, time, .false.) ! change_state parameter should come from namelist or decided some other way (not hardcoded) !!!
 
     dbgtail(check_boundaries)
     return

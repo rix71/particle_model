@@ -108,6 +108,14 @@ contains
       call nc_add_attr(nc_fileout_snap, "vz", "units", "m/s")
       call nc_add_attr(nc_fileout_snap, "vz", "name", "vertical velocity")
 
+      call nc_add_variable(nc_fileout_snap, "vel_kooi", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+      call nc_add_attr(nc_fileout_snap, "vel_kooi", "units", "m/s")
+      call nc_add_attr(nc_fileout_snap, "vel_kooi", "name", "vertical velocity calculated from density difference")
+
+      call nc_add_variable(nc_fileout_snap, "delta_rho", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+      call nc_add_attr(nc_fileout_snap, "delta_rho", "units", "kg/m3")
+      call nc_add_attr(nc_fileout_snap, "delta_rho", "name", "density difference")
+
       call nc_add_variable(nc_fileout_snap, "age", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
       call nc_add_attr(nc_fileout_snap, "age", "units", "s")
 
@@ -157,6 +165,14 @@ contains
     call nc_add_variable(file_name, "vz", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "vz", "units", "m/s")
     call nc_add_attr(file_name, "vz", "name", "vertical velocity")
+
+    call nc_add_variable(file_name, "vel_kooi", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "vel_kooi", "units", "m/s")
+    call nc_add_attr(file_name, "vel_kooi", "name", "vertical velocity calculated from density difference")
+
+    call nc_add_variable(file_name, "delta_rho", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "delta_rho", "units", "kg/m3")
+    call nc_add_attr(file_name, "delta_rho", "name", "density difference")
 
     call nc_add_variable(file_name, "age", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "age", "units", "s")
@@ -252,6 +268,18 @@ contains
                     nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
 
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "vel_kooi", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%vel_vertical
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "delta_rho", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%delta_rho
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+
       call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "age", varid), "write_data :: inq varid")
       var2d = particles(ipart)%age
       call nc_check(trim(nc_fileout_all), &
@@ -333,6 +361,18 @@ contains
                       nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                       "write_data_active :: put var")
 
+        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "vel_kooi", varid), "write_data_active :: inq varid")
+        var2d = particles(ipart)%vel_vertical
+        call nc_check(trim(nc_fileout_active), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data_active :: put var")
+
+        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "delta_rho", varid), "write_data_active :: inq varid")
+        var2d = particles(ipart)%delta_rho
+        call nc_check(trim(nc_fileout_active), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data_active :: put var")
+
         call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "age", varid), "write_data_active :: inq varid")
         var2d = particles(ipart)%age
         call nc_check(trim(nc_fileout_active), &
@@ -405,6 +445,18 @@ contains
 
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "vz", varid), "write_data_snap :: inq varid")
     var1d = p%w0
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "vel_kooi", varid), "write_data_snap :: inq varid")
+    var1d = p%vel_vertical
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "delta_rho", varid), "write_data_snap :: inq varid")
+    var1d = p%delta_rho
     call nc_check(trim(nc_fileout_snap), &
                   nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")

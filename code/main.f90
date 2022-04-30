@@ -57,6 +57,11 @@ contains
   end subroutine command_line
   !===========================================
   subroutine print_compile_info()
+#ifdef SAY_LESS
+#define FMT1 print *, '  '
+#define FMT2 print *, '      '
+#define FMT3 print *, '          '
+#endif
     use iso_fortran_env
 
     FMT1, "Compiled: "//__DATE__//" "//__TIME__
@@ -98,6 +103,12 @@ contains
 #endif
 #ifdef DIFFUSE_VERTICAL
     FMT2, "-DIFFUSE_VERTICAL"
+#endif
+#ifdef SMAGORINSKY_FULL_FIELD
+    FMT2, "-SMAGORINSKY_FULL_FIELD"
+#endif
+#ifdef SMAGORINSKY_INTERP_UV
+    FMT2, "-SMAGORINSKY_INTERP_UV"
 #endif
 
     return

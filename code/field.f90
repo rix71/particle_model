@@ -141,7 +141,7 @@ contains
     integer, intent(in)            :: seamask(this%nx, this%ny)
     real(rk), intent(out)          :: res
     integer                        :: i, j, k
-    integer                        :: inbr
+    integer                        :: inbr, iadd, jadd
     real(rk)                       :: f1, f2
     real(rk)                       :: x1, x2, &
                                       y1, y2, &
@@ -224,11 +224,20 @@ contains
         f1 = this%data_t1(i, j, k)
         f2 = this%data_t2(i, j, k)
         do inbr = 1, 8
-          if (seamask(i + nbrs(1, inbr), j + nbrs(2, inbr)) .ne. LAND) then
-            f1 = this%data_t1(i + nbrs(1, inbr), j + nbrs(2, inbr), k)
-            f2 = this%data_t2(i + nbrs(1, inbr), j + nbrs(2, inbr), k)
+
+          iadd = nbrs(1, inbr)
+          jadd = nbrs(2, inbr)
+
+          if ((i == 1) .and. (iadd == -1)) cycle
+          if ((j == 1) .and. (jadd == -1)) cycle
+          if ((i == this%nx) .and. (iadd == 1)) cycle
+          if ((j == this%ny) .and. (jadd == 1)) cycle
+
+          if (seamask(i + iadd, j + jadd) .ne. LAND) then
+            f1 = this%data_t1(i + iadd, j + jadd, k)
+            f2 = this%data_t2(i + iadd, j + jadd, k)
             DBG, "Stopped neighbour search"
-            DBG, "Data from: ", i + nbrs(1, inbr), j + nbrs(2, inbr), k
+            DBG, "Data from: ", i + iadd, j + jadd, k
             debug(inbr)
             exit
           end if

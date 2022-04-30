@@ -19,13 +19,17 @@ FFLAGS += -DWRITESTDOUT
 FFLAGS += -DSNAP_TO_BOUNDS
 
 # Calculate the vertical displacement in 3D mode (disable to keep particles at initial depths) 
-# FFLAGS += -DADVECT_VERTICAL
+FFLAGS += -DADVECT_VERTICAL
 
 # Calculate the vertical displacement in 3D mode (disable to keep particles at initial depths)
-# FFLAGS += -DDIFFUSE_VERTICAL
+FFLAGS += -DDIFFUSE_VERTICAL
+
+# Smagorinsky parametrization method (full field much slower)
+# FFLAGS += -DSMAGORINSKY_FULL_FIELD
+FFLAGS += -DSMAGORINSKY_INTERP_UV
 
 # Set particle to sealevel, if floating (disable to keep particles at initial depths (surface))
-# FFLAGS += -DPARTICLE_SNAP_SEALVL
+FFLAGS += -DPARTICLE_SNAP_SEALVL
 
 # Land interaction methods
 # FFLAGS += -DPARTICLE_BOUNCE
@@ -62,7 +66,7 @@ SRCS = precdefs.f90 errors.f90 \
 OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
 
 #--------------------------------------------------
-PROGRAM = $(BIN)/main_domain_debug
+PROGRAM = $(BIN)/main_for_exp_012
 
 all: $(PROGRAM)
 

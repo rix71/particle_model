@@ -18,9 +18,12 @@ module mod_physics
   private
   !===================================================
   !---------------------------------------------
-  public :: vertical_velocity, init_diffusion, diffuse, update_Ah_Smagorinsky_full_field
+  public :: vertical_velocity, diffuse
+#ifdef SMAGORINSKY_FULL_FIELD
+  public :: init_diffusion, update_Ah_Smagorinsky_full_field, Ah_field
   !---------------------------------------------
   real(rk), allocatable :: Ah_field(:, :, :)
+#endif
   !---------------------------------------------
   integer :: ierr
   !===================================================
@@ -64,20 +67,23 @@ contains
     case (DEFAULT_DENSITY)
       rho = rho_default
     end select
+    p%delta_rho = p%rho - rho
 
     ! Viscosity
     select case (viscosity_method)
     case (.true.)
       mu = fieldset%get("VISC", time, i, j, k)
+      if (mu == ZERO) mu = mu_default ! To avoid division by 0
     case (.false.)
       mu = mu_default
     end select
     kin_visc = mu / rho
 
-    kooi_vel = Kooi_vertical_velocity(p%rho, p%radius, rho, kin_visc)
+    kooi_vel = Kooi_vertical_velocity(p%delta_rho, p%radius, rho, kin_visc)
 
     p%depth1 = p%depth1 + (kooi_vel * dt)
     p%w1 = p%w1 + kooi_vel
+    p%vel_vertical = kooi_vel
 
     debug(p%depth1)
     debug(p%w1)
@@ -86,24 +92,24 @@ contains
     return
   end subroutine vertical_velocity
   !===========================================
-  real(rk) function Kooi_vertical_velocity(rho_p, rad_p, rho_env, kin_visc) result(res)
+  real(rk) function Kooi_vertical_velocity(delta_rho, rad_p, rho_env, kin_visc) result(res)
     !---------------------------------------------
     ! Calculate vertical velocity
     ! Reference: Kooi 2017
     !---------------------------------------------
-    real(rk), intent(in) :: rho_p, rad_p, rho_env
+    real(rk), intent(in) :: delta_rho, rad_p, rho_env
     real(rk), intent(in) :: kin_visc  ! Kinematic viscosity
     real(rk)             :: d_star    ! Dimensionless diameter
     real(rk)             :: w_star    ! Dimensionless settling velocity
-    real(rk)             :: delta_rho ! Density difference
+    ! real(rk)             ::  ! Density difference
 
     dbghead(Kooi_vertical_velocity)
 
-    debug(rho_p); debug(rad_p); 
+    debug(rad_p); 
     debug(rho_env)
 
     ! kin_visc = mu_env / rho_env ! NOT USING VISCOSITY???
-    delta_rho = rho_p - rho_env
+    ! delta_rho = rho_p - rho_env
 
     debug(kin_visc); 
     debug(delta_rho)
@@ -137,6 +143,7 @@ contains
     return
   end function Kooi_vertical_velocity
   !===========================================
+#ifdef SMAGORINSKY_FULL_FIELD
   subroutine init_diffusion(nx, ny, nz)
     integer, intent(in) :: nx, ny, nz
 
@@ -344,13 +351,15 @@ contains
     dbgtail(get_Ah_Smagorinsky_full_field)
     return
   end function get_Ah_Smagorinsky_full_field
+#endif
   !===========================================
-  subroutine Ah_Smagorinsky(fieldset, time, i, j, k, Ah_s)
+#ifdef SMAGORINSKY_INTERP_UV
+  function Ah_Smagorinsky(fieldset, time, i, j, k) result(Ah_s)
     type(t_fieldset), intent(in)  :: fieldset
     real(rk), intent(in)          :: time
-    integer, intent(in)           :: i, j
-    integer, intent(in), optional :: k
-    real(rk), intent(out)         :: Ah_s
+    real(rk), intent(in)           :: i, j
+    real(rk), intent(in), optional :: k
+    real(rk)                      :: Ah_s
     real(rk)                      :: dx, dy
     real(rk)                      :: i0, j0, i1, j1, ih, jh, kh
     real(rk)                      :: uh0, vh0, uh1, vh1, u0h, v0h, u1h, v1h
@@ -413,7 +422,8 @@ contains
 
     dbgtail(Ah_Smagorinsky)
     return
-  end subroutine Ah_Smagorinsky
+  end function Ah_Smagorinsky
+#endif
   !===========================================
   subroutine diffuse_2D(p, fieldset, time)
 
@@ -432,8 +442,11 @@ contains
 
     call fieldset%domain%lonlat2xy(p%lon1, p%lat1, x0, y0)
 
-    ! call Ah_Smagorinsky(fieldset, time, i, j, Ah_s=Ah)
+#if defined(SMAGORINSKY_INTERP_UV)
+    Ah = Ah_Smagorinsky(fieldset, time, i, j)
+#elif defined(SMAGORINSKY_FULL_FIELD)
     Ah = get_Ah_Smagorinsky_full_field(fieldset, i, j)
+#endif
 
     x1 = x0 + normal_random() * sqrt(2 * Ah * dt)
     y1 = y0 + normal_random() * sqrt(2 * Ah * dt)
@@ -465,8 +478,11 @@ contains
     call fieldset%domain%lonlat2xy(p%lon1, p%lat1, x0, y0)
     z0 = p%depth1
 
-    ! call Ah_Smagorinsky(fieldset, time, i, j, k=k, Ah_s=Ah)
+#if defined(SMAGORINSKY_INTERP_UV)
+    Ah = Ah_Smagorinsky(fieldset, time, i, j, k)
+#elif defined(SMAGORINSKY_FULL_FIELD)
     Ah = get_Ah_Smagorinsky_full_field(fieldset, i, j, k)
+#endif
     kv = diffusion_vert_const
 
     x1 = x0 + normal_random() * sqrt(2 * Ah * dt)

@@ -57,7 +57,9 @@ contains
       !   - update fields
       call fieldset%update(theDate)
       time = fieldset%get_time(theDate)
+#ifdef SMAGORINSKY_FULL_FIELD
       if (do_diffusion) call update_Ah_Smagorinsky_full_field(fieldset, time, fieldset%nx, fieldset%ny, fieldset%nz)
+#endif
 
       !   - release particles
       if (mod(itime, inputstep) .eq. 0) then
@@ -111,7 +113,11 @@ contains
       !---------------------------------------------
       ! Start particle loop
 #ifdef USE_OMP
+#ifdef SMAGORINSKY_FULL_FIELD
+      !$omp parallel do shared(particles, fieldset, domain, Ah_field)
+#else
       !$omp parallel do shared(particles, fieldset, domain)
+#endif
 #endif
       do ipart = 1, runparts
         DBG, "----------------------------------------"

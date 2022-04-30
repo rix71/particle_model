@@ -23,7 +23,9 @@ module mod_initialise
   use mod_datetime
   use mod_params, only: do_diffusion, do_velocity, advection_method, &
                         diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky
+#ifdef SMAGORINSKY_FULL_FIELD
   use mod_physics, only: init_diffusion
+#endif
   implicit none
   private
   !===================================================
@@ -175,8 +177,7 @@ contains
 
     field_mem = (nx * ny * nlevels * 2) * sizeof(real_var)
     FMT2, "Using full domain"
-    FMT2, "Allocating fields of size (nx, ny, nz): (", nx, ", ", ny, ", ", nlevels, ")", &
-      field_mem, " bytes per field"
+    FMT2, "Allocating fields of size (nx, ny, nz): (", nx, ", ", ny, ", ", nlevels, ")", field_mem, " bytes per field"
     if (has_subdomains) then
       fieldset = t_fieldset(nx, ny, nlevels, &
                             file_prefix=trim(file_prefix), file_suffix=trim(file_suffix), &
@@ -274,10 +275,12 @@ contains
     end if
     !---------------------------------------------
     ! Diffusion coeficient
+#ifdef SMAGORINSKY_FULL_FIELD
     if (do_diffusion) then
       call init_diffusion(nx, ny, nlevels)
       field_count = field_count + 1
     end if
+#endif
     !---------------------------------------------
     ! if (has_subdomains) call fieldset%init_proc_mask()
 

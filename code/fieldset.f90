@@ -703,18 +703,28 @@ contains
     ! Could there be a way to do this without looping?
     do ik = 1, this%nz - 1
       if (zax(ik + 1) .ge. z) then
+        if ((zax(ik + 1) - zax(ik)) <= ZERO) cycle ! There may be zeros at the bottom
         if (present(k)) then
           k = ik
           debug(k)
         end if
         if (present(kr)) then
           kr = ik + (z - zax(ik)) / (zax(ik + 1) - zax(ik))
+          if (kr < ONE) kr = ONE
           debug(kr)
         end if
         dbgtail(get_indices_vertical)
         return
       end if
     end do
+    if (present(k)) then
+            k = this%nz
+            debug(k)
+    end if
+    if (present(kr)) then
+            kr = real(this%nz, rk)
+            debug(kr)
+    end if
 
 #ifdef DEBUG
     call throw_warning("fieldset :: get_indices_vertical", "Did not find vertical index!")
