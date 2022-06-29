@@ -40,7 +40,7 @@ FFLAGS += -DPARTICLE_REDIRECT
 # FFLAGS += -DPARTICLE_BEACH_IMMEDIATELY
 
 # Use OpenMP
-FFLAGS += -DUSE_OMP -fopenmp
+# FFLAGS += -DUSE_OMP -fopenmp
 
 #--------------------------------------------------
 MOD=./mod
@@ -63,7 +63,7 @@ SRCS = precdefs.f90 errors.f90 \
 	   vars.f90 \
        particle.f90 output.f90 \
 	   advection.f90 physics.f90 \
-       init.f90 loop.f90 postprocessing.f90 \
+       diffusion.f90 init.f90 loop.f90 postprocessing.f90 \
 	   main.f90 
 
 OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
