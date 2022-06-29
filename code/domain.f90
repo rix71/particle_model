@@ -576,8 +576,8 @@ contains
 
 !     debug(lon); debug(lat)
 
-!     irt = (lon - this%lon0) / this%dlon
-!     jrt = (lat - this%lat0) / this%dlat
+!     irt = (lon - this%lon0) / this%dlon + 1
+!     jrt = (lat - this%lat0) / this%dlat + 1
 
 ! #ifdef SNAP_TO_BOUNDS
 !     ! This is probably only necessary in case of large time steps
