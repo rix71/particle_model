@@ -999,7 +999,7 @@ contains
     end if
 
     ! Makes the uninitialised ubound warning go away, but might not be necessary actually
-    ! tmp_arr = 0.
+    tmp_arr = ZERO
 
     do i_subdom = 0, this%nproc - 1
       write (subdom_filename, "(a,i0.4,a)") trim(this%current_path)//"/"//trim(this%file_prefix), &
