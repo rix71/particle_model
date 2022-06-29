@@ -144,10 +144,10 @@ contains
     real(rk), optional, intent(in) :: z
 #ifndef GET_INTERP_ONLY
     integer, intent(in)            :: seamask(this%nx, this%ny)
+    integer                        :: inbr, iadd, jadd
 #endif
     real(rk), intent(out)          :: res
     integer                        :: i, j, k
-    integer                        :: inbr, iadd, jadd
     real(rk)                       :: f1, f2
     real(rk)                       :: x1, x2, &
                                       y1, y2, &
