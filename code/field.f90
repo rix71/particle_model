@@ -128,7 +128,11 @@ contains
     return
   end function time_interp_matrix
   !===========================================
-  subroutine get_interp(this, t, x, y, z, seamask, res)
+  subroutine get_interp(this, t, x, y, z, &
+#ifndef GET_INTERP_ONLY
+                        seamask, &
+#endif
+                        res)
     !---------------------------------------------
     ! Getter function
     ! Get (interpolated) values from the field using real indices
@@ -138,7 +142,9 @@ contains
     real(rk), intent(in)           :: t
     real(rk) AIM_INTENT            :: x, y
     real(rk), optional, intent(in) :: z
+#ifndef GET_INTERP_ONLY
     integer, intent(in)            :: seamask(this%nx, this%ny)
+#endif
     real(rk), intent(out)          :: res
     integer                        :: i, j, k
     integer                        :: inbr, iadd, jadd
@@ -213,11 +219,13 @@ contains
 
     if (present(z)) then
       debug(z)
-      DBG, "Spatial intepolation 3D"
+      DBG, "Spatial interpolation 3D"
 
       k = floor(z); debug(k)
       z1 = float(floor(z)); debug(z1)
       z2 = float(floor(z) + 1); debug(z2)
+
+#ifndef GET_INTERP_ONLY
 
       if (seamask(i, j) == LAND) then
         DBG, "Nearest neighbour"
@@ -251,6 +259,7 @@ contains
         f2 = this%data_t2(i, j, k); debug(f2)
 
       else
+#endif
         DBG, "Trilinear interpolation"
 
         if (k == this%nz) then
@@ -283,9 +292,13 @@ contains
 
         call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f2)
         debug(f2)
+#ifndef GET_INTERP_ONLY
       end if
+#endif
     else
-      DBG, "Spatial intepolation 2D"
+      DBG, "Spatial interpolation 2D"
+
+#ifndef GET_INTERP_ONLY
 
       if (seamask(i, j) == LAND) then
         DBG, "Nearest neighbour"
@@ -310,6 +323,7 @@ contains
         f2 = this%data_t2(i, j, 1); debug(f2)
 
       else
+#endif
         DBG, "Bilinear interpolation"
 
         c11 = this%data_t1(i, j, 1); debug(c11)
@@ -327,7 +341,9 @@ contains
 
         call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f2)
         debug(f2)
+#ifndef GET_INTERP_ONLY
       end if
+#endif
     end if
 
     res = this%time_interp(f1, f2, t)

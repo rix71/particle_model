@@ -206,10 +206,18 @@ contains
     if (present(k)) then
       DBG, "Getting 3D"
       debug(k)
-      call p_field%get(t=t, x=i, y=j, z=k, seamask=this%domain%get_seamask(), res=res)
+      call p_field%get(t=t, x=i, y=j, z=k, &
+#ifndef GET_INTERP_ONLY
+                       seamask=this%domain%get_seamask(), &
+#endif
+                       res=res)
     else
       DBG, "Getting 2D"
-      call p_field%get(t=t, x=i, y=j, seamask=this%domain%get_seamask(), res=res)
+      call p_field%get(t=t, x=i, y=j, &
+#ifndef GET_INTERP_ONLY
+                       seamask=this%domain%get_seamask(), &
+#endif
+                       res=res)
     end if
 
     debug(res)
@@ -255,9 +263,17 @@ contains
 
     call this%fields%get_item(idx, p_field)
     if (present(k)) then
-      call p_field%get(t, i, j, z=k, seamask=this%domain%get_seamask(), res=res)
+      call p_field%get(t, i, j, z=k, &
+#ifndef GET_INTERP_ONLY
+                       seamask=this%domain%get_seamask(), &
+#endif
+                       res=res)
     else
-      call p_field%get(t, i, j, seamask=this%domain%get_seamask(), res=res)
+      call p_field%get(t, i, j, &
+#ifndef GET_INTERP_ONLY
+                       seamask=this%domain%get_seamask(), &
+#endif
+                       res=res)
     end if
 
   end function get_value_idx_real_idx
@@ -718,12 +734,12 @@ contains
       end if
     end do
     if (present(k)) then
-            k = this%nz
-            debug(k)
+      k = this%nz
+      debug(k)
     end if
     if (present(kr)) then
-            kr = real(this%nz, rk)
-            debug(kr)
+      kr = real(this%nz, rk)
+      debug(kr)
     end if
 
 #ifdef DEBUG
@@ -853,7 +869,11 @@ contains
     res = 0.
     if (this%fields%key_exists("ELEV")) then
       call this%fields%get_item("ELEV", p_field)
-      call p_field%get(t, i, j, seamask=this%domain%get_seamask(), res=res)
+      call p_field%get(t, i, j, &
+#ifndef GET_INTERP_ONLY
+                       seamask=this%domain%get_seamask(), &
+#endif
+                       res=res)
     else
       zax = this%get_zax(t, nint(i), nint(j))
       res = zax(this%nz)
