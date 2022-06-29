@@ -15,7 +15,7 @@ module utils
     real(rk) :: m_min = ZERO
     real(rk) :: n = ZERO
     logical :: accumulate_duration = .false.
-    character(len=64) :: name
+    character(len=LEN_CHAR_S) :: name
   contains
     procedure :: start
     procedure :: stop
