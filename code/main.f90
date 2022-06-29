@@ -43,11 +43,13 @@ contains
       call getarg(i, arg)
       select case (arg)
       case ('-h', '--help')
-        call throw_error("main :: command_line", "Sorry, no help yet")
-      case ('-c')
+        call print_help()
+        stop
+      case ('-c', '--compile')
         call print_compile_info()
         stop
       case default
+        call print_help()
         call throw_error("main :: command_line", "Command line argument not recognised: "//trim(arg))
       end select
       i = i + 1
@@ -56,17 +58,38 @@ contains
     return
   end subroutine command_line
   !===========================================
-  subroutine print_compile_info()
 #ifdef SAY_LESS
 #define FMT1 print *, '  '
 #define FMT2 print *, '      '
 #define FMT3 print *, '          '
-#endif
+#endif  
+  subroutine print_help()
+    character(len=LEN_CHAR_L) :: cmd
+
+    call get_command_argument(0, cmd)
+
+    FMT1, ""
+    FMT1, "Usage: ", trim(cmd), " [OPTIONS]"
+    FMT1, ""
+    FMT1, "Without any options, the program will continue execution."
+    FMT1, "All options for execution (and dry run) are set in the namelist (name in cppdefs.h)."
+    FMT1, ""
+    FMT1, "Command line options:"
+    FMT2, "-h, --help      print this help message and exit"
+    FMT2, "-c, --compile   print compliation options and exit"
+    FMT1, ""
+
+    return
+  end subroutine print_help
+  !===========================================
+  subroutine print_compile_info()
     use iso_fortran_env
 
+    FMT1, ""
     FMT1, "Compiled: "//__DATE__//" "//__TIME__
     FMT1, "Compiler: "//compiler_version()
     FMT1, "Compiler options: "//compiler_options()
+    FMT1, ""
     FMT1, "Used flags:"
 #ifdef WRITESTDOUT
     FMT2, "-WRITESTDOUT"
