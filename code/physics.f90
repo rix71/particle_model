@@ -21,7 +21,7 @@ module mod_physics
   private
   !===================================================
   !---------------------------------------------
-  public :: vertical_velocity, diffuse
+  public :: vertical_velocity, Ah_Smagorinsky, normal_random
   !---------------------------------------------
   integer :: ierr
   !===================================================
@@ -141,7 +141,6 @@ contains
     return
   end function Kooi_vertical_velocity
   !===========================================
-#ifdef SMAGORINSKY_INTERP_UV
   function Ah_Smagorinsky(fieldset, time, i, j, k) result(Ah_s)
     type(t_fieldset), intent(in)  :: fieldset
     real(rk), intent(in)          :: time
@@ -211,99 +210,6 @@ contains
     dbgtail(Ah_Smagorinsky)
     return
   end function Ah_Smagorinsky
-#endif
-  !===========================================
-  subroutine diffuse_2D(p, fieldset, time)
-
-    type(t_particle), intent(inout) :: p
-    type(t_fieldset), intent(in)    :: fieldset
-    real(rk), intent(in)            :: time
-    real(rk)                        :: Ah
-    real(rk)                        :: i, j
-    real(rk)                        :: x0, x1, &
-                                       y0, y1
-
-    dbghead(diffuse_2D)
-
-    i = p%ir1
-    j = p%jr1
-
-    call fieldset%domain%lonlat2xy(p%lon1, p%lat1, x0, y0)
-
-#if defined(SMAGORINSKY_INTERP_UV)
-    Ah = Ah_Smagorinsky(fieldset, time, i, j)
-#elif defined(SMAGORINSKY_FULL_FIELD)
-    Ah = get_Ah_Smagorinsky_full_field(fieldset, i, j)
-#endif
-
-    x1 = x0 + normal_random() * sqrt(2 * Ah * dt)
-    y1 = y0 + normal_random() * sqrt(2 * Ah * dt)
-
-    call fieldset%domain%xy2lonlat(x1, y1, p%lon1, p%lat1)
-    call fieldset%search_indices(x=p%lon1, y=p%lat1, i=p%i1, j=p%j1, ir=p%ir1, jr=p%jr1)
-
-    dbgtail(diffuse_2D)
-    return
-  end subroutine diffuse_2D
-  !===========================================
-  subroutine diffuse_3D(p, fieldset, time)
-
-    type(t_particle), intent(inout) :: p
-    type(t_fieldset), intent(in) :: fieldset
-    real(rk), intent(in) :: time
-    real(rk)                        :: Ah, kv
-    real(rk)                        :: i, j, k
-    real(rk)                        :: x0, x1, &
-                                       y0, y1, &
-                                       z0, z1
-
-    dbghead(diffuse_3D)
-
-    i = p%ir1
-    j = p%jr1
-    k = p%kr1
-
-    call fieldset%domain%lonlat2xy(p%lon1, p%lat1, x0, y0)
-    z0 = p%depth1
-
-#if defined(SMAGORINSKY_INTERP_UV)
-    Ah = Ah_Smagorinsky(fieldset, time, i, j, k)
-#elif defined(SMAGORINSKY_FULL_FIELD)
-    Ah = get_Ah_Smagorinsky_full_field(fieldset, i, j, k)
-#endif
-    kv = diffusion_vert_const
-
-    x1 = x0 + normal_random() * sqrt(2 * Ah * dt)
-    y1 = y0 + normal_random() * sqrt(2 * Ah * dt)
-#ifdef DIFFUSE_VERTICAL
-    z1 = z0 + normal_random() * sqrt(2 * kv * dt)
-#else
-    z1 = z0
-#endif
-
-    call fieldset%domain%xy2lonlat(x1, y1, p%lon1, p%lat1)
-    call fieldset%search_indices(x=p%lon1, y=p%lat1, i=p%i1, j=p%j1, ir=p%ir1, jr=p%jr1)
-
-    dbgtail(diffuse_3D)
-    return
-  end subroutine diffuse_3D
-  !===========================================
-  subroutine diffuse(p, fieldset, time, dif_3d)
-
-    type(t_particle), intent(inout) :: p
-    type(t_fieldset), intent(in) :: fieldset
-    real(rk), intent(in) :: time
-    logical, intent(in)             :: dif_3d
-
-    select case (dif_3d)
-    case (.true.)
-      call diffuse_3D(p, fieldset, time)
-    case (.false.)
-      call diffuse_2D(p, fieldset, time)
-    end select
-
-    return
-  end subroutine diffuse
   !===========================================
   real(rk) function seawater_density_from_temp_and_salt(T, S, Z)
     !---------------------------------------------
@@ -353,7 +259,6 @@ contains
     R202 = 2.5019633244e+00; R012 = 2.0564311499e+00; R112 = -2.1311365518e-01; 
     R022 = -1.2419983026e+00; R003 = -2.3342758797e-02; R103 = -1.8507636718e-02; 
     R013 = 3.7969820455e-01; 
-    !
 
     ss = sqrt((S + deltaS) / SAu); 
     tt = T / CTu; 

@@ -10,6 +10,7 @@ module mod_loop
   use mod_errors
   use mod_params, only: do_velocity, do_diffusion, run_3d, advection_method
   use mod_advection
+  use mod_diffusion
   use mod_physics
   use field_vars, only: fieldset, has_density, has_viscosity
   use mod_particle, only: t_particle
