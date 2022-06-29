@@ -57,9 +57,6 @@ contains
       !   - update fields
       call fieldset%update(theDate)
       time = fieldset%get_time(theDate)
-#ifdef SMAGORINSKY_FULL_FIELD
-      if (do_diffusion) call update_Ah_Smagorinsky_full_field(fieldset, time, fieldset%nx, fieldset%ny, fieldset%nz)
-#endif
 
       !   - release particles
       if (mod(itime, inputstep) .eq. 0) then
@@ -85,6 +82,7 @@ contains
 
 #ifndef SAY_LESS
       if (mod(itime, PROGRESSINFO) .eq. 0) then
+
         call theDate%print_short_date
         call date_and_time(date=d, time=t)
         FMT2, t(1:2), ":", t(3:4), ":", t(5:10), " itime = ", itime
@@ -112,12 +110,9 @@ contains
 
       !---------------------------------------------
       ! Start particle loop
+
 #ifdef USE_OMP
-#ifdef SMAGORINSKY_FULL_FIELD
-      !$omp parallel do shared(particles, fieldset, domain, Ah_field)
-#else
       !$omp parallel do shared(particles, fieldset, domain)
-#endif
 #endif
       do ipart = 1, runparts
         DBG, "----------------------------------------"
@@ -144,9 +139,7 @@ contains
         DBG, "PARTICLE BEFORE UPDATING: ", ipart
         call particles(ipart)%print_info()
 #endif
-
         call particles(ipart)%update(fieldset, time)
-
 #ifdef DEBUG
         DBG, "PARTICLE AFTER UPDATING: ", ipart
         call particles(ipart)%print_info()
@@ -170,11 +163,13 @@ contains
       if ((mod(itime, outputstep) .eq. 0) .and. (runparts .gt. 0)) then
         if (write_all_particles) call write_data(runparts)
         if (write_active_particles) call write_data_only_active(runparts)
+
       end if
       !---------------------------------------------
       ! Update time
       call theDate%update(dt)
       itime = itime + 1
+
     end do
 
     call date_and_time(date=d, time=t)

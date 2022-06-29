@@ -23,9 +23,6 @@ module mod_initialise
   use mod_datetime
   use mod_params, only: do_diffusion, do_velocity, advection_method, &
                         diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky
-#ifdef SMAGORINSKY_FULL_FIELD
-  use mod_physics, only: init_diffusion
-#endif
   implicit none
   private
   !===================================================
@@ -273,14 +270,7 @@ contains
                            ". Using default viscosity.")
       end if
     end if
-    !---------------------------------------------
-    ! Diffusion coeficient
-#ifdef SMAGORINSKY_FULL_FIELD
-    if (do_diffusion) then
-      call init_diffusion(nx, ny, nlevels)
-      field_count = field_count + 1
-    end if
-#endif
+
     !---------------------------------------------
     ! if (has_subdomains) call fieldset%init_proc_mask()
 
