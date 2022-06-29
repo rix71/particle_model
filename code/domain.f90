@@ -532,35 +532,6 @@ contains
     return
   end subroutine get_indices_2d
   !===========================================
-  subroutine nearest_point(this, val, i, j, in, jn)
-    !---------------------------------------------
-    ! Find closest seamask point with value val
-    !---------------------------------------------
-    class(t_domain), intent(in) :: this
-    integer, intent(in) :: val
-    integer, intent(in) :: i, j
-    integer, intent(out) :: in, jn
-    integer :: arr(2, 8)
-
-    arr = reshape([0, 1, -1, 0, 1, 1, -1, -1, 1, 0, 0, -1, 1, -1, -1, 1], [2, 8])
-
-    ! [0, 1],
-    ! [1, 0],
-    ! [-1, 0],
-    ! [0, -1],
-    ! [1, 1],
-    ! [1, -1],
-    ! [-1, -1],
-    ! [-1, 1]
-
-    if (this%seamask(i, j) == val) then
-      in = i
-      jn = j
-      return
-    end if
-
-  end subroutine nearest_point
-  !===========================================
 !   subroutine get_indices_2d(this, lon, lat, i, j, ir, jr)
 !     !---------------------------------------------
 !     ! Should integer indices be int(irt) or nint(irt) (nearest)?
