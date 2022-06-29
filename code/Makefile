@@ -4,7 +4,7 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
 # Print everything to .stdout file
-FFLAGS += -DWRITESTDOUT
+# FFLAGS += -DWRITESTDOUT
 
 # Print debug messages
 # FFLAGS += -DDEBUG
@@ -17,6 +17,9 @@ FFLAGS += -DWRITESTDOUT
 
 # Do not allow too big indices (needed when the time step is big or domain has northern/eastern boundaries)
 FFLAGS += -DSNAP_TO_BOUNDS
+
+# Always interpolate in the field (and physics Ah) getter function (disable NNS)
+FFLAGS += -DGET_INTERP_ONLY
 
 # Calculate the vertical displacement in 3D mode (disable to keep particles at initial depths) 
 FFLAGS += -DADVECT_VERTICAL
@@ -53,7 +56,7 @@ FFLAGS += $(NETCDF_INC)
 LIBS = ${NETCDF_LIB} -lnetcdff -lnetcdf
 
 SRCS = precdefs.f90 errors.f90 \
-       interp.f90 nc_manager.f90 field.f90 list.f90 \
+       utils.f90 interp.f90 nc_manager.f90 field.f90 list.f90 \
 	   domain.f90 \
 	   datetime.f90 \
 	   fieldset.f90 \
@@ -66,7 +69,7 @@ SRCS = precdefs.f90 errors.f90 \
 OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
 
 #--------------------------------------------------
-PROGRAM = $(BIN)/main_for_exp_012
+PROGRAM = $(BIN)/main_field_dbg
 
 all: $(PROGRAM)
 
