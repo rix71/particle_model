@@ -39,8 +39,7 @@ contains
     logical, intent(in)             :: viscosity_method
     real(rk)                        :: i, j, k
     real(rk)                        :: kooi_vel
-    real(rk)                        :: rho = ONE ! Fluid density
-    real(rk)                        :: T, S
+    real(rk)                        :: rho ! Fluid density
     real(rk)                        :: mu  ! Dynamic viscosity
     real(rk)                        :: kin_visc
 
@@ -50,31 +49,19 @@ contains
     debug(p%depth1)
     debug(p%w1)
 
+    rho = ONE
+
     i = p%ir0
     j = p%jr0
     k = p%kr0
 
     ! Density
-    select case (density_method)
-    case (DENSITY)
-      rho = fieldset%get("RHO", time, i, j, k)
-    case (TEMP_SALT)
-      T = fieldset%get("TEMP", time, i, j, k)
-      S = fieldset%get("SALT", time, i, j, k)
-      rho = seawater_density_from_temp_and_salt(T, S, p%depth0)
-    case (DEFAULT_DENSITY)
-      rho = rho_default
-    end select
+    rho = seawater_density(fieldset, time, i, j, k, density_method, p%depth0)
     p%delta_rho = p%rho - rho
 
     ! Viscosity
-    select case (viscosity_method)
-    case (.true.)
-      mu = fieldset%get("VISC", time, i, j, k)
-      if (mu == ZERO) mu = mu_default ! To avoid division by 0
-    case (.false.)
-      mu = mu_default
-    end select
+    mu = seawater_viscosity(fieldset, time, i, j, k, viscosity_method)
+    if (mu == ZERO) mu = mu_default ! To avoid division by 0
     kin_visc = mu / rho
 
     kooi_vel = Kooi_vertical_velocity(p%delta_rho, p%radius, rho, kin_visc)
@@ -89,6 +76,48 @@ contains
     dbgtail(vertical_velocity)
     return
   end subroutine vertical_velocity
+  !===========================================
+  real(rk) function seawater_viscosity(fieldset, time, i, j, k, method) result(res)
+    type(t_fieldset), intent(in) :: fieldset
+    real(rk), intent(in)         :: time
+    real(rk), intent(in)         :: i, j, k
+    logical, intent(in)          :: method
+
+    select case (method)
+    case (.true.)
+      res = fieldset%get("VISC", time, i, j, k)
+    case (.false.)
+      res = mu_default
+    end select
+
+    return
+  end function seawater_viscosity
+  !===========================================
+  real(rk) function seawater_density(fieldset, time, i, j, k, method, depth) result(res)
+    type(t_fieldset), intent(in) :: fieldset
+    real(rk), intent(in)         :: time
+    real(rk), intent(in)         :: i, j, k
+    real(rk), intent(in)         :: depth
+    integer, intent(in)          :: method
+    real(rk)                     :: T, S
+
+    select case (method)
+    case (DENSITY)
+      res = fieldset%get("RHO", time, i, j, k)
+    case (TEMP_SALT)
+      T = fieldset%get("TEMP", time, i, j, k)
+      S = fieldset%get("SALT", time, i, j, k)
+      res = seawater_density_from_temp_and_salt(T, S, depth)
+    case (DEFAULT_DENSITY)
+      res = rho_default
+    case default
+      ! May be unnecessary as the program sets the method...
+      res = 1000.0_rk
+      call throw_error("physics :: seawater_density", "Density method not recognized!")
+    end select
+
+    return
+  end function seawater_density
   !===========================================
   real(rk) function Kooi_vertical_velocity(delta_rho, rad_p, rho_env, kin_visc) result(res)
     !---------------------------------------------
@@ -111,6 +140,8 @@ contains
 
     debug(kin_visc); 
     debug(delta_rho)
+
+    res = ZERO
 
     d_star = (delta_rho * g * (2.*rad_p)**3.) / (rho_env * (kin_visc**2.)) ! g negative?
     if (d_star < 0.05) then
@@ -259,7 +290,6 @@ contains
     R202 = 2.5019633244e+00; R012 = 2.0564311499e+00; R112 = -2.1311365518e-01; 
     R022 = -1.2419983026e+00; R003 = -2.3342758797e-02; R103 = -1.8507636718e-02; 
     R013 = 3.7969820455e-01; 
-
     ss = sqrt((S + deltaS) / SAu); 
     tt = T / CTu; 
     zz = -Z / Zu; 
