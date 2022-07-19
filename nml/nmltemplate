@@ -26,6 +26,7 @@
 &params
   do_diffusion = .false.
   do_velocity = .false.
+  do_biofouling = .false.
   run_3d = .false.
   advection_method = 2
   diffusion_hor_const = 0.01
@@ -76,7 +77,7 @@
 !-------------------------------
 ! run_start - [char]  Start of simulation
 ! run_end   - [char]  End of simulation
-! dt        - [float] Time step
+! dt        - [float] Time step [s]
 !===============================
 &time_vars
   run_start = '2017-07-29 03:00:00'
@@ -125,6 +126,24 @@
   saltvarname = 'salt'
   viscvarname = 'nuh'
   zax_style = 1
+/
+!===============================
+! Biofouling variables
+!-------------------------------
+! cell_size    - [float] Mean bacterial cell size [m]
+! Ba_mean      - [float] Mean cell abundance
+! rho_biofilm  - [float] Density of biofilm [kg/m3]
+! h_crit       - [float] Critical biofilm thickness
+! D            - [float] Diffusion coefficient for bacteria 
+! bavarname    - [char]  Name of bacterial concentration variable in GETM data
+!===============================
+&biofouling
+  cell_size = 1.e-6
+  Ba_mean = 0.5e12
+  rho_biofilm = 1500
+  h_crit = 10.9
+  D = 2.e-4
+  bavarname = 'ba'
 /
 !===============================
 ! Output variables
