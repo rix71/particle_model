@@ -26,6 +26,12 @@ module mod_fieldset
     type(t_domain), pointer, public :: domain
     type(t_datetime)                :: date_t1, date_t2
     !---------------------------------------------
+    ! Velocity component variables
+    integer :: u_idx = 0
+    integer :: v_idx = 0
+    integer, allocatable :: u_mask(:, :)
+    integer, allocatable :: v_mask(:, :)
+    !---------------------------------------------
     ! Z axis variables
     integer      :: zax_style = DEPTH_VALUES
     integer      :: zax_idx = 0
@@ -57,6 +63,10 @@ module mod_fieldset
     private
     procedure, public :: add_field
     procedure, public :: list_fields
+    procedure, public :: set_u_component
+    procedure, public :: set_v_component
+    procedure         :: get_u_comp_mask
+    procedure         :: get_v_comp_mask
     procedure, public :: set_zax
     procedure, public :: get_zax
     procedure, public :: get_gradient
@@ -301,6 +311,80 @@ contains
     call this%fields%get_info()
 
   end subroutine list_fields
+  !===========================================
+  subroutine get_u_comp_mask(this)
+    !---------------------------------------------
+    ! Make the velocity u component (similarly for v comp. in get_v_comp_mask)
+    ! to deal with boundaries.
+    ! SEA will be 0, BEACH areas will be 1 or -1 depending on where the land is. 
+    ! Adjacent land cells will have the same velocity tangential to land (0 gradient).
+    ! Normal (cross-boundary) components will be 0.
+    !---------------------------------------------
+    class(t_fieldset), intent(inout) :: this
+    integer :: i, j
+
+    allocate (this%u_mask(this%nx, this%ny), stat=ierr)
+    if (ierr .ne. 0) call throw_error("fieldset :: get_u_comp_mask", "Could not allocate u component mask")
+    this%u_mask = 0
+    do i = 1, this%nx
+      do j = 1, this%ny
+        if (this%domain%get_seamask(i, j) == BEACH) then
+          if (this%domain%get_seamask(i, j + 1) == LAND) then
+            this%u_mask(i, j) = -1
+          else if (this%domain%get_seamask(i, j - 1) == LAND) then
+            this%u_mask(i, j) = 1
+          end if
+        end if
+      end do
+    end do
+
+  end subroutine get_u_comp_mask
+  !===========================================
+  subroutine get_v_comp_mask(this)
+    class(t_fieldset), intent(inout) :: this
+    integer :: i, j
+
+    allocate (this%v_mask(this%nx, this%ny), stat=ierr)
+    if (ierr .ne. 0) call throw_error("fieldset :: get_v_comp_mask", "Could not allocate v component mask")
+    this%v_mask = 0
+    do i = 1, this%nx
+      do j = 1, this%ny
+        if (this%domain%get_seamask(i, j) == BEACH) then
+          if (this%domain%get_seamask(i + 1, j) == LAND) then
+            this%v_mask(i, j) = -1
+          else if (this%domain%get_seamask(i - 1, j) == LAND) then
+            this%v_mask(i, j) = 1
+          end if
+        end if
+      end do
+    end do
+
+  end subroutine get_v_comp_mask
+  !===========================================
+  subroutine set_u_component(this, u_comp_name)
+    !---------------------------------------------
+    ! Set the index of the velocity u component and create
+    ! the mask (similarly for v component in set_v_component). 
+    !---------------------------------------------
+
+    class(t_fieldset), intent(inout) :: this
+    character(*), intent(in) :: u_comp_name
+
+    this%u_idx = this%fields%node_loc(trim(u_comp_name))
+    if (this%u_idx < 1) call throw_error("fieldset :: set_u_component", "Did not find "//trim(u_comp_name)//" in fieldset")
+    call this%get_u_comp_mask()
+
+  end subroutine set_u_component
+  !===========================================
+  subroutine set_v_component(this, v_comp_name)
+    class(t_fieldset), intent(inout) :: this
+    character(*), intent(in) :: v_comp_name
+
+    this%v_idx = this%fields%node_loc(trim(v_comp_name))
+    if (this%v_idx < 1) call throw_error("fieldset :: set_v_component", "Did not find "//trim(v_comp_name)//" in fieldset")
+    call this%get_v_comp_mask()
+
+  end subroutine set_v_component
   !===========================================
   subroutine set_zax(this, zax_name, zax_style)
     class(t_fieldset), intent(inout) :: this
@@ -917,13 +1001,13 @@ contains
       do i_field = 1, this%num_fields
         call this%fields%get_item(i_field, p_field)
         call p_field%swap()
-        call this%read_field_subdomains(p_field)
+        call this%read_field_subdomains(p_field, i_field)
       end do
     else
       do i_field = 1, this%num_fields
         call this%fields%get_item(i_field, p_field)
         call p_field%swap()
-        call this%read_field(p_field)
+        call this%read_field(p_field, i_field)
       end do
     end if
 
@@ -970,9 +1054,11 @@ contains
     return
   end subroutine read_first_timesteps
   !===========================================
-  subroutine read_field_subdomains(this, p_field)
+  subroutine read_field_subdomains(this, p_field, field_idx)
     class(t_fieldset), intent(in)                :: this
     type(t_field), target, intent(inout)         :: p_field
+    integer, intent(in)                          :: field_idx
+    character                                    :: c_field
     character(len=LEN_CHAR_S)                    :: varname
     character(len=LEN_CHAR_L)                    :: subdom_filename
     integer                                      :: n_dims
@@ -980,16 +1066,24 @@ contains
     integer, allocatable                         :: start(:), count(:)
     integer                                      :: i, j, i_subdom, ioff, joff, istart, jstart
 
+    if (field_idx == this%u_idx) then
+      c_field = "u"
+    else if (field_idx == this%v_idx) then
+      c_field = "v"
+    else
+      c_field = "x"
+    end if
+
     varname = p_field%get_varname()
     n_dims = p_field%n_dims
 
     if (n_dims == 2) then
-      allocate (tmp_arr(this%nx, this%ny, 1))
+      allocate (buffer(this%nx, this%ny, 1))
       allocate (count(3))
       count(3) = 1
       start = [1, 1, this%read_idx]
     else if (n_dims == 3) then
-      allocate (tmp_arr(this%nx, this%ny, this%nz))
+      allocate (buffer(this%nx, this%ny, this%nz))
       allocate (count(4))
       count(3) = this%nz
       count(4) = 1
@@ -999,7 +1093,7 @@ contains
     end if
 
     ! Makes the uninitialised ubound warning go away, but might not be necessary actually
-    tmp_arr = ZERO
+    buffer = ZERO
 
     do i_subdom = 0, this%nproc - 1
       write (subdom_filename, "(a,i0.4,a)") trim(this%current_path)//"/"//trim(this%file_prefix), &
@@ -1030,41 +1124,88 @@ contains
       end if
 #endif
 
-      allocate (buffer(count(1), count(2), count(3)))
+      allocate (tmp_arr(count(1), count(2), count(3)))
 
       if (n_dims == 2) then
-        call nc_read_real_3d(trim(subdom_filename), trim(varname), start, count, buffer)
+        call nc_read_real_3d(trim(subdom_filename), trim(varname), start, count, tmp_arr)
       else
-        call nc_read_real_4d(trim(subdom_filename), trim(varname), start, count, buffer)
+        call nc_read_real_4d(trim(subdom_filename), trim(varname), start, count, tmp_arr)
       end if
-      tmp_arr(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:count(3)) = buffer
+      buffer(istart:istart + count(1) - 1, jstart:jstart + count(2) - 1, 1:count(3)) = tmp_arr
 
-      deallocate (buffer)
+      deallocate (tmp_arr)
 
     end do
 
-    do j = 1, this%ny
-      do i = 1, this%nx
-        if (this%domain%get_bathymetry(i, j) < ZERO) then
-          tmp_arr(i, j, :) = ZERO
-        end if
+    select case (c_field)
+    case ("v")
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%domain%get_bathymetry(i, j) < ZERO) then
+            buffer(i, j, :) = ZERO
+          end if
+        end do
       end do
-    end do
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%v_mask(i, j) > 0) then
+            buffer(i, j, :) = buffer(i + 1, j, :)
+          else if (this%v_mask(i, j) < 0) then
+            buffer(i + 1, j, :) = buffer(i, j, :)
+          end if
+        end do
+      end do
+    case ("u")
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%domain%get_bathymetry(i, j) < ZERO) then
+            buffer(i, j, :) = ZERO
+          end if
+        end do
+      end do
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%u_mask(i, j) > 0) then
+            buffer(i, j, :) = buffer(i, j + 1, :)
+          else if (this%u_mask(i, j) < 0) then
+            buffer(i, j + 1, :) = buffer(i, j, :)
+          end if
+        end do
+      end do
+    case default
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%domain%get_bathymetry(i, j) < ZERO) then
+            buffer(i, j, :) = ZERO
+          end if
+        end do
+      end do
+    end select
 
-    where (tmp_arr <= MISSING_VAL) tmp_arr = ZERO
+    where (buffer <= MISSING_VAL) buffer = ZERO
 
-    call p_field%set(tmp_arr)
+    call p_field%set(buffer)
 
   end subroutine read_field_subdomains
   !===========================================
-  subroutine read_field(this, p_field)
+  subroutine read_field(this, p_field, field_idx)
     class(t_fieldset), intent(in)             :: this
     type(t_field), pointer, intent(inout)     :: p_field
+    integer, intent(in)                       :: field_idx
+    character                                 :: c_field
     character(len=LEN_CHAR_S)                 :: varname
     integer                                   :: n_dims
     real(rk), dimension(:, :, :), allocatable :: buffer
     integer, allocatable                      :: start(:), count(:)
     integer                                   :: i, j
+
+    if (field_idx == this%u_idx) then
+      c_field = "u"
+    else if (field_idx == this%v_idx) then
+      c_field = "v"
+    else
+      c_field = "x"
+    end if
 
     varname = p_field%get_varname()
     n_dims = p_field%n_dims
@@ -1091,13 +1232,50 @@ contains
       call nc_read_real_4d(trim(this%current_path), trim(varname), start, count, buffer)
     end if
 
-    do j = 1, this%ny
-      do i = 1, this%nx
-        if (this%domain%get_bathymetry(i, j) < ZERO) then
-          buffer(i, j, :) = ZERO
-        end if
+    select case (c_field)
+    case ("v")
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%domain%get_bathymetry(i, j) < ZERO) then
+            buffer(i, j, :) = ZERO
+          end if
+        end do
       end do
-    end do
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%v_mask(i, j) > 0) then
+            buffer(i, j, :) = buffer(i + 1, j, :)
+          else if (this%v_mask(i, j) < 0) then
+            buffer(i + 1, j, :) = buffer(i, j, :)
+          end if
+        end do
+      end do
+    case ("u")
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%domain%get_bathymetry(i, j) < ZERO) then
+            buffer(i, j, :) = ZERO
+          end if
+        end do
+      end do
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%u_mask(i, j) > 0) then
+            buffer(i, j, :) = buffer(i, j + 1, :)
+          else if (this%u_mask(i, j) < 0) then
+            buffer(i, j + 1, :) = buffer(i, j, :)
+          end if
+        end do
+      end do
+    case default
+      do j = 1, this%ny
+        do i = 1, this%nx
+          if (this%domain%get_bathymetry(i, j) < ZERO) then
+            buffer(i, j, :) = ZERO
+          end if
+        end do
+      end do
+    end select
 
     where (buffer <= MISSING_VAL) buffer = ZERO
 

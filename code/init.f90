@@ -21,7 +21,8 @@ module mod_initialise
                                init_particles_from_netcdf, init_particles_from_coordfile
   use time_vars
   use mod_datetime
-  use mod_params, only: do_diffusion, do_velocity, advection_method, &
+  use mod_biofouling, only: init_biofouling
+  use mod_params, only: do_diffusion, do_velocity, do_biofouling, advection_method, &
                         diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky
   implicit none
   private
@@ -51,7 +52,7 @@ contains
     !---------------------------------------------
     ! Namelists
     !---------------------------------------------
-    namelist /params/ do_diffusion, do_velocity, run_3d, advection_method, diffusion_hor_const, diffusion_vert_const, Cm_smagorinsky
+    namelist /params/ do_diffusion, do_velocity, do_biofouling, run_3d, advection_method, diffusion_hor_const, diffusion_vert_const, Cm_smagorinsky
     namelist /domain_vars/ TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny
     namelist /particle_vars/ inputstep, particle_init_method, coordfile, max_age, kill_beached, kill_boundary
     namelist /time_vars/ run_start, run_end, dt
@@ -76,6 +77,7 @@ contains
     FMT2, "&params"
     FMT3, var2val(do_diffusion)
     FMT3, var2val(do_velocity)
+    FMT3, var2val(do_biofouling)
     FMT3, var2val(run_3d)
     FMT3, var2val(advection_method)
     FMT3, var2val(diffusion_hor_const)
@@ -203,12 +205,14 @@ contains
     ! Fields for h. velocity
     if (nc_var_exists(trim(filename), trim(uvarname))) then
       call fieldset%add_field("U", uvarname)
+      call fieldset%set_u_component("U")
     else
       call throw_error("initialise :: init_fieldset", "Variable for U velocity does not exist: "//trim(uvarname))
     end if
 
     if (nc_var_exists(trim(filename), trim(vvarname))) then
       call fieldset%add_field("V", vvarname)
+      call fieldset%set_v_component("V")
     else
       call throw_error("initialise :: init_fieldset", "Variable for V velocity does not exist: "//trim(vvarname))
     end if
@@ -271,6 +275,10 @@ contains
       end if
     end if
 
+    !---------------------------------------------
+    if (do_biofouling) then
+      call init_biofouling(fieldset, filename)
+    end if
     !---------------------------------------------
     ! if (has_subdomains) call fieldset%init_proc_mask()
 
