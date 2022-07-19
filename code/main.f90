@@ -133,6 +133,9 @@ contains
 #ifdef SMAGORINSKY_INTERP_UV
     FMT2, "-SMAGORINSKY_INTERP_UV"
 #endif
+#ifdef GET_INTERP_ONLY
+    FMT2, "-GET_INTERP_ONLY"
+#endif
 
     return
   end subroutine print_compile_info
