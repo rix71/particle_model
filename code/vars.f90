@@ -20,6 +20,7 @@ module mod_params
 
   logical             :: do_diffusion, &
                          do_velocity, &            ! Calculate particles' own velocity
+                         do_biofouling, &          ! Calculate density change due to biological growth
                          run_3d                    ! 2D or 3D
   integer             :: advection_method
   real(rk)            :: diffusion_hor_const, diffusion_vert_const, &                 ! Horisontal and vertical diffusion coefs
@@ -78,7 +79,7 @@ module field_vars
                                zax_style, &                    ! Depth values (1) or layer thickness (2)
                                has_density                     ! 0 - default density, 1 - has variable, 2 - calculate from T/S
   character(len=LEN_CHAR_S) :: uvarname, vvarname, wvarname, & ! Names of the variables. Necessary?
-                               zaxvarname, elevvarname, &      
+                               zaxvarname, elevvarname, &
                                rhovarname, tempvarname, &
                                saltvarname, viscvarname
   character(len=LEN_CHAR_L) :: file_prefix, file_suffix        ! What comes before and after the proc. number?
