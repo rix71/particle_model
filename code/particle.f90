@@ -22,36 +22,47 @@ module mod_particle
   !---------------------------------------------
   ! Particle type
   type t_particle
+    !---------------------------------------------
     logical  :: is_active = .true.          ! Skip particle in loop if is_active == .false.
     logical  :: kill_beached, kill_boundary ! Set is_active=.false. if beached or on boundary?
     integer  :: warnings = 0
     integer  :: state = ACTIVE              ! 0 - active, 1 - beached, 2 - on boundary, 3 - bottom
-    integer  :: i0, j0, k0                  ! Particle position (grid cell indices, original)
-    real(rk) :: ir0, jr0, kr0               ! Particle position (real indices, original)
-    integer  :: i1, j1, k1                  ! Particle position (grid cell indices, t + dt)
-    real(rk) :: ir1, jr1, kr1               ! Particle position (real indices, t + dt)
-    real(rk) :: lon0 = ZERO                 ! Particle position (original)
-    real(rk) :: lat0 = ZERO                 ! Particle position (original)
-    real(rk) :: depth0 = ZERO               ! Particle position (original)
-    real(rk) :: lon1 = ZERO                 ! Particle position (t + dt)
-    real(rk) :: lat1 = ZERO                 ! Particle position (t + dt)
-    real(rk) :: depth1 = ZERO               ! Particle position (t + dt)
-    real(rk) :: u0 = ZERO                   ! Particle velocity (original)
-    real(rk) :: v0 = ZERO                   ! Particle velocity (original)
-    real(rk) :: w0 = ZERO                   ! Particle velocity (original)
-    real(rk) :: u1 = ZERO                   ! Particle velocity (t + dt)
-    real(rk) :: v1 = ZERO                   ! Particle velocity (t + dt)
-    real(rk) :: w1 = ZERO                   ! Particle velocity (t + dt)
-    real(rk) :: vel_vertical = ZERO         ! Vertical velocity (Kooi)
-    real(rk) :: rho = ZERO                  ! Particle density
+    real(rk) :: id                          ! Origin of particle, number
+    !---------------------------------------------
+    ! Indices
+    integer  :: i0, j0, k0                  ! Position (grid cell indices, original)
+    real(rk) :: ir0, jr0, kr0               ! Position (real indices, original)
+    integer  :: i1, j1, k1                  ! Position (grid cell indices, t + dt)
+    real(rk) :: ir1, jr1, kr1               ! Position (real indices, t + dt)
+    !---------------------------------------------
+    ! Coordinates
+    real(rk) :: lon0 = ZERO                 ! Position (original)
+    real(rk) :: lat0 = ZERO                 ! Position (original)
+    real(rk) :: depth0 = ZERO               ! Position (original)
+    real(rk) :: lon1 = ZERO                 ! Position (t + dt)
+    real(rk) :: lat1 = ZERO                 ! Position (t + dt)
+    real(rk) :: depth1 = ZERO               ! Position (t + dt)
+    !---------------------------------------------
+    ! Velocity
+    real(rk) :: u0 = ZERO                   ! Velocity (original)
+    real(rk) :: v0 = ZERO                   ! Velocity (original)
+    real(rk) :: w0 = ZERO                   ! Velocity (original)
+    real(rk) :: u1 = ZERO                   ! Velocity (t + dt)
+    real(rk) :: v1 = ZERO                   ! Velocity (t + dt)
+    real(rk) :: w1 = ZERO                   ! Velocity (t + dt)
+    real(rk) :: vel_vertical = ZERO         ! Velocity (Kooi)
+    !---------------------------------------------
+    real(rk) :: rho = ZERO                  ! Density
+    real(rk) :: rho0 = ZERO                 ! Initial density
     real(rk) :: delta_rho = ZERO            ! Density difference
-    real(rk) :: radius = ZERO               ! Particle radius
-    real(rk) :: age = ZERO                  ! Particle age
-    real(rk) :: max_age = ZERO              ! Particle maximum age
+    real(rk) :: radius = ZERO               ! Radius
+    real(rk) :: radius0 = ZERO              ! Initial radius
+    real(rk) :: h_biofilm = ZERO            ! Thickness of biofilm
+    real(rk) :: age = ZERO                  ! Age
+    real(rk) :: max_age = ZERO              ! Maximum age
     real(rk) :: traj_len = ZERO             ! Particle trajectory length
     real(rk) :: time_on_beach = ZERO        ! Time spent in the beach area
     real(rk) :: beaching_time               ! Different particles may essentialy have different beaching times
-    real(rk) :: id                          ! Origin of particle, number
 
   contains
     private
@@ -88,6 +99,7 @@ contains
     p%beaching_time = beaching_time
     p%rho = rho
     p%radius = radius
+    p%radius0 = radius
     p%max_age = max_age
     p%kill_beached = kill_beached
     p%kill_boundary = kill_boundary
