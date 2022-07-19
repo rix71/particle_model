@@ -4,7 +4,7 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
 # Print everything to .stdout file
-# FFLAGS += -DWRITESTDOUT
+FFLAGS += -DWRITESTDOUT
 
 # Print debug messages
 # FFLAGS += -DDEBUG
@@ -19,7 +19,7 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 FFLAGS += -DSNAP_TO_BOUNDS
 
 # Always interpolate in the field (and physics Ah) getter function (disable NNS)
-FFLAGS += -DGET_INTERP_ONLY
+# FFLAGS += -DGET_INTERP_ONLY
 
 # Calculate the vertical displacement in 3D mode (disable to keep particles at initial depths) 
 FFLAGS += -DADVECT_VERTICAL
@@ -40,7 +40,7 @@ FFLAGS += -DPARTICLE_REDIRECT
 # FFLAGS += -DPARTICLE_BEACH_IMMEDIATELY
 
 # Use OpenMP
-# FFLAGS += -DUSE_OMP -fopenmp
+FFLAGS += -DUSE_OMP -fopenmp
 
 #--------------------------------------------------
 MOD=./mod
@@ -63,13 +63,14 @@ SRCS = precdefs.f90 errors.f90 \
 	   vars.f90 \
        particle.f90 output.f90 \
 	   advection.f90 physics.f90 \
-       diffusion.f90 init.f90 loop.f90 postprocessing.f90 \
+       diffusion.f90 biofouling.f90 \
+	   init.f90 loop.f90 postprocessing.f90 \
 	   main.f90 
 
 OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
 
 #--------------------------------------------------
-PROGRAM = $(BIN)/main_field_dbg
+PROGRAM = $(BIN)/main
 
 all: $(PROGRAM)
 
