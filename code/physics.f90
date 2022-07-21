@@ -23,7 +23,7 @@ module mod_physics
   !---------------------------------------------
   public :: vertical_velocity, Ah_Smagorinsky, normal_random
   !---------------------------------------------
-  integer :: ierr
+  ! integer :: ierr ! Unused for now
   !===================================================
 contains
   !===========================================

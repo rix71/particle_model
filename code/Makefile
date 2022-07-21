@@ -18,9 +18,6 @@ FFLAGS += -DWRITESTDOUT
 # Do not allow too big indices (needed when the time step is big or domain has northern/eastern boundaries)
 FFLAGS += -DSNAP_TO_BOUNDS
 
-# Always interpolate in the field (and physics Ah) getter function (disable NNS)
-# FFLAGS += -DGET_INTERP_ONLY
-
 # Calculate the vertical displacement in 3D mode (disable to keep particles at initial depths) 
 FFLAGS += -DADVECT_VERTICAL
 

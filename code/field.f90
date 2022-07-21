@@ -5,7 +5,7 @@
 module mod_field
   use mod_errors
   use mod_precdefs
-  use mod_interp, only: bilinearinterp, trilinearinterp, nbrs
+  use mod_interp, only: bilinearinterp, trilinearinterp
   implicit none
   private
   !===================================================
@@ -83,8 +83,10 @@ contains
   subroutine dtor_field(this)
     type(t_field), intent(inout) :: this
 
-    if (allocated(this%data_t1)) deallocate (this%data_t1)
-    if (allocated(this%data_t2)) deallocate (this%data_t2)
+    if (allocated(this%data_t1)) deallocate (this%data_t1, stat=ierr)
+    if (ierr .ne. 0) call throw_warning("field :: field destructor", "Could not deallocate data (t1)")
+    if (allocated(this%data_t2)) deallocate (this%data_t2, stat=ierr)
+    if (ierr .ne. 0) call throw_warning("field :: field destructor", "Could not deallocate data (t2)")
 
   end subroutine dtor_field
   !===========================================
@@ -129,9 +131,6 @@ contains
   end function time_interp_matrix
   !===========================================
   subroutine get_interp(this, t, x, y, z, &
-#ifndef GET_INTERP_ONLY
-                        seamask, &
-#endif
                         res)
     !---------------------------------------------
     ! Getter function
@@ -142,10 +141,7 @@ contains
     real(rk), intent(in)           :: t
     real(rk) AIM_INTENT            :: x, y
     real(rk), optional, intent(in) :: z
-#ifndef GET_INTERP_ONLY
-    integer, intent(in)            :: seamask(this%nx, this%ny)
-    integer                        :: inbr, iadd, jadd
-#endif
+    ! integer                        :: inbr, iadd, jadd
     real(rk), intent(out)          :: res
     integer                        :: i, j, k
     real(rk)                       :: f1, f2
@@ -225,125 +221,54 @@ contains
       z1 = float(floor(z)); debug(z1)
       z2 = float(floor(z) + 1); debug(z2)
 
-#ifndef GET_INTERP_ONLY
-
-      if (seamask(i, j) == LAND) then
-        DBG, "Nearest neighbour"
-        f1 = this%data_t1(i, j, k)
-        f2 = this%data_t2(i, j, k)
-        do inbr = 1, 8
-
-          iadd = nbrs(1, inbr)
-          jadd = nbrs(2, inbr)
-
-          if ((i == 1) .and. (iadd == -1)) cycle
-          if ((j == 1) .and. (jadd == -1)) cycle
-          if ((i == this%nx) .and. (iadd == 1)) cycle
-          if ((j == this%ny) .and. (jadd == 1)) cycle
-
-          if (seamask(i + iadd, j + jadd) .ne. LAND) then
-            f1 = this%data_t1(i + iadd, j + jadd, k)
-            f2 = this%data_t2(i + iadd, j + jadd, k)
-            DBG, "Stopped neighbour search"
-            DBG, "Data from: ", i + iadd, j + jadd, k
-            debug(inbr)
-            exit
-          end if
-        end do
-        debug(f1)
-        debug(f2)
-
-      else if (seamask(i, j) == BEACH) then
-        DBG, "Single cell value"
-        f1 = this%data_t1(i, j, k); debug(f1)
-        f2 = this%data_t2(i, j, k); debug(f2)
-
-      else
-#endif
-        DBG, "Trilinear interpolation"
-
-        if (k == this%nz) then
-          ! Use the lower layer if the particle is exactly at the surface
-          k = k - 1
-          z1 = z1 - ONE
-          z2 = z2 - ONE
-        end if
-
-        c111 = this%data_t1(i, j, k); debug(c111)
-        c121 = this%data_t1(i, j + 1, k); debug(c121)
-        c211 = this%data_t1(i + 1, j, k); debug(c211)
-        c221 = this%data_t1(i + 1, j + 1, k); debug(c221)
-        c112 = this%data_t1(i, j, k + 1); debug(c112)
-        c122 = this%data_t1(i, j + 1, k + 1); debug(c122)
-        c212 = this%data_t1(i + 1, j, k + 1); debug(c212)
-        c222 = this%data_t1(i + 1, j + 1, k + 1); debug(c222)
-
-        call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f1)
-        debug(f1)
-
-        c111 = this%data_t2(i, j, k); debug(c111)
-        c121 = this%data_t2(i, j + 1, k); debug(c121)
-        c211 = this%data_t2(i + 1, j, k); debug(c211)
-        c221 = this%data_t2(i + 1, j + 1, k); debug(c221)
-        c112 = this%data_t2(i, j, k + 1); debug(c112)
-        c122 = this%data_t2(i, j + 1, k + 1); debug(c122)
-        c212 = this%data_t2(i + 1, j, k + 1); debug(c212)
-        c222 = this%data_t2(i + 1, j + 1, k + 1); debug(c222)
-
-        call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f2)
-        debug(f2)
-#ifndef GET_INTERP_ONLY
+      if (k == this%nz) then
+        ! Use the lower layer if the particle is exactly at the surface
+        k = k - 1
+        z1 = z1 - ONE
+        z2 = z2 - ONE
       end if
-#endif
+
+      c111 = this%data_t1(i, j, k); debug(c111)
+      c121 = this%data_t1(i, j + 1, k); debug(c121)
+      c211 = this%data_t1(i + 1, j, k); debug(c211)
+      c221 = this%data_t1(i + 1, j + 1, k); debug(c221)
+      c112 = this%data_t1(i, j, k + 1); debug(c112)
+      c122 = this%data_t1(i, j + 1, k + 1); debug(c122)
+      c212 = this%data_t1(i + 1, j, k + 1); debug(c212)
+      c222 = this%data_t1(i + 1, j + 1, k + 1); debug(c222)
+
+      call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f1)
+      debug(f1)
+
+      c111 = this%data_t2(i, j, k); debug(c111)
+      c121 = this%data_t2(i, j + 1, k); debug(c121)
+      c211 = this%data_t2(i + 1, j, k); debug(c211)
+      c221 = this%data_t2(i + 1, j + 1, k); debug(c221)
+      c112 = this%data_t2(i, j, k + 1); debug(c112)
+      c122 = this%data_t2(i, j + 1, k + 1); debug(c122)
+      c212 = this%data_t2(i + 1, j, k + 1); debug(c212)
+      c222 = this%data_t2(i + 1, j + 1, k + 1); debug(c222)
+
+      call trilinearinterp(x1, x2, y1, y2, z1, z2, c111, c121, c211, c221, c112, c122, c212, c222, x, y, z, f2)
+      debug(f2)
     else
       DBG, "Spatial interpolation 2D"
 
-#ifndef GET_INTERP_ONLY
+      c11 = this%data_t1(i, j, 1); debug(c11)
+      c12 = this%data_t1(i, j + 1, 1); debug(c12)
+      c21 = this%data_t1(i + 1, j, 1); debug(c21)
+      c22 = this%data_t1(i + 1, j + 1, 1); debug(c22)
 
-      if (seamask(i, j) == LAND) then
-        DBG, "Nearest neighbour"
-        f1 = this%data_t1(i, j, 1)
-        f2 = this%data_t2(i, j, 1)
-        do inbr = 1, 8
-          if (seamask(i + nbrs(1, inbr), j + nbrs(2, inbr)) .ne. LAND) then
-            f1 = this%data_t1(i + nbrs(1, inbr), j + nbrs(2, inbr), 1)
-            f2 = this%data_t2(i + nbrs(1, inbr), j + nbrs(2, inbr), 1)
-            DBG, "Stopped neighbour search"
-            DBG, "Data from: ", i + nbrs(1, inbr), j + nbrs(2, inbr), 1
-            debug(inbr)
-            exit
-          end if
-        end do
-        debug(f1)
-        debug(f2)
+      call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f1)
+      debug(f1)
 
-      else if (seamask(i, j) == BEACH) then
-        DBG, "Single cell value"
-        f1 = this%data_t1(i, j, 1); debug(f1)
-        f2 = this%data_t2(i, j, 1); debug(f2)
+      c11 = this%data_t2(i, j, 1)
+      c12 = this%data_t2(i, j + 1, 1)
+      c21 = this%data_t2(i + 1, j, 1)
+      c22 = this%data_t2(i + 1, j + 1, 1)
 
-      else
-#endif
-        DBG, "Bilinear interpolation"
-
-        c11 = this%data_t1(i, j, 1); debug(c11)
-        c12 = this%data_t1(i, j + 1, 1); debug(c12)
-        c21 = this%data_t1(i + 1, j, 1); debug(c21)
-        c22 = this%data_t1(i + 1, j + 1, 1); debug(c22)
-
-        call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f1)
-        debug(f1)
-
-        c11 = this%data_t2(i, j, 1)
-        c12 = this%data_t2(i, j + 1, 1)
-        c21 = this%data_t2(i + 1, j, 1)
-        c22 = this%data_t2(i + 1, j + 1, 1)
-
-        call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f2)
-        debug(f2)
-#ifndef GET_INTERP_ONLY
-      end if
-#endif
+      call bilinearinterp(x1, x1, x2, x2, y1, y2, c11, c12, c21, c22, x, y, f2)
+      debug(f2)
     end if
 
     res = this%time_interp(f1, f2, t)

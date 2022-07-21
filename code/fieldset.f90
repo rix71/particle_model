@@ -217,16 +217,10 @@ contains
       DBG, "Getting 3D"
       debug(k)
       call p_field%get(t=t, x=i, y=j, z=k, &
-#ifndef GET_INTERP_ONLY
-                       seamask=this%domain%get_seamask(), &
-#endif
                        res=res)
     else
       DBG, "Getting 2D"
       call p_field%get(t=t, x=i, y=j, &
-#ifndef GET_INTERP_ONLY
-                       seamask=this%domain%get_seamask(), &
-#endif
                        res=res)
     end if
 
@@ -274,15 +268,9 @@ contains
     call this%fields%get_item(idx, p_field)
     if (present(k)) then
       call p_field%get(t, i, j, z=k, &
-#ifndef GET_INTERP_ONLY
-                       seamask=this%domain%get_seamask(), &
-#endif
                        res=res)
     else
       call p_field%get(t, i, j, &
-#ifndef GET_INTERP_ONLY
-                       seamask=this%domain%get_seamask(), &
-#endif
                        res=res)
     end if
 
@@ -316,7 +304,7 @@ contains
     !---------------------------------------------
     ! Make the velocity u component (similarly for v comp. in get_v_comp_mask)
     ! to deal with boundaries.
-    ! SEA will be 0, BEACH areas will be 1 or -1 depending on where the land is. 
+    ! SEA will be 0, BEACH areas will be 1 or -1 depending on where the land is.
     ! Adjacent land cells will have the same velocity tangential to land (0 gradient).
     ! Normal (cross-boundary) components will be 0.
     !---------------------------------------------
@@ -364,7 +352,7 @@ contains
   subroutine set_u_component(this, u_comp_name)
     !---------------------------------------------
     ! Set the index of the velocity u component and create
-    ! the mask (similarly for v component in set_v_component). 
+    ! the mask (similarly for v component in set_v_component).
     !---------------------------------------------
 
     class(t_fieldset), intent(inout) :: this
@@ -954,9 +942,6 @@ contains
     if (this%fields%key_exists("ELEV")) then
       call this%fields%get_item("ELEV", p_field)
       call p_field%get(t, i, j, &
-#ifndef GET_INTERP_ONLY
-                       seamask=this%domain%get_seamask(), &
-#endif
                        res=res)
     else
       zax = this%get_zax(t, nint(i), nint(j))
@@ -1144,6 +1129,10 @@ contains
           if (this%domain%get_bathymetry(i, j) < ZERO) then
             buffer(i, j, :) = ZERO
           end if
+          ! This is needed due to the A grid
+          if (this%u_mask(i, j) > 0) then
+            buffer(i, j, :) = ZERO
+          end if
         end do
       end do
       do j = 1, this%ny
@@ -1159,6 +1148,9 @@ contains
       do j = 1, this%ny
         do i = 1, this%nx
           if (this%domain%get_bathymetry(i, j) < ZERO) then
+            buffer(i, j, :) = ZERO
+          end if
+          if (this%v_mask(i, j) > 0) then
             buffer(i, j, :) = ZERO
           end if
         end do
@@ -1239,6 +1231,10 @@ contains
           if (this%domain%get_bathymetry(i, j) < ZERO) then
             buffer(i, j, :) = ZERO
           end if
+          ! This is needed due to the A grid
+          if (this%u_mask(i, j) > 0) then
+            buffer(i, j, :) = ZERO
+          end if
         end do
       end do
       do j = 1, this%ny
@@ -1254,6 +1250,9 @@ contains
       do j = 1, this%ny
         do i = 1, this%nx
           if (this%domain%get_bathymetry(i, j) < ZERO) then
+            buffer(i, j, :) = ZERO
+          end if
+          if (this%v_mask(i, j) > 0) then
             buffer(i, j, :) = ZERO
           end if
         end do
