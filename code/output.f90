@@ -86,57 +86,65 @@ contains
       call throw_warning("output :: init_output", "Cannot write snapshot in parallel mode!")
 #else
       nc_fileout_snap = trim(outDir)//'/'//trim(runid)//'.snap.nc'
-      call nc_initialise(nc_fileout_snap)
-      call nc_add_dimension(nc_fileout_snap, "particle", nc_p_dimid)
-      call nc_add_variable(nc_fileout_snap, "time", "float", 1, [nc_p_dimid])
-      call nc_add_attr(nc_fileout_snap, "time", "units", "seconds since 1900-01-01 00:00:00")
-
-      call nc_add_variable(nc_fileout_snap, "lon", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "lon", "units", "degrees east")
-
-      call nc_add_variable(nc_fileout_snap, "lat", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "lat", "units", "degrees north")
-
-      call nc_add_variable(nc_fileout_snap, "depth", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "depth", "units", "m")
-      call nc_add_attr(nc_fileout_snap, "depth", "name", "depth")
-
-      call nc_add_variable(nc_fileout_snap, "vx", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "vx", "units", "m/s")
-      call nc_add_attr(nc_fileout_snap, "vx", "name", "eastward velocity")
-
-      call nc_add_variable(nc_fileout_snap, "vy", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "vy", "units", "m/s")
-      call nc_add_attr(nc_fileout_snap, "vy", "name", "northward velocity")
-
-      call nc_add_variable(nc_fileout_snap, "vz", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "vz", "units", "m/s")
-      call nc_add_attr(nc_fileout_snap, "vz", "name", "vertical velocity")
-
-      call nc_add_variable(nc_fileout_snap, "vel_kooi", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "vel_kooi", "units", "m/s")
-      call nc_add_attr(nc_fileout_snap, "vel_kooi", "name", "vertical velocity calculated from density difference")
-
-      call nc_add_variable(nc_fileout_snap, "delta_rho", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "delta_rho", "units", "kg/m3")
-      call nc_add_attr(nc_fileout_snap, "delta_rho", "name", "density difference")
-
-      call nc_add_variable(nc_fileout_snap, "age", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "age", "units", "s")
-
-      call nc_add_variable(nc_fileout_snap, "id", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "id", "name", "particle id")
-
-      call nc_add_variable(nc_fileout_snap, "trajectory", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-      call nc_add_attr(nc_fileout_snap, "trajectory", "units", "m")
-      call nc_add_attr(nc_fileout_snap, "trajectory", "name", "distance travelled")
-
-      call nc_add_variable(nc_fileout_snap, "particle_num", "int", 1, [nc_p_dimid])
+      call init_nc_snapshot(nc_fileout_snap)
 #endif
     end if
 
     return
   end subroutine init_output
+  !===========================================
+  subroutine init_nc_snapshot(file_name)
+
+    character(len=LEN_CHAR_L), intent(in) :: file_name
+
+    call nc_initialise(file_name)
+    call nc_add_dimension(file_name, "particle", nc_p_dimid)
+    call nc_add_variable(file_name, "time", "float", 1, [nc_p_dimid])
+    call nc_add_attr(file_name, "time", "units", "seconds since 1900-01-01 00:00:00")
+
+    call nc_add_variable(file_name, "lon", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "lon", "units", "degrees east")
+
+    call nc_add_variable(file_name, "lat", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "lat", "units", "degrees north")
+
+    call nc_add_variable(file_name, "depth", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "depth", "units", "m")
+    call nc_add_attr(file_name, "depth", "name", "depth")
+
+    call nc_add_variable(file_name, "vx", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "vx", "units", "m/s")
+    call nc_add_attr(file_name, "vx", "name", "eastward velocity")
+
+    call nc_add_variable(file_name, "vy", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "vy", "units", "m/s")
+    call nc_add_attr(file_name, "vy", "name", "northward velocity")
+
+    call nc_add_variable(file_name, "vz", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "vz", "units", "m/s")
+    call nc_add_attr(file_name, "vz", "name", "vertical velocity")
+
+    call nc_add_variable(file_name, "vel_kooi", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "vel_kooi", "units", "m/s")
+    call nc_add_attr(file_name, "vel_kooi", "name", "vertical velocity calculated from density difference")
+
+    call nc_add_variable(file_name, "delta_rho", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "delta_rho", "units", "kg/m3")
+    call nc_add_attr(file_name, "delta_rho", "name", "density difference")
+
+    call nc_add_variable(file_name, "age", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "age", "units", "s")
+
+    call nc_add_variable(file_name, "id", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "id", "name", "particle id")
+
+    call nc_add_variable(file_name, "trajectory", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "trajectory", "units", "m")
+    call nc_add_attr(file_name, "trajectory", "name", "distance travelled")
+
+    call nc_add_variable(file_name, "particle_num", "int", 1, [nc_p_dimid])
+
+  end subroutine init_nc_snapshot
   !===========================================
   subroutine init_nc_output(file_name)
 

@@ -1,7 +1,7 @@
 {
   "makefile.extensionOutputFolder": "./.vscode",
   "C_Cpp.errorSquiggles": "Disabled",
-  "fortran.includePaths": [
+  "fortran.linter.includePaths": [
     "./include"
   ]
 }

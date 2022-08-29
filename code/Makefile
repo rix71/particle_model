@@ -4,7 +4,7 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
 # Print everything to .stdout file
-FFLAGS += -DWRITESTDOUT
+# FFLAGS += -DWRITESTDOUT
 
 # Print debug messages
 # FFLAGS += -DDEBUG

@@ -101,7 +101,7 @@ contains
   type(t_datetime) function datetime_from_netcdf(fname, n)
     !---------------------------------------------
     ! Reads the time unit from netCDF and returns a datetime
-    ! datetime instance. Time unit date if no 'n', first date
+    ! datetime instance. Time unit date if no 'n', n-th date
     ! in netCDF if 'n' is specified.
     !---------------------------------------------
 

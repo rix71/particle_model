@@ -789,8 +789,10 @@ module mod_particle_vars
   use mod_particle
   use nc_manager, only: nc_read_real_1d, nc_read_real_2d, nc_get_dim, nc_var_exists
   use mod_domain_vars, only: domain
-  use time_vars, only: nTimes, run_start_dt
+  use time_vars, only: nTimes, run_start_dt, dt
   use run_params, only: runid, restart, restart_path
+  use mod_datetime, only: t_datetime, datetime_from_netcdf
+  use mod_fieldset, only: t_fieldset
   implicit none
   !===================================================
   !---------------------------------------------
@@ -800,12 +802,14 @@ module mod_particle_vars
                                    n_particles, &              ! Number of particles
                                    n_restart_particles, &
                                    n_init_times, &
-                                   runparts = 0                ! Number of particles to loop over
+                                   runparts = 0, &             ! Number of particles to loop over
+                                   i_release = 1
   real(rk)                      :: max_age                     ! Lifetime (for all particles) in timesteps
   character(len=LEN_CHAR_L)     :: coordfile                   ! File containing particle locations at init.
   type(t_particle), allocatable :: particles(:)                ! Array of particles
   !---------------------------------------------
   type, private :: t_initial_position
+    type(t_datetime)                    :: release_date
     integer                             :: next_idx = 1, &
                                            time_idx = 1, &
                                            n_particles
@@ -1027,7 +1031,9 @@ contains
         init_coords(itime)%next_idx = itime + 1
       else
         ! Could also be periodic (last next_idx = 1)
-        init_coords(itime)%next_idx = itime
+        ! will stop releasing particles when the init file runs out
+        init_coords(itime)%next_idx = 1
+        ! init_coords(itime)%next_idx = itime
       end if
 
       debug(itime)
@@ -1035,6 +1041,8 @@ contains
 
       init_coords(itime)%n_particles = int(nInitParticles(itime))
       call init_coords(itime)%allocate_n_init_particles
+
+      init_coords(itime)%release_date = datetime_from_netcdf(trim(coordfile), itime)
 
       if (nc_var_exists(trim(coordfile), "x")) then
         call nc_read_real_2d(trim(coordfile), "x", 1, int(nInitParticles(itime)), init_coords(itime)%x, &
@@ -1089,6 +1097,14 @@ contains
 
     end do
 
+    do itime = 1, n_init_times
+      if (run_start_dt <= init_coords(itime)%release_date) then
+        i_release = itime
+        call init_coords(itime)%release_date%print_short_date()
+        exit
+      end if
+    end do
+
     if (inputstep > 0) then
       if (n_init_times > 1) then
         n_particles = int(sum(nInitParticles))
@@ -1102,5 +1118,47 @@ contains
     FMT2, "Finished init particles"
 
   end subroutine init_particles_from_netcdf
+  !===========================================
+  subroutine release_particles(itime, date, fieldset, fieldset_time)
+    integer, intent(in) :: itime
+    type(t_datetime), intent(in) :: date
+    type(t_fieldset), intent(in) :: fieldset
+    real(rk), intent(in) :: fieldset_time
+    integer :: ipart
+
+    if (inputstep <= 0) return
+
+    select case (particle_init_method)
+    case (TXT_FILE)
+      if (mod(itime, inputstep) /= 0) then
+        return
+      end if
+    case (NC_FILE)
+      if (date < init_coords(i_release)%release_date) then
+        return
+      end if
+    end select
+
+    FMT2, "Releasing ", init_coords(i_release)%n_particles, " new particles at itime = ", itime
+    do ipart = 1, init_coords(i_release)%n_particles
+      particles(ipart + runparts) = t_particle(lon=init_coords(i_release)%x(ipart), &
+                                               lat=init_coords(i_release)%y(ipart), &
+                                               depth=init_coords(i_release)%z(ipart), &
+                                               id=init_coords(i_release)%id(ipart), &
+                                               beaching_time=init_coords(i_release)%beaching_time(ipart), &
+                                               rho=init_coords(i_release)%rho(ipart), &
+                                               radius=init_coords(i_release)%radius(ipart), &
+                                               max_age=max_age, &
+                                               kill_beached=kill_beached, &
+                                               kill_boundary=kill_boundary, &
+                                               fieldset=fieldset, &
+                                               time=fieldset_time)
+    end do
+    runparts = runparts + init_coords(i_release)%n_particles
+    FMT2, runparts, "particles"
+    i_release = init_coords(i_release)%next_idx
+
+    return
+  end subroutine release_particles
 
 end module mod_particle_vars

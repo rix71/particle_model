@@ -17,7 +17,7 @@ module mod_loop
   use mod_particle, only: t_particle
   use mod_domain_vars, only: domain
   use mod_particle_vars, only: particles, init_coords, inputstep, &
-                               max_age, runparts, kill_beached, kill_boundary
+                               max_age, runparts, kill_beached, kill_boundary, release_particles
   use time_vars, only: theDate, run_start_dt, run_end_dt, dt
   use mod_output, only: outputstep, restartstep, snap_interval, write_data, &
                         write_beached, write_boundary, write_data_only_active, write_restart, &
@@ -33,7 +33,7 @@ contains
   !===========================================
   subroutine loop
     integer           :: itime = 0
-    integer           :: ipart, i_release = 1
+    integer           :: ipart ! , i_release = 1
     real(rk)          :: time
     character(len=8)  :: d
     character(len=10) :: t
@@ -61,26 +61,7 @@ contains
       time = fieldset%get_time(theDate)
 
       !   - release particles
-      if ((inputstep > 0) .and. (mod(itime, inputstep) .eq. 0)) then
-        FMT2, "Releasing ", init_coords(i_release)%n_particles, " new particles at itime = ", itime
-        do ipart = 1, init_coords(i_release)%n_particles
-          particles(ipart + runparts) = t_particle(lon=init_coords(i_release)%x(ipart), &
-                                                   lat=init_coords(i_release)%y(ipart), &
-                                                   depth=init_coords(i_release)%z(ipart), &
-                                                   id=init_coords(i_release)%id(ipart), &
-                                                   beaching_time=init_coords(i_release)%beaching_time(ipart), &
-                                                   rho=init_coords(i_release)%rho(ipart), &
-                                                   radius=init_coords(i_release)%radius(ipart), &
-                                                   max_age=max_age, &
-                                                   kill_beached=kill_beached, &
-                                                   kill_boundary=kill_boundary, &
-                                                   fieldset=fieldset, &
-                                                   time=time)
-        end do
-        runparts = runparts + init_coords(i_release)%n_particles
-        FMT2, runparts, "particles"
-        i_release = init_coords(i_release)%next_idx
-      end if
+      call release_particles(itime, theDate, fieldset, time)
 
 #ifndef SAY_LESS
       if (mod(itime, PROGRESSINFO) .eq. 0) then
@@ -178,9 +159,9 @@ contains
       if ((restartstep > 0) .and. (mod(itime, restartstep) == 0)) then
         call write_restart(runparts)
       end if
-      
+
     end do
-    
+
     !---------------------------------------------
     ! Write restart at end of simulation
     if (restartstep == 0) then
