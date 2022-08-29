@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+# ---------------------
+import os
+import sys
+import numpy as np
+from netCDF4 import Dataset
+
+
+def main(argv):
+    fileout = argv[-1]
+    files = argv[1:-1]
+
+    s_t_dim = 0
+    s_p_dim = 0
+
+    nfo = Dataset(fileout, "w")
+    for ifile, fname in enumerate(files):
+        nfi = Dataset(fname)
+        if (ifile == 0):
+            vars = nfi.variables.keys()
+
+        # Time dim (sum all)
+        s_t_dim += nfi.dimensions['time'].size
+
+        # Particle dim (find longest)
+        if (nfi.dimensions['particle'].size > s_p_dim):
+            s_p_dim = nfi.dimensions['particle'].size
+
+        nfi.close()
+
+    nfo.createDimension("time", s_t_dim)
+    nfo.createDimension("particle", s_p_dim)
+
+    for vname in vars:
+        # print(f"Variable: {vname}")
+        for ifile, fname in enumerate(files):
+            nfi = Dataset(fname)
+            if (ifile == 0):
+
+                vo = nfo.createVariable(
+                    vname, nfi.variables[vname].dtype, nfi.variables[vname].dimensions)
+                for attr in nfi.variables[vname].ncattrs():
+                    vo.setncattr(attr, nfi.variables[vname].getncattr(attr))
+
+                vi = np.array(nfi.variables[vname][:])
+                if ((len(vi.shape) == 2) and (vi.shape[1] != s_p_dim)):
+                    dr = s_p_dim - vi.shape[1]
+                    lt = vi.shape[0]
+                    vi = np.hstack(
+                        (vi, np.ones((lt, dr)) * np.nan))
+            else:
+                if ("time" in nfi.variables[vname].dimensions):
+                    if (len(nfi.variables[vname].shape) == 2):
+                        if (nfi.variables[vname].shape[1] != s_p_dim):
+                            dr = s_p_dim - nfi.variables[vname].shape[1]
+                            lt = nfi.variables[vname].shape[0]
+                            nvi = np.hstack(
+                                (nfi.variables[vname][:], np.ones((lt, dr)) * np.nan))
+                            vi = np.vstack((vi, nvi))
+                        else:
+                            vi = np.vstack((vi, nfi.variables[vname][:]))
+                    else:
+                        vi = np.hstack((vi, nfi.variables[vname][:]))
+                else:
+                    vi = np.hstack((vi, nfi.variables[vname][len(vi):]))
+            nfi.close()
+        vo[:] = vi
+
+    nfo.close()
+
+    return
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

@@ -7,6 +7,8 @@ module run_params
 
   character(len=LEN_CHAR_L) :: runid
   logical                   :: dry_run
+  logical                   :: restart
+  character(len=LEN_CHAR_L) :: restart_path
 
 end module run_params
 !===================================================

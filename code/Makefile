@@ -68,6 +68,7 @@ OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
 
 #--------------------------------------------------
 PROGRAM = $(BIN)/main
+# PROGRAM = $(BIN)/restart_test
 
 all: $(PROGRAM)
 

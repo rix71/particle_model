@@ -6,7 +6,7 @@ module mod_initialise
   !----------------------------------------------------------------
   use mod_precdefs
   use mod_errors
-  use run_params, only: runid, dry_run
+  use run_params, only: runid, dry_run, restart, restart_path
   use mod_fieldset
   use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, has_density, has_viscosity, &
                         file_prefix, file_suffix, nlevels, &
@@ -18,7 +18,7 @@ module mod_initialise
   use mod_particle_vars, only: inputstep, particle_init_method, coordfile, &
                                max_age, &
                                kill_beached, kill_boundary, &
-                               init_particles_from_netcdf, init_particles_from_coordfile
+                               init_particles
   use time_vars
   use mod_datetime
   use mod_biofouling, only: init_biofouling
@@ -38,7 +38,7 @@ contains
     !---------------------------------------------
     ! First things to read in
     !---------------------------------------------
-    namelist /run_params/ runid, dry_run
+    namelist /run_params/ runid, dry_run, restart, restart_path
 
     open (NMLFILE, file=NMLFILENAME, action='read', iostat=ierr)
     if (ierr .ne. 0) call throw_error('initialise :: init_run', "Failed to open "//NMLFILENAME, ierr)
@@ -295,12 +295,7 @@ contains
     call init_domain                   ! init.f90
     call init_time                     ! init.f90
     call init_fieldset                 ! init.f90
-    select case (particle_init_method)
-    case (TXT_FILE)
-      call init_particles_from_coordfile ! particle.f90
-    case (NC_FILE)
-      call init_particles_from_netcdf    ! particle.f90
-    end select
+    call init_particles
 
   end subroutine init_model
 

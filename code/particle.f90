@@ -77,12 +77,17 @@ module mod_particle
 
   interface t_particle
     module procedure :: ctor_particle
+    module procedure :: ctor_particle_restart
   end interface t_particle
 
   !===================================================
 contains
   !===========================================
-  type(t_particle) function ctor_particle(lon, lat, depth, id, beaching_time, rho, radius, max_age, kill_beached, kill_boundary, fieldset, time) result(p)
+  type(t_particle) function ctor_particle(lon, lat, depth, &
+                                          id, beaching_time, &
+                                          rho, radius, max_age, &
+                                          kill_beached, kill_boundary, &
+                                          fieldset, time) result(p)
     real(rk), intent(in)         :: lon, lat, depth
     real(rk), intent(in)         :: id
     real(rk), intent(in)         :: beaching_time
@@ -98,6 +103,7 @@ contains
     p%id = id
     p%beaching_time = beaching_time
     p%rho = rho
+    p%rho0 = rho
     p%radius = radius
     p%radius0 = radius
     p%max_age = max_age
@@ -107,6 +113,70 @@ contains
     call fieldset%search_indices(time, lon, lat, depth, i=p%i0, j=p%j0, k=p%k0, ir=p%ir0, jr=p%jr0, kr=p%kr0)
 
   end function ctor_particle
+  !===========================================
+  type(t_particle) function ctor_particle_restart(lon, lat, depth, &
+                                                  i0, j0, k0, &
+                                                  ir0, jr0, kr0, &
+                                                  id, beaching_time, &
+                                                  rho, rho0, &
+                                                  radius, radius0, &
+                                                  h_biofilm, &
+                                                  age, max_age, kill_beached, kill_boundary, &
+                                                  u0, v0, w0, vel_vertical, &
+                                                  traj_len, time_on_beach, is_active, state) result(p)
+    real(rk), intent(in)         :: lon, lat, depth
+    real(rk), intent(in)         :: id
+    real(rk), intent(in)         :: beaching_time
+    real(rk), intent(in)         :: rho, rho0
+    real(rk), intent(in)         :: radius, radius0
+    real(rk), intent(in)         :: h_biofilm
+    real(rk), intent(in)         :: age, max_age
+    real(rk), intent(in)         :: ir0, jr0, kr0
+    real(rk), intent(in)         :: u0, v0, w0, vel_vertical
+    real(rk), intent(in)         :: traj_len, time_on_beach
+    integer, intent(in)          :: i0, j0, k0
+    integer, intent(in)          :: state
+    logical, intent(in)          :: kill_beached, kill_boundary, is_active
+
+    p%lon0 = lon
+    p%lat0 = lat
+    p%depth0 = depth
+
+    p%i0 = i0
+    p%j0 = j0
+    p%k0 = k0
+    p%ir0 = ir0
+    p%jr0 = jr0
+    p%kr0 = kr0
+
+    p%u0 = u0
+    p%v0 = v0
+    p%w0 = w0
+    p%vel_vertical = vel_vertical
+
+    p%traj_len = traj_len
+
+    p%id = id
+    p%is_active = is_active
+    p%state = state
+
+    p%beaching_time = beaching_time
+    p%time_on_beach = time_on_beach
+
+    p%rho = rho
+    p%rho0 = rho0
+
+    p%radius = radius
+    p%radius0 = radius0
+    p%h_biofilm = h_biofilm
+
+    p%age = age
+    p%max_age = max_age
+
+    p%kill_beached = kill_beached
+    p%kill_boundary = kill_boundary
+
+  end function ctor_particle_restart
   !===========================================
   subroutine update(this, fieldset, time)
 
@@ -719,7 +789,8 @@ module mod_particle_vars
   use mod_particle
   use nc_manager, only: nc_read_real_1d, nc_read_real_2d, nc_get_dim, nc_var_exists
   use mod_domain_vars, only: domain
-  use time_vars, only: nTimes
+  use time_vars, only: nTimes, run_start_dt
+  use run_params, only: runid, restart, restart_path
   implicit none
   !===================================================
   !---------------------------------------------
@@ -727,6 +798,7 @@ module mod_particle_vars
   integer                       :: inputstep, &                ! How often are particles released?
                                    particle_init_method, &     ! Read initial positions (1 - txt, 2 - .nc)
                                    n_particles, &              ! Number of particles
+                                   n_restart_particles, &
                                    n_init_times, &
                                    runparts = 0                ! Number of particles to loop over
   real(rk)                      :: max_age                     ! Lifetime (for all particles) in timesteps
@@ -751,6 +823,106 @@ module mod_particle_vars
   integer :: ierr
   !===================================================
 contains
+  !===========================================
+  subroutine init_particles()
+
+    select case (particle_init_method)
+    case (TXT_FILE)
+      call init_particles_from_coordfile ! particle.f90
+    case (NC_FILE)
+      call init_particles_from_netcdf    ! particle.f90
+    end select
+
+    if (restart) then
+      call check_restart_file
+      allocate (particles(n_particles + n_restart_particles))
+      FMT2, "Allocated array for", n_particles + n_restart_particles, "particles"
+      call read_restart_file
+    else
+      allocate (particles(n_particles))
+      FMT2, "Allocated array for", n_particles, "particles"
+    end if
+
+  end subroutine init_particles
+  !===========================================
+  subroutine check_restart_file()
+
+    character(len=LEN_CHAR_L) :: restart_filename
+    character(len=14) :: time_str
+    logical  :: file_exists
+
+    write (time_str, '(i0.14)') run_start_dt%shortDate(include_time=.true.)
+
+    restart_filename = trim(restart_path)//"/"//trim(runid)//"."//trim(time_str)//".restart.dat"
+
+    inquire (file=trim(restart_filename), exist=file_exists)
+    if (file_exists) then
+      open (RESTARTFILE, file=trim(restart_filename), action='read', iostat=ierr)
+      read (RESTARTFILE, *) n_restart_particles
+      close (RESTARTFILE)
+    else
+      call throw_error("particle :: read_restart_file", "No restart file found.")
+    end if
+
+  end subroutine check_restart_file
+  !===========================================
+  subroutine read_restart_file()
+    !---------------------------------------------
+    ! Read restart file (latest position)
+    ! Initialise in particles array
+    ! Update runparts
+    !---------------------------------------------
+    character(len=LEN_CHAR_L) :: restart_filename
+    character(len=14) :: time_str
+    integer  :: i
+    real(rk) :: lon, lat, depth
+    real(rk) :: id
+    real(rk) :: beaching_time
+    real(rk) :: rho, rho0
+    real(rk) :: radius, radius0
+    real(rk) :: h_biofilm
+    real(rk) :: age, max_age
+    real(rk) :: ir0, jr0, kr0
+    real(rk) :: u0, v0, w0, vel_vertical
+    real(rk) :: traj_len, time_on_beach
+    integer  :: i0, j0, k0
+    integer  :: state
+    logical  :: kill_beached, kill_boundary, is_active
+
+    write (time_str, '(i0.14)') run_start_dt%shortDate(include_time=.true.)
+
+    restart_filename = trim(restart_path)//"/"//trim(runid)//"."//trim(time_str)//".restart.dat"
+
+    open (RESTARTFILE, file=trim(restart_filename), action='read', status='old', iostat=ierr)
+    read (RESTARTFILE, *)
+    do i = 1, n_restart_particles
+      read (RESTARTFILE, *) lon, lat, depth, &
+        i0, j0, k0, &
+        ir0, jr0, kr0, &
+        id, beaching_time, &
+        rho, rho0, &
+        radius, radius0, &
+        h_biofilm, &
+        age, max_age, kill_beached, kill_boundary, &
+        u0, v0, w0, vel_vertical, &
+        traj_len, time_on_beach, is_active, state
+
+      particles(i) = t_particle(lon, lat, depth, &
+                                i0, j0, k0, &
+                                ir0, jr0, kr0, &
+                                id, beaching_time, &
+                                rho, rho0, &
+                                radius, radius0, &
+                                h_biofilm, &
+                                age, max_age, kill_beached, kill_boundary, &
+                                u0, v0, w0, vel_vertical, &
+                                traj_len, time_on_beach, is_active, state)
+    end do
+    close (RESTARTFILE)
+    runparts = n_restart_particles
+
+    return
+  end subroutine read_restart_file
   !===========================================
   subroutine allocate_n_init_particles(this)
     class(t_initial_position), intent(inout) :: this
@@ -821,9 +993,12 @@ contains
 
     call init_coords(1)%check_initial_coordinates()
 
-    n_particles = init_coords(1)%n_particles * (nTimes / inputstep) + init_coords(1)%n_particles
-    allocate (particles(n_particles))
-    FMT2, "Allocated array for", n_particles, "particles"
+    ! If inputstep is < 0, it means no additional particles will be released (for restart)
+    if (inputstep > 0) then
+      n_particles = init_coords(1)%n_particles * (nTimes / inputstep) + init_coords(1)%n_particles
+    else
+      n_particles = 0
+    end if
 
     !print
     FMT2, "Finished init particles"
@@ -914,13 +1089,15 @@ contains
 
     end do
 
-    if (n_init_times > 1) then
-      n_particles = int(sum(nInitParticles))
+    if (inputstep > 0) then
+      if (n_init_times > 1) then
+        n_particles = int(sum(nInitParticles))
+      else
+        n_particles = int(nInitParticles(1)) * (nTimes / inputstep) + int(nInitParticles(1))
+      end if
     else
-      n_particles = int(nInitParticles(1)) * (nTimes / inputstep) + int(nInitParticles(1))
+      n_particles = 0
     end if
-    allocate (particles(n_particles))
-    FMT2, "Allocated array for", n_particles, "particles"
 
     FMT2, "Finished init particles"
 

@@ -8,8 +8,9 @@ module mod_interp
   private
   !===================================================
   !---------------------------------------------
-  public :: bilinearinterp, trilinearinterp, timeinterp
+  public :: bilinearinterp, trilinearinterp, timeinterp, nbrs
   !---------------------------------------------
+  integer, parameter :: nbrs(2, 8) = reshape([0, 1, 1, 0, -1, 0, 0, -1, 1, 1, 1, -1, -1, -1, -1, 1], [2, 8])
   !===================================================
 contains
   !===========================================

@@ -12,7 +12,7 @@ program main
   use mod_postprocessing, only: postprocess
   implicit none
   !===================================================
-  call command_line()
+  call command_line
   call init_run
 #ifdef WRITESTDOUT
   open (STDOUT, file=trim(runid)//".stdout")
@@ -49,8 +49,9 @@ contains
         call print_compile_info()
         stop
       case default
+        ERROR, "Command line argument not recognised: "//trim(arg)
         call print_help()
-        call throw_error("main :: command_line", "Command line argument not recognised: "//trim(arg))
+        stop
       end select
       i = i + 1
     end do
@@ -62,7 +63,7 @@ contains
 #define FMT1 print *, '  '
 #define FMT2 print *, '      '
 #define FMT3 print *, '          '
-#endif  
+#endif
   subroutine print_help()
     character(len=LEN_CHAR_L) :: cmd
 

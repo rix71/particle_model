@@ -19,19 +19,19 @@ module mod_output
   private
   !===================================================
   !---------------------------------------------
-  public :: outputstep, snap_interval, init_output, open_beach_bdy_files, &
+  public :: outputstep, restartstep, snap_interval, init_output, open_beach_bdy_files, &
             close_beach_bdy_files, write_data, &
-            write_beached, write_boundary, write_data_only_active, &
+            write_beached, write_boundary, write_data_only_active, write_restart, &
             write_all_particles, write_active_particles, &
             write_data_snapshot, outDir, write_snapshot
   !---------------------------------------------
-  integer                     :: outputstep
+  integer                     :: outputstep, restartstep
   character(len=LEN_CHAR_L)          :: outDir
   integer                     :: nc_t_dimid, nc_p_dimid
   character(len=LEN_CHAR_L)          :: nc_fileout_all, nc_fileout_active, nc_fileout_snap
   logical                     :: write_all_particles, write_active_particles, write_snapshot
   real(rk)                    :: snap_interval
-  namelist /output_vars/ outDir, outputstep, snap_interval, write_all_particles, write_active_particles, write_snapshot
+  namelist /output_vars/ outDir, outputstep, restartstep, snap_interval, write_all_particles, write_active_particles, write_snapshot
   !---------------------------------------------
   integer                     :: ierr
   !===================================================
@@ -65,6 +65,11 @@ contains
     FMT2, var2val(snap_interval)
     FMT2, "Writing output every ", outputstep, " timesteps, or ", (outputstep * dt) / 3600., "hours"
     FMT2, "Saving ", nTimes / outputstep, " timesteps"
+    if (restartstep > 0) then
+      FMT2, "Writing restart every ", restartstep, " timesteps, or ", (restartstep * dt) / 3600., "hours"
+    else if (restartstep == 0) then
+      FMT2, "Writing restart at end of simulation"
+    end if
 
     if (write_all_particles) then
       nc_fileout_all = trim(outDir)//'/'//trim(runid)//'.all.nc'
@@ -222,7 +227,7 @@ contains
     real(rk)            :: var1d(1), var2d(1, 1), dateval(1)
 
     call theDate%print_short_date
-    FMT2, "Saving data... ", nwrite, " particles"
+    FMT2, "Saving all... ", nwrite, " particles"
 
     nc_itime_out = nc_itime_out + 1
     call nc_check(trim(nc_fileout_all), nf90_open(trim(nc_fileout_all), nf90_write, ncid), "write_data :: open")
@@ -313,6 +318,9 @@ contains
     dbghead(write_data_only_active)
 
     debug(nwrite)
+
+    call theDate%print_short_date
+    FMT2, "Saving active... ", nwrite, " particles"
 
     nc_itime_out = nc_itime_out + 1
     call nc_check(trim(nc_fileout_active), nf90_open(trim(nc_fileout_active), nf90_write, ncid), "write_data_active :: open")
@@ -410,9 +418,9 @@ contains
     call nc_check(trim(nc_fileout_snap), nf90_open(trim(nc_fileout_snap), nf90_write, ncid), "write_data_snap :: open")
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "time", varid), "write_data_snap :: inq varid")
     dateval = theDate%date2num()
-
     call nc_check(trim(nc_fileout_snap), nf90_put_var(ncid, varid, dateval, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
+
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "lon", varid), "write_data_snap :: inq varid")
     var1d = p%lon0
     call nc_check(trim(nc_fileout_snap), &
@@ -488,6 +496,37 @@ contains
     call nc_check(trim(nc_fileout_snap), nf90_close(ncid), "write_data_snap :: close")
 
   end subroutine write_data_snapshot
+  !===========================================
+  subroutine write_restart(nwrite)
+    integer, intent(in) :: nwrite
+    character(len=LEN_CHAR_L) :: restart_file
+    character(len=14) :: time_str
+    integer :: ipart
+
+    call theDate%print_short_date
+    FMT2, "Saving restart... ", nwrite, " particles"
+
+    write (time_str, '(i0.14)') theDate%shortDate(include_time=.true.)
+    restart_file = trim(outDir)//"/"//trim(runid)//"."//trim(time_str)//".restart.dat"
+
+    open (RESTARTFILE, file=trim(restart_file), action='write', status='new', iostat=ierr)
+    write (RESTARTFILE, *) nwrite
+
+    do ipart = 1, nwrite
+      write (RESTARTFILE, *) particles(ipart)%lon0, particles(ipart)%lat0, particles(ipart)%depth0, &
+        particles(ipart)%i0, particles(ipart)%j0, particles(ipart)%k0, &
+        particles(ipart)%ir0, particles(ipart)%jr0, particles(ipart)%kr0, &
+        particles(ipart)%id, particles(ipart)%beaching_time, &
+        particles(ipart)%rho, particles(ipart)%rho0, &
+        particles(ipart)%radius, particles(ipart)%radius0, &
+        particles(ipart)%h_biofilm, &
+        particles(ipart)%age, particles(ipart)%max_age, particles(ipart)%kill_beached, particles(ipart)%kill_boundary, &
+        particles(ipart)%u0, particles(ipart)%v0, particles(ipart)%w0, particles(ipart)%vel_vertical, &
+        particles(ipart)%traj_len, particles(ipart)%time_on_beach, particles(ipart)%is_active, particles(ipart)%state
+    end do
+    close (RESTARTFILE)
+
+  end subroutine write_restart
   !===========================================
   subroutine write_beached(p)
 

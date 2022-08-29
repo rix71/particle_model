@@ -19,8 +19,8 @@ module mod_loop
   use mod_particle_vars, only: particles, init_coords, inputstep, &
                                max_age, runparts, kill_beached, kill_boundary
   use time_vars, only: theDate, run_start_dt, run_end_dt, dt
-  use mod_output, only: outputstep, snap_interval, write_data, &
-                        write_beached, write_boundary, write_data_only_active, &
+  use mod_output, only: outputstep, restartstep, snap_interval, write_data, &
+                        write_beached, write_boundary, write_data_only_active, write_restart, &
                         write_all_particles, write_active_particles, write_data_snapshot, write_snapshot
   implicit none
   private
@@ -61,7 +61,7 @@ contains
       time = fieldset%get_time(theDate)
 
       !   - release particles
-      if (mod(itime, inputstep) .eq. 0) then
+      if ((inputstep > 0) .and. (mod(itime, inputstep) .eq. 0)) then
         FMT2, "Releasing ", init_coords(i_release)%n_particles, " new particles at itime = ", itime
         do ipart = 1, init_coords(i_release)%n_particles
           particles(ipart + runparts) = t_particle(lon=init_coords(i_release)%x(ipart), &
@@ -173,8 +173,19 @@ contains
       ! Update time
       call theDate%update(dt)
       itime = itime + 1
-
+      !---------------------------------------------
+      ! Write restart (save after updating the date so it could be used as initial state later)
+      if ((restartstep > 0) .and. (mod(itime, restartstep) == 0)) then
+        call write_restart(runparts)
+      end if
+      
     end do
+    
+    !---------------------------------------------
+    ! Write restart at end of simulation
+    if (restartstep == 0) then
+      call write_restart(runparts)
+    end if
 
     call date_and_time(date=d, time=t)
     FMT2, LINE

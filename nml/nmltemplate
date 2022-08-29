@@ -1,12 +1,16 @@
 !===============================
 ! Run parameters
 !-------------------------------
-! runid   - [char] Name of the run
-! dry_run - [bool] Start loop
+! runid        - [char] Name of the run
+! dry_run      - [bool] Start loop
+! restart      - [bool] Seed particles from restart file
+! restart_path - [char] Path to restart file
 !===============================
 &run_params
   runid = 'exp01'
   dry_run = .false.
+  restart = .false.
+  restart_path = './'
 /
 !===============================
 ! Physical parameters
@@ -150,6 +154,10 @@
 !-------------------------------
 ! outDir                 - [char]  Where to save the data
 ! outputstep             - [int]   How often to save the data
+! restartstep            - [int]   How often to save restart files
+!                                  < 0 - never save
+!                                    0 - save at end of simulation
+!                                  > 0 - interval in time steps
 ! snap_interval          - [float] Snapshot interval (in seconds)
 ! write_all_particles    - [bool]  Write all (active and inactive) particles
 ! write_active_particles - [bool]  Write only active particles
@@ -158,6 +166,7 @@
 &output_vars
   outDir = './'
   outputstep = 1
+  restartstep = 0
   snap_interval = 86400.
   write_all_particles = .false.
   write_active_particles = .true.

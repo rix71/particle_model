@@ -1233,8 +1233,8 @@ contains
           end if
           ! This is needed due to the A grid
           if (this%u_mask(i, j) > 0) then
-            buffer(i, j, :) = ZERO
-          end if
+            buffer(i, j, :) = ZERO           
+          end if        
         end do
       end do
       do j = 1, this%ny

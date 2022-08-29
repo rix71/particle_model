@@ -62,6 +62,7 @@
 #define COORDFILE 11
 #define PROCFILE 12
 #define DIRFILE 13
+#define RESTARTFILE 14
 #define DATAOUTFILE 21
 #define BCHFILE 22
 #define BDYFILE 23
