@@ -21,16 +21,19 @@ module mod_params
   use mod_precdefs
 
   logical             :: do_diffusion, &
-                         do_velocity, &            ! Calculate particles' own velocity
-                         do_biofouling, &          ! Calculate density change due to biological growth
-                         run_3d                    ! 2D or 3D
+                         do_velocity, &                               ! Calculate particles' own velocity
+                         do_biofouling, &                             ! Calculate density change due to biological growth
+                         run_3d                                       ! 2D or 3D
   integer             :: advection_method
-  real(rk)            :: diffusion_hor_const, diffusion_vert_const, &                 ! Horisontal and vertical diffusion coefs
-                         Cm_smagorinsky            ! Used in Ah calculation (Smagorinsky)
-  real(rk), parameter :: pi = 4.*atan(1.), &       ! 3, plus a little extra
+  real(rk)            :: diffusion_hor_const, diffusion_vert_const, & ! Horisontal and vertical diffusion coefs
+                         Cm_smagorinsky, &                            ! Used in Ah calculation (Smagorinsky)
+                         Im, &                                        ! Light intensity at noon
+                         eps_light                                    ! Light extinction coefficient
+  real(rk), parameter :: pi = 4.*atan(1.), &                          ! 3, plus a little extra
                          g = 9.81, &
-                         mu_default = 0.0010016, & ! Default dynamic viscosity of water at 20 degrees Celcius [N s/m2]
-                         rho_default = 1000.0d0    ! Default density
+                         k_b = 1.380649e-23, &                        ! Boltzmann constant [m2 kg s-2 K-1]
+                         mu_default = 0.0010016, &                    ! Default dynamic viscosity of water at 20 degrees Celcius [N s/m2]
+                         rho_default = 1000.0d0                       ! Default density
 
 end module mod_params
 !===================================================
