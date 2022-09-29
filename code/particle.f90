@@ -11,7 +11,7 @@ module mod_particle
   ! use mod_domain_vars, only: x0, y0, dx, dy, seamask, depdata, nx, ny
   ! Pass loop vars into functions rather than import?
   use time_vars, only: dt
-  use mod_params, only: run_3d
+  use mod_params, only: run_3d, pi
   use mod_domain, only: t_domain
   use mod_fieldset, only: t_fieldset
   implicit none
@@ -50,29 +50,33 @@ module mod_particle
     real(rk) :: u1 = ZERO                   ! Velocity (t + dt)
     real(rk) :: v1 = ZERO                   ! Velocity (t + dt)
     real(rk) :: w1 = ZERO                   ! Velocity (t + dt)
-    real(rk) :: vel_vertical = ZERO         ! Velocity (Kooi)
+    real(rk) :: vel_vertical = ZERO         ! Settling velocity (Kooi)
     !---------------------------------------------
     real(rk) :: rho = ZERO                  ! Density
     real(rk) :: rho0 = ZERO                 ! Initial density
     real(rk) :: delta_rho = ZERO            ! Density difference
     real(rk) :: radius = ZERO               ! Radius
     real(rk) :: radius0 = ZERO              ! Initial radius
-    real(rk) :: h_biofilm = ZERO            ! Thickness of biofilm
     real(rk) :: age = ZERO                  ! Age
     real(rk) :: max_age = ZERO              ! Maximum age
     real(rk) :: traj_len = ZERO             ! Particle trajectory length
     real(rk) :: time_on_beach = ZERO        ! Time spent in the beach area
     real(rk) :: beaching_time               ! Different particles may essentialy have different beaching times
+    !---------------------------------------------
+    real(rk) :: aa_growth = ZERO            ! Attached algal growth
+    real(rk) :: h_biofilm = ZERO            ! Thickness of biofilm
 
   contains
     private
     procedure, public :: update
     procedure         :: check_boundaries
     procedure         :: check_age
-    procedure         :: check_depth
+    procedure, public :: check_depth
     procedure         :: bounce
     procedure         :: redirect
     procedure, public :: print_info
+    procedure, public :: volume
+    procedure, public :: surface_area
   end type t_particle
 
   interface t_particle
@@ -177,6 +181,20 @@ contains
     p%kill_boundary = kill_boundary
 
   end function ctor_particle_restart
+  !===========================================
+  elemental real(rk) function volume(this)
+    class(t_particle), intent(in) :: this
+
+    volume = 4./3.*pi * this%radius0**3
+
+  end function volume
+  !===========================================
+  elemental real(rk) function surface_area(this)
+    class(t_particle), intent(in) :: this
+
+    surface_area = 4.*pi * this%radius0**2.
+
+  end function surface_area
   !===========================================
   subroutine update(this, fieldset, time)
 

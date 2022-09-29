@@ -4,7 +4,7 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
 # Print everything to .stdout file
-# FFLAGS += -DWRITESTDOUT
+FFLAGS += -DWRITESTDOUT
 
 # Print debug messages
 # FFLAGS += -DDEBUG
@@ -54,13 +54,13 @@ LIBS = ${NETCDF_LIB} -lnetcdff -lnetcdf
 
 SRCS = precdefs.f90 errors.f90 \
        utils.f90 interp.f90 nc_manager.f90 field.f90 list.f90 \
-	   domain.f90 \
-	   datetime.f90 \
+	   domain.f90 datetime.f90 \
 	   fieldset.f90 \
 	   vars.f90 \
        particle.f90 output.f90 \
 	   advection.f90 physics.f90 \
-       diffusion.f90 biofouling.f90 \
+	   vertical_motion.f90 \
+       diffusion.f90 biofouling_kooi.f90 biofouling_kooi_funcs.f90 \
 	   init.f90 loop.f90 postprocessing.f90 \
 	   main.f90 
 
@@ -68,6 +68,7 @@ OBJS = $(patsubst %.f90, $(OBJ)/%.o, $(SRCS))
 
 #--------------------------------------------------
 PROGRAM = $(BIN)/main
+# PROGRAM = $(BIN)/main_debug
 # PROGRAM = $(BIN)/restart_test
 
 all: $(PROGRAM)
@@ -83,7 +84,7 @@ $(BIN) $(OBJ):
 
 clean:
 	rm -rf ./obj
-	rm *.mod
+	rm *.mod *.smod
 
 show:
 	@ echo $(OBJS)
