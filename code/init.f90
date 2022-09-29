@@ -282,7 +282,9 @@ contains
     !---------------------------------------------
     ! if (has_subdomains) call fieldset%init_proc_mask()
 
-    FMT2, "Fields allocated: total", field_count * field_mem, " bytes"
+    FMT1, LINE
+    FMT2, "Fields allocated: total", fieldset%num_fields * field_mem, " bytes"
+    call fieldset%list_fields()
 
   end subroutine init_fieldset
   !===========================================
