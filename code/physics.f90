@@ -15,69 +15,22 @@ module mod_physics
   use mod_precdefs
   use mod_params
   use time_vars, only: dt
-  use mod_particle, only: t_particle
   use mod_fieldset, only: t_fieldset
   implicit none
   private
   !===================================================
   !---------------------------------------------
-  public :: vertical_velocity, Ah_Smagorinsky, normal_random
+  public :: seawater_viscosity, seawater_density, diffusion_brown, &
+            light_intensity, Ah_Smagorinsky, normal_random
   !---------------------------------------------
   ! integer :: ierr ! Unused for now
   !===================================================
 contains
   !===========================================
-  subroutine vertical_velocity(p, fieldset, time, density_method, viscosity_method)
-    !---------------------------------------------
-    ! Calculate the vertical velocity due to buoyancy
-    ! TODO: Which timestep should be used? (original or t + dt?)
-    !---------------------------------------------
-    type(t_particle), intent(inout) :: p
-    type(t_fieldset), intent(in)    :: fieldset
-    real(rk), intent(in)            :: time
-    integer, intent(in)             :: density_method
-    logical, intent(in)             :: viscosity_method
-    real(rk)                        :: i, j, k
-    real(rk)                        :: kooi_vel
-    real(rk)                        :: rho ! Fluid density
-    real(rk)                        :: mu  ! Dynamic viscosity
-    real(rk)                        :: kin_visc
-
-    dbghead(vertical_velocity)
-
-    debug(time)
-    debug(p%depth1)
-    debug(p%w1)
-
-    rho = ONE
-
-    i = p%ir0
-    j = p%jr0
-    k = p%kr0
-
-    ! Density
-    rho = seawater_density(fieldset, time, i, j, k, density_method, p%depth0)
-    p%delta_rho = p%rho - rho
-
-    ! Viscosity
-    mu = seawater_viscosity(fieldset, time, i, j, k, viscosity_method)
-    if (mu == ZERO) mu = mu_default ! To avoid division by 0
-    kin_visc = mu / rho
-
-    kooi_vel = Kooi_vertical_velocity(p%delta_rho, p%radius, rho, kin_visc)
-
-    p%depth1 = p%depth1 + (kooi_vel * dt)
-    p%w1 = p%w1 + kooi_vel
-    p%vel_vertical = kooi_vel
-
-    debug(p%depth1)
-    debug(p%w1)
-
-    dbgtail(vertical_velocity)
-    return
-  end subroutine vertical_velocity
-  !===========================================
   real(rk) function seawater_viscosity(fieldset, time, i, j, k, method) result(res)
+    !---------------------------------------------
+    ! Kinematic viscosity
+    !---------------------------------------------
     type(t_fieldset), intent(in) :: fieldset
     real(rk), intent(in)         :: time
     real(rk), intent(in)         :: i, j, k
@@ -86,6 +39,7 @@ contains
     select case (method)
     case (.true.)
       res = fieldset%get("VISC", time, i, j, k)
+      if (isnan(res) .or. (res <= ZERO)) res = mu_default
     case (.false.)
       res = mu_default
     end select
@@ -119,58 +73,25 @@ contains
     return
   end function seawater_density
   !===========================================
-  real(rk) function Kooi_vertical_velocity(delta_rho, rad_p, rho_env, kin_visc) result(res)
-    !---------------------------------------------
-    ! Calculate vertical velocity
-    ! Reference: Kooi 2017
-    !---------------------------------------------
-    real(rk), intent(in) :: delta_rho, rad_p, rho_env
-    real(rk), intent(in) :: kin_visc  ! Kinematic viscosity
-    real(rk)             :: d_star    ! Dimensionless diameter
-    real(rk)             :: w_star    ! Dimensionless settling velocity
-    ! real(rk)             ::  ! Density difference
+  real(rk) function diffusion_brown(T, r, mu) result(res)
+    real(rk), intent(in) :: T, r, mu
 
-    dbghead(Kooi_vertical_velocity)
+    res = (k_b * (T + 273.16)) / (6.*pi * mu * r)
 
-    debug(rad_p); 
-    debug(rho_env)
-
-    ! kin_visc = mu_env / rho_env ! NOT USING VISCOSITY???
-    ! delta_rho = rho_p - rho_env
-
-    debug(kin_visc); 
-    debug(delta_rho)
-
-    res = ZERO
-
-    d_star = (delta_rho * g * (2.*rad_p)**3.) / (rho_env * (kin_visc**2.)) ! g negative?
-    if (d_star < 0.05) then
-      DBG, "d_star < 0.05"
-      w_star = 1.74e-4 * (d_star**2)
-    else if (d_star > 5.e9) then
-      DBG, "d_star > 5e9"
-      w_star = 1000.
-    else
-      DBG, "0.05 > d_star > 5e9"
-      w_star = 10.**(-3.76715 + (1.92944 * log10(d_star)) - (0.09815 * log10(d_star)**2.) &
-                     - (0.00575 * log10(d_star)**3.) + (0.00056 * log10(d_star)**4.))
-    end if
-
-    debug(d_star); debug(w_star)
-
-    if (delta_rho > ZERO) then
-      DBG, "delta_rho > 0"; debug(delta_rho / rho_env)
-      res = -1.0 * ((delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
-    else
-      DBG, "delta_rho < 0"; debug(delta_rho / rho_env)
-      res = (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
-    end if
-
-    debug(res)
-
-    dbgtail(Kooi_vertical_velocity)
     return
-  end function Kooi_vertical_velocity
+  end function diffusion_brown
+  !===========================================
+  real(rk) function light_intensity(t, z) result(res)
+    real(rk), intent(in) :: t ! Hour of day
+    real(rk), intent(in) :: z ! Depth
+    real(rk) :: I0 ! Light intensity at sea surface
+
+    I0 = Im * sin(2.*pi * (t / 24.-(6./24.)))
+    if (I0 < ZERO) I0 = ZERO
+    res = I0 * exp(eps_light * z)
+
+    return
+  end function light_intensity
   !===========================================
   function Ah_Smagorinsky(fieldset, time, i, j, k) result(Ah_s)
     type(t_fieldset), intent(in)  :: fieldset

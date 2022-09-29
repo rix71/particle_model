@@ -10,9 +10,9 @@ module mod_loop
   use mod_errors
   use mod_params, only: do_velocity, do_diffusion, do_biofouling, run_3d, advection_method
   use mod_advection
+  use mod_vertical_motion
   use mod_diffusion
   use mod_biofouling, only: biofouling
-  use mod_physics
   use field_vars, only: fieldset, has_density, has_viscosity
   use mod_particle, only: t_particle
   use mod_domain_vars, only: domain
@@ -111,7 +111,7 @@ contains
           ! - do advection
           call advect(particles(ipart), fieldset, time, advection_method, run_3d)
           ! - do biofouling
-          if (do_biofouling) call biofouling(particles(ipart), fieldset, time)
+          if (do_biofouling) call biofouling(particles(ipart), fieldset, time, theDate)
           ! - do Kooi vertical velocity
           if (do_velocity .and. run_3d) call vertical_velocity(particles(ipart), fieldset, time, has_density, has_viscosity)
           ! - do diffusion
