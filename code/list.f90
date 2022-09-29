@@ -1,5 +1,7 @@
+#include "cppdefs.h"
 module mod_list
   use mod_precdefs
+  use mod_errors
   use mod_field
   implicit none
   private
@@ -87,11 +89,9 @@ contains
     integer                            :: i
 
     if (idx < 1) then
-      write (*, *) "ERROR: index out of bounds"
-      stop
+      call throw_error("list :: l_get_idx_node", "Index out of bounds")
     else if (idx > this%num_nodes) then
-      write (*, *) "ERROR: index out of bounds"
-      stop
+      call throw_error("list :: l_get_idx_node", "Index out of bounds")
     end if
 
     current_node => this%head
@@ -117,13 +117,11 @@ contains
         end if
         current_node => current_node%next
       end do
-      write (*, *) "ERROR: did not find key: "//trim(key)
       current_node => null()
-      stop
+      call throw_error("list :: l_get_key_node", "Did not find key: "//trim(key))
     else
-      write (*, *) "ERROR: the list is empty"
       current_node => null()
-      stop
+      call throw_error("list :: l_get_key_node", "The list is empty")
     end if
 
   end subroutine l_get_key_node
@@ -156,10 +154,12 @@ contains
     class(t_list), intent(in) :: this
     type(t_node), pointer     :: current_node
 
-    write (*, "('Nodes: ', i4)") this%num_nodes
+    ! write (*, "('Nodes: ', i4)") this%num_nodes
+    FMT2, "Nodes: ", this%num_nodes
     current_node => this%head
     do while (associated(current_node))
-      write (*, "(' -> ', a)") trim(current_node%key)
+      ! write (*, "(' -> ', a)", advance="no") trim(current_node%key)
+      FMT3, "-> "//trim(current_node%key)
       current_node => current_node%next
     end do
     current_node => null()
@@ -213,8 +213,7 @@ contains
         allocate (this%tail%next, source=t_node(data, key))
         this%tail => this%tail%next
       else
-        write (*, *) "ERROR: key already exists: "//trim(key)
-        stop
+        call throw_error("list :: l_add_node", "Key already exists: "//trim(key))
       end if
     else
       allocate (this%head, source=t_node(data, key))
