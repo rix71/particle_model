@@ -19,7 +19,7 @@ module mod_fieldset
     private
     !---------------------------------------------
     type(t_list)                    :: fields
-    integer                         :: num_fields = 0
+    integer, public                 :: num_fields = 0
     integer, public                 :: nx, ny, nz
     real(rk)                        :: nc_timestep
     ! real(rk), allocatable         :: bathymetry(:, :)
@@ -63,6 +63,7 @@ module mod_fieldset
     private
     procedure, public :: add_field
     procedure, public :: list_fields
+    procedure, public :: get_field_index
     procedure, public :: set_u_component
     procedure, public :: set_v_component
     procedure         :: get_u_comp_mask
@@ -136,6 +137,13 @@ contains
       t2 = nc_read_time_val(trim(init_path), 2)
     end select
     f%nc_timestep = t2 - t1
+    if (f%nc_timestep <= ZERO) then
+      debug(t1)
+      debug(t2)
+      debug(trim(init_path)//PROC0)
+      ERROR, "Dataset time step <= 0: ", f%nc_timestep, " [s]"
+      call throw_error("fieldset", "Bad time step")
+    end if
 
     return
 #undef PROC0
@@ -300,6 +308,15 @@ contains
 
   end subroutine list_fields
   !===========================================
+  integer function get_field_index(this, field_name) result(res)
+    class(t_fieldset), intent(in) :: this
+    character(*), intent(in)      :: field_name
+
+    res = this%fields%node_loc(field_name)
+
+    return
+  end function get_field_index
+  !===========================================
   subroutine get_u_comp_mask(this)
     !---------------------------------------------
     ! Make the velocity u component (similarly for v comp. in get_v_comp_mask)
@@ -309,7 +326,7 @@ contains
     ! Normal (cross-boundary) components will be 0.
     !---------------------------------------------
     class(t_fieldset), intent(inout) :: this
-    integer :: i, j
+    integer                          :: i, j
 
     allocate (this%u_mask(this%nx, this%ny), stat=ierr)
     if (ierr .ne. 0) call throw_error("fieldset :: get_u_comp_mask", "Could not allocate u component mask")
@@ -330,7 +347,7 @@ contains
   !===========================================
   subroutine get_v_comp_mask(this)
     class(t_fieldset), intent(inout) :: this
-    integer :: i, j
+    integer                          :: i, j
 
     allocate (this%v_mask(this%nx, this%ny), stat=ierr)
     if (ierr .ne. 0) call throw_error("fieldset :: get_v_comp_mask", "Could not allocate v component mask")
@@ -356,7 +373,7 @@ contains
     !---------------------------------------------
 
     class(t_fieldset), intent(inout) :: this
-    character(*), intent(in) :: u_comp_name
+    character(*), intent(in)         :: u_comp_name
 
     this%u_idx = this%fields%node_loc(trim(u_comp_name))
     if (this%u_idx < 1) call throw_error("fieldset :: set_u_component", "Did not find "//trim(u_comp_name)//" in fieldset")
@@ -366,7 +383,7 @@ contains
   !===========================================
   subroutine set_v_component(this, v_comp_name)
     class(t_fieldset), intent(inout) :: this
-    character(*), intent(in) :: v_comp_name
+    character(*), intent(in)         :: v_comp_name
 
     this%v_idx = this%fields%node_loc(trim(v_comp_name))
     if (this%v_idx < 1) call throw_error("fieldset :: set_v_component", "Did not find "//trim(v_comp_name)//" in fieldset")
@@ -376,8 +393,8 @@ contains
   !===========================================
   subroutine set_zax(this, zax_name, zax_style)
     class(t_fieldset), intent(inout) :: this
-    character(*), intent(in) :: zax_name
-    integer, intent(in) :: zax_style
+    character(*), intent(in)         :: zax_name
+    integer, intent(in)              :: zax_style
 
     dbghead(set_zax)
 
@@ -428,7 +445,10 @@ contains
     if (dt <= this%nc_timestep) then
       this%read_idx_increment = 1
     else
-      if (mod(dt,this%nc_timestep) .ne. 0) call throw_error("fieldset :: set_simulation_timestep", "Time step should be divisible by netCDF time step")
+      if (mod(dt, this%nc_timestep) .ne. 0) then
+        ERROR, "Time step ", dt, " [s] not divisible by netCDF time step ", this%nc_timestep, " [s]"
+        call throw_error("fieldset :: set_simulation_timestep", "Time step should be divisible by netCDF time step")
+      end if
       this%read_idx_increment = int(dt / this%nc_timestep)
     end if
 
@@ -437,7 +457,7 @@ contains
   !===========================================
   real(rk) function get_time(this, date) result(res)
     class(t_fieldset), intent(in) :: this
-    type(t_datetime), intent(in) :: date
+    type(t_datetime), intent(in)  :: date
 
     res = date_diff(this%date_t1, date)
 
@@ -445,7 +465,7 @@ contains
   !===========================================
   character(len=LEN_CHAR_L) function get_folder(this, idx) result(res)
     class(t_fieldset), intent(in) :: this
-    integer, intent(in) :: idx
+    integer, intent(in)           :: idx
 
     if (idx < 1) call throw_error("fieldset :: get_folder", "Index out of bounds (idx < 1)")
     if (idx > this%nentries) call throw_error("fieldset :: get_folder", "Index out of bounds (idx > number of folders)")
@@ -456,7 +476,7 @@ contains
   !===========================================
   character(len=LEN_CHAR_L) function get_file(this, idx) result(res)
     class(t_fieldset), intent(in) :: this
-    integer, intent(in) :: idx
+    integer, intent(in)           :: idx
 
     if (idx < 1) call throw_error("fieldset :: get_file", "Index out of bounds (idx < 1)")
     if (idx > this%nentries) call throw_error("fieldset :: get_file", "Index out of bounds (idx > number of files)")
@@ -477,8 +497,8 @@ contains
     !       would not depend on ls getting it right.
     !---------------------------------------------
     class(t_fieldset), intent(inout) :: this
-    logical :: dirlist_exists
-    integer :: idir
+    logical                          :: dirlist_exists
+    integer                          :: idir
 
     FMT1, "======== Init dirlist ========"
     inquire (file=trim(dirinfile), exist=dirlist_exists)
@@ -536,10 +556,10 @@ contains
     ! EDIT: This is called from init_model only if this%has_subdomains=.true.
     !---------------------------------------------
     class(t_fieldset), intent(inout) :: this
-    integer :: imax, jmax ! Total size of the domain
-    integer :: ioff, joff ! Subdomain offset
-    integer :: pnum, iend, jend
-    integer :: i, j, iproc
+    integer                          :: imax, jmax ! Total size of the domain
+    integer                          :: ioff, joff ! Subdomain offset
+    integer                          :: pnum, iend, jend
+    integer                          :: i, j, iproc
 
     FMT1, "======== Init subdomains ========"
 
@@ -597,7 +617,7 @@ contains
     ! (it's private otherwise)
     !---------------------------------------------
     class(t_fieldset), intent(in) :: this
-    integer, intent(inout) :: pmapout(this%nproc, 2)
+    integer, intent(inout)        :: pmapout(this%nproc, 2)
 
     pmapout = this%pmap
 
@@ -749,8 +769,8 @@ contains
     debug(this%domain%get_seamask(i, j))
 
     if (dep < ZERO) then
-      if (present(k)) k = 1
-      if (present(kr)) kr = 1.0d0
+      if (present(k)) k = this%nz
+      if (present(kr)) kr = real(this%nz, rk)
 #ifdef DEBUG
       DBG, "Particle on ground"
       debug(k); debug(kr)
@@ -908,11 +928,11 @@ contains
   !===========================================
   function get_gradient(this, field_name, t, dim) result(res)
     class(t_fieldset), intent(in) :: this
-    character(*), intent(in) :: field_name
-    real(rk), intent(in) :: t
-    integer, intent(in) :: dim
-    type(t_field), pointer :: p_field
-    real(rk) :: res(this%nx, this%ny, this%nz)
+    character(*), intent(in)      :: field_name
+    real(rk), intent(in)          :: t
+    integer, intent(in)           :: dim
+    type(t_field), pointer        :: p_field
+    real(rk)                      :: res(this%nx, this%ny, this%nz)
 
     call this%fields%get_item(field_name, p_field)
     select case (dim)
@@ -1028,7 +1048,7 @@ contains
   !===========================================
   subroutine read_first_timesteps(this, date)
     class(t_fieldset), intent(inout) :: this
-    type(t_datetime), intent(in)    :: date
+    type(t_datetime), intent(in)     :: date
 
     dbghead(read_first_timesteps)
 
@@ -1233,8 +1253,8 @@ contains
           end if
           ! This is needed due to the A grid
           if (this%u_mask(i, j) > 0) then
-            buffer(i, j, :) = ZERO           
-          end if        
+            buffer(i, j, :) = ZERO
+          end if
         end do
       end do
       do j = 1, this%ny
