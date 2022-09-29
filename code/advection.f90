@@ -162,10 +162,10 @@ contains
     call fieldset%domain%lonlat2xy(p%lon0, p%lat0, x0, y0)
     z0 = p%depth0
 
-    u1 = fieldset%get("U", time, i=i, j=j, k=k)
-    v1 = fieldset%get("V", time, i=i, j=j, k=k)
+    u1 = fieldset%get("U", time, i=i, j=j, k=k); if (isnan(u1)) u1 = ZERO
+    v1 = fieldset%get("V", time, i=i, j=j, k=k); if (isnan(v1)) v1 = ZERO
 #ifdef ADVECT_VERTICAL
-    w1 = fieldset%get("W", time, i=i, j=j, k=k)
+    w1 = fieldset%get("W", time, i=i, j=j, k=k); if (isnan(w1)) w1 = ZERO
 #else
     w1 = ZERO
 #endif
@@ -177,10 +177,10 @@ contains
     call fieldset%domain%xy2lonlat(x1, y1, lon1, lat1)
     call fieldset%search_indices(t=time + dt, x=lon1, y=lat1, z=z1, ir=i, jr=j, kr=k)
 
-    u2 = fieldset%get("U", time + dt, i, j, k)
-    v2 = fieldset%get("V", time + dt, i, j, k)
+    u2 = fieldset%get("U", time + dt, i, j, k); if (isnan(u2)) u2 = ZERO
+    v2 = fieldset%get("V", time + dt, i, j, k); if (isnan(v2)) v2 = ZERO
 #ifdef ADVECT_VERTICAL
-    w2 = fieldset%get("W", time + dt, i, j, k)
+    w2 = fieldset%get("W", time + dt, i, j, k); if (isnan(w2)) w2 = ZERO
 #else
     w2 = ZERO
 #endif
