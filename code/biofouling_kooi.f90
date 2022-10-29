@@ -149,7 +149,7 @@ contains
 
     Iz = light_intensity(hour, depth)
     mu_opt = (growth_rate_max * Iz) / (Iz + (growth_rate_max / slope_init) * (Iz / I_opt - 1)**2.)
-    phi = ((T - T_max)*(T - T_min)**2)/((T_opt - T_min) * ((T_opt - T_min)*(T - T_opt) - (T_opt - T_max)*(T_opt + T_min - 2.*T)))
+    phi = ((T - T_max)*(T - T_min)**2.)/((T_opt - T_min) * ((T_opt - T_min)*(T - T_opt) - (T_opt - T_max)*(T_opt + T_min - 2.*T)))
 
   end function primary_prod
   !===========================================
@@ -168,7 +168,7 @@ contains
 
     beta_Abrown = 4.*pi * (diffusion_brown(T, p%radius, mu) + diffusion_brown(T, r_algae, mu)) * (p%radius + r_algae)
     beta_Asettling = HALF * pi * p%radius**2 * abs(p%vel_vertical)
-    beta_Ashear = 1.3 * gamma * (p%radius + r_algae)**3
+    beta_Ashear = 1.3 * gamma * (p%radius + r_algae)**3.
 
     res = beta_Abrown + beta_Asettling + beta_Ashear
 

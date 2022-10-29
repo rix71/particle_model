@@ -7,6 +7,7 @@ module mod_vertical_motion
   use mod_precdefs
   use mod_params
   use time_vars, only: dt
+  use field_vars, only: density_method => has_density, viscosity_method => has_viscosity
   use mod_physics, only: seawater_density, seawater_viscosity
   use mod_particle, only: t_particle
   use mod_fieldset, only: t_fieldset
@@ -20,31 +21,53 @@ module mod_vertical_motion
   !===================================================
 contains
   !===========================================
-  subroutine vertical_velocity(p, fieldset, time, density_method, viscosity_method)
+  subroutine vertical_velocity(p, fieldset, time)
     type(t_particle), intent(inout) :: p
     type(t_fieldset), intent(in)    :: fieldset
     real(rk), intent(in)            :: time
-    integer, intent(in)             :: density_method
-    logical, intent(in)             :: viscosity_method
     real(rk)                        :: vert_vel
 
-    vert_vel = buoyancy(p, fieldset, time, density_method, viscosity_method, p%delta_rho) + resuspension()
-
+    dbghead(vertical_velocity)
+    
+    vert_vel = buoyancy(p, fieldset, time, p%delta_rho) + resuspension(p, fieldset, time)
+    
     p%depth1 = p%depth1 + (vert_vel * dt)
     p%w1 = p%w1 + vert_vel
     p%vel_vertical = vert_vel
-
+    
     debug(p%depth1)
     debug(p%w1)
-
+    
+    dbgtail(vertical_velocity)
     return
   end subroutine vertical_velocity
   !===========================================
-  real(rk) function resuspension() result(res)
+  real(rk) function resuspension(p, fieldset, time) result(res)
+    type(t_particle), intent(in) :: p
+    type(t_fieldset), intent(in) :: fieldset
+    real(rk), intent(in) :: time
+    real(rk) :: i, j, k
+    real(rk) :: u, v
+
+    res = ZERO
+    if (p%state /= BOTTOM) return
+
+    if (resuspension_coeff >= ZERO) then
+
+      i = p%ir0
+      j = p%jr0
+      k = p%kr0
+
+      u = fieldset%get("U", time, i, j, k)
+      v = fieldset%get("V", time, i, j, k)
+
+      res = sqrt(u**2.+v**2.) * resuspension_coeff
+    end if
+
     return
   end function resuspension
   !===========================================
-  real(rk) function buoyancy(p, fieldset, time, density_method, viscosity_method, delta_rho) result(res)
+  real(rk) function buoyancy(p, fieldset, time, delta_rho) result(res)
     !---------------------------------------------
     ! Calculate the vertical velocity due to buoyancy
     ! TODO: Which timestep should be used? (original or t + dt?)
@@ -52,8 +75,6 @@ contains
     type(t_particle), intent(in)    :: p
     type(t_fieldset), intent(in)    :: fieldset
     real(rk), intent(in)            :: time
-    integer, intent(in)             :: density_method
-    logical, intent(in)             :: viscosity_method
     real(rk)                        :: i, j, k
     real(rk)                        :: rho_sw ! Fluid density
     real(rk), intent(out)           :: delta_rho ! Density difference

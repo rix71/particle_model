@@ -99,10 +99,10 @@
 #define BOUNDARY 4
 !--------------
 !particle
-#define ACTIVE 0
 #define BEACHED 1
 #define ON_BOUNDARY 2
-#define BOTTOM 3
+#define ACTIVE 3
+#define BOTTOM 4
 !--------------
 !advection method
 #define ADV_NONE 0

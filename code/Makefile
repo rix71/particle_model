@@ -73,18 +73,18 @@ PROGRAM = $(BIN)/main
 
 all: $(PROGRAM)
 
-$(PROGRAM): $(OBJS) | $(BIN)
+$(PROGRAM): $(OBJS) | $(BIN) $(MOD)
 	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
+	mv *.mod *.smod $(MOD)/.
 
 $(OBJ)/%.o: %.f90 | $(OBJ)
 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 
-$(BIN) $(OBJ):
+$(BIN) $(OBJ) $(MOD):
 	mkdir $@
 
 clean:
-	rm -rf ./obj
-	rm *.mod *.smod
+	rm -rf $(OBJ) $(MOD) 
 
 show:
 	@ echo $(OBJS)

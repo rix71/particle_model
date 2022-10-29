@@ -26,7 +26,7 @@ module mod_particle
     logical  :: is_active = .true.          ! Skip particle in loop if is_active == .false.
     logical  :: kill_beached, kill_boundary ! Set is_active=.false. if beached or on boundary?
     integer  :: warnings = 0
-    integer  :: state = ACTIVE              ! 0 - active, 1 - beached, 2 - on boundary, 3 - bottom
+    integer  :: state = ACTIVE              ! States: active, beached, on boundary, bottom. Enumerated in cppdefs.h
     real(rk) :: id                          ! Origin of particle, number
     !---------------------------------------------
     ! Indices
@@ -247,45 +247,50 @@ contains
 
   end subroutine check_age
   !===========================================
-  subroutine check_depth(this, fieldset, t, change_state)
+  subroutine check_depth(this, fieldset, t)
     !---------------------------------------------
     ! TODO: Interpolation for bathymetry?
     !---------------------------------------------
 
     class(t_particle), intent(inout) :: this
     class(t_fieldset), intent(in)    :: fieldset
-    logical, intent(in)              :: change_state
     real(rk), intent(in)             :: t
     real(rk)                         :: dep
     real(rk)                         :: elev
-    real(rk)                         :: zval
 
     dbghead(check_depth)
 
-    zval = this%depth1
-    elev = fieldset%sealevel(t, this%ir1, this%jr1)
-
-    debug(zval); debug(elev)
-
 #ifdef PARTICLE_SNAP_SEALVL
-    if (zval > elev) then
+    elev = fieldset%sealevel(t, this%ir1, this%jr1)
+    if (this%depth1 >= elev) then
+      debug(elev)
       DBG, "Setting particle to sealevel"
-      zval = elev
+      this%depth1 = elev
+      dbgtail(check_depth)
+      return
     end if
 #endif
 
     dep = fieldset%domain%get_bathymetry(this%ir1, this%jr1)
     debug(dep)
 
-    if (zval < -1.0 * dep) then
+    ! The particle is past the bottom
+    if (this%depth1 <= -1.0 * dep) then
       DBG, "Setting particle to bottom depth"
-      zval = -1.0 * dep
-      if (change_state) then
-        this%state = BOTTOM
-        if (this%kill_boundary) this%is_active = .false.
-      end if
+      this%depth1 = -1.0 * dep
+      this%state = BOTTOM
+      this%w1 = ZERO
+      ! if (this%kill_boundary) this%is_active = .false.
+      dbgtail(check_depth)
+      return
     end if
-    this%depth1 = zval
+
+    ! Reset to ACTIVE if resuspended
+    if ((this%depth1 > -1.0 * dep) .and. (this%state == BOTTOM)) then
+      this%state = ACTIVE
+      dbgtail(check_depth)
+      return
+    end if
 
     dbgtail(check_depth)
   end subroutine check_depth
@@ -757,7 +762,7 @@ contains
       this%state = ON_BOUNDARY
     end select
 
-    if (run_3d) call this%check_depth(fieldset, time, .false.) ! change_state parameter should come from namelist or decided some other way (not hardcoded) !!!
+    if (run_3d) call this%check_depth(fieldset, time)
 
     dbgtail(check_boundaries)
     return

@@ -1,7 +1,7 @@
+#include "cppdefs.h"
 #if (defined(SNAP_TO_BOUNDS) && defined(DEBUG))
 #warning SNAP_TO_BOUNDS defined, indices can be modified
 #endif
-#include "cppdefs.h"
 module mod_domain
   !----------------------------------------------------------------
   ! Initialise domain and seamask

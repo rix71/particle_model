@@ -13,7 +13,7 @@ module mod_loop
   use mod_vertical_motion
   use mod_diffusion
   use mod_biofouling, only: biofouling
-  use field_vars, only: fieldset, has_density, has_viscosity
+  use field_vars, only: fieldset
   use mod_particle, only: t_particle
   use mod_domain_vars, only: domain
   use mod_particle_vars, only: particles, init_coords, inputstep, &
@@ -106,14 +106,14 @@ contains
         if (.not. particles(ipart)%is_active) cycle
         DBG, "Still active :)"
         !---------------------------------------------
-        ! Advect only if the particle is alive (is_active=.true.) and active (state=0)
-        if (particles(ipart)%state == ACTIVE) then
+        ! Advect only if the particle is alive (is_active=.true.) and active (state=3/4) 
+        if (particles(ipart)%state >= ACTIVE) then
           ! - do advection
           call advect(particles(ipart), fieldset, time, advection_method, run_3d)
           ! - do biofouling
           if (do_biofouling) call biofouling(particles(ipart), fieldset, time, theDate)
           ! - do Kooi vertical velocity
-          if (do_velocity .and. run_3d) call vertical_velocity(particles(ipart), fieldset, time, has_density, has_viscosity)
+          if (do_velocity .and. run_3d) call vertical_velocity(particles(ipart), fieldset, time)
           ! - do diffusion
           if (do_diffusion) call diffuse(particles(ipart), fieldset, time, run_3d)
         end if

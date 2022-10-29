@@ -28,7 +28,8 @@ module mod_params
   real(rk)            :: diffusion_hor_const, diffusion_vert_const, & ! Horisontal and vertical diffusion coefs
                          Cm_smagorinsky, &                            ! Used in Ah calculation (Smagorinsky)
                          Im, &                                        ! Light intensity at noon
-                         eps_light                                    ! Light extinction coefficient
+                         eps_light, &                                 ! Light extinction coefficient
+                         resuspension_coeff
   real(rk), parameter :: pi = 4.*atan(1.), &                          ! 3, plus a little extra
                          g = 9.81, &
                          k_b = 1.380649e-23, &                        ! Boltzmann constant [m2 kg s-2 K-1]

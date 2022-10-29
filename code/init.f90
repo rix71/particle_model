@@ -23,7 +23,7 @@ module mod_initialise
   use mod_datetime
   use mod_biofouling, only: init_biofouling
   use mod_params, only: do_diffusion, do_velocity, do_biofouling, advection_method, &
-                        diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky
+                        diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky, resuspension_coeff
   implicit none
   private
   !===================================================
@@ -52,7 +52,7 @@ contains
     !---------------------------------------------
     ! Namelists
     !---------------------------------------------
-    namelist /params/ do_diffusion, do_velocity, do_biofouling, run_3d, advection_method, diffusion_hor_const, diffusion_vert_const, Cm_smagorinsky
+    namelist /params/ do_diffusion, do_velocity, do_biofouling, run_3d, advection_method, diffusion_hor_const, diffusion_vert_const, Cm_smagorinsky, resuspension_coeff
     namelist /domain_vars/ TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny
     namelist /particle_vars/ inputstep, particle_init_method, coordfile, max_age, kill_beached, kill_boundary
     namelist /time_vars/ run_start, run_end, dt
@@ -83,6 +83,7 @@ contains
     FMT3, var2val(diffusion_hor_const)
     FMT3, var2val(diffusion_vert_const)
     FMT3, var2val(Cm_smagorinsky)
+    FMT3, var2val(resuspension_coeff)
     FMT2, LINE
     FMT2, "&domain_vars"
     FMT3, var2val_char(TOPOFILE)

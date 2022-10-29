@@ -3,5 +3,7 @@
   "C_Cpp.errorSquiggles": "Disabled",
   "fortran.linter.includePaths": [
     "./include"
-  ]
+  ],
+  "fortran.linter.modOutput": "${workspaceFolder}/.vscode/.mod"
+
 }
