@@ -36,6 +36,9 @@ FFLAGS += -DPARTICLE_SNAP_SEALVL
 FFLAGS += -DPARTICLE_REDIRECT
 # FFLAGS += -DPARTICLE_BEACH_IMMEDIATELY
 
+# Compile and run the postprocessing module
+# FFLAGS += -DPOSTPROCESS
+
 # Use OpenMP
 FFLAGS += -DUSE_OMP -fopenmp
 

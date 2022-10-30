@@ -9,7 +9,9 @@ program main
   use mod_initialise, only: init_run, init_model
   use mod_loop, only: loop
   use mod_output, only: init_output, open_beach_bdy_files, close_beach_bdy_files
+#ifdef POSTPROCESS
   use mod_postprocessing, only: postprocess
+#endif
   implicit none
   !===================================================
   call command_line
@@ -22,7 +24,9 @@ program main
   !---------------------------------------------
   if (.not. dry_run) then
     call loop
+#ifdef POSTPROCESS
     call postprocess
+#endif
   else
     FMT1, LINE; FMT1, "Will not loop!"; FMT1, LINE
   end if

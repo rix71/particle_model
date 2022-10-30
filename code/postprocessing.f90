@@ -1,5 +1,6 @@
 #include "cppdefs.h"
 module mod_postprocessing
+#ifdef POSTPROCESS
   use mod_precdefs
   use mod_errors
   use mod_particle_vars, only: particles, runparts
@@ -207,4 +208,5 @@ contains
 
     dbgtail(postprocess)
   end subroutine postprocess
+#endif
 end module mod_postprocessing
