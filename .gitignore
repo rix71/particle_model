@@ -15,6 +15,7 @@ Particle animations/timeres_test_lo_anim.gif
 backup
 update.log
 code/*.mod
+code/mod
 .vscode
 code/.vscode
 code/loop_particle.bkp.f90
