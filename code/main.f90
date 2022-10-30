@@ -138,6 +138,9 @@ contains
 #ifdef SMAGORINSKY_INTERP_UV
     FMT2, "-SMAGORINSKY_INTERP_UV"
 #endif
+#ifdef POSTPROCESS
+    FMT2, "-POSTPROCESS"
+#endif
 
     return
   end subroutine print_compile_info
