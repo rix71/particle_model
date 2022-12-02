@@ -1,3 +1,4 @@
+#warning This module is not tested
 submodule(mod_biofouling) mod_biofouling_funcs
   !----------------------------------------------------------------
   ! The subroutine set_biofouling_fields should add necessary field/fields to

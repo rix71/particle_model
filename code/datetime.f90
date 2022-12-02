@@ -91,7 +91,7 @@ contains
       res%minute = minute
       res%second = second
     else
-      call throw_error("datetime", &
+      call throw_error("datetime :: datetime", &
                        "Wrong date format: "//trim(date_str)// &
                        " Accepted date formats are 'yyyy-mm-dd' or 'yyyy-mm-dd HH:MM:SS'")
     end if
@@ -262,7 +262,7 @@ contains
     call this%isLeap
     yearday = sum(daysInMonth(1:this%month - 1))
     yearday = yearday + this%day
-    debug(yearday)
+
     call reset_DIM
 
   end function yearday
@@ -274,9 +274,6 @@ contains
     integer                     :: year
     class(t_datetime), intent(in) :: this
 
-    dbghead(date2num)
-    debug(this%shortDate(.true.))
-
     date2num = 0
     do year = 1900, this%year - 1
       date2num = date2num + daysInYear(year) * d2s
@@ -285,9 +282,7 @@ contains
     date2num = date2num + float(this%yearday()) * d2s + &
                float(this%hour) * h2s + float(this%minute) * min2s + &
                float(this%second) - d2s ! Why is it off by one day?
-    debug(date2num)
 
-    dbgtail(date2num)
   end function date2num
   !===========================================
   real(rk) function date_diff(start, end)
@@ -301,10 +296,6 @@ contains
     start_num = start%date2num()
     end_num = end%date2num()
     date_diff = end_num - start_num
-
-    debug(start_num)
-    debug(end_num)
-    debug(date_diff)
 
   end function date_diff
   !===========================================

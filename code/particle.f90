@@ -1,7 +1,4 @@
 #include "cppdefs.h"
-#if (!defined(PARTICLE_SNAP_SEALVL) && (defined(ADVECT_VERTICAL) || defined(DIFFUSE_VERTICAL)))
-#warning ADVECT_VERTICAL or DIFFUSE_VERTICAL defined, but PARTICLE_SNAP_SEALVL not defined!
-#endif
 module mod_particle
   !----------------------------------------------------------------
   ! This is the particle type definition
@@ -208,7 +205,7 @@ contains
     call this%check_age()
 
     ! Only update the age if the particle is beached or otherwise not active (but still alive)
-    if (this%state .ne. ACTIVE) return
+    if (this%state < ACTIVE) return
 
     call this%check_boundaries(fieldset, time)
 
@@ -258,41 +255,31 @@ contains
     real(rk)                         :: dep
     real(rk)                         :: elev
 
-    dbghead(check_depth)
-
 #ifdef PARTICLE_SNAP_SEALVL
     elev = fieldset%sealevel(t, this%ir1, this%jr1)
     if (this%depth1 >= elev) then
-      debug(elev)
-      DBG, "Setting particle to sealevel"
       this%depth1 = elev
-      dbgtail(check_depth)
       return
     end if
 #endif
 
-    dep = fieldset%domain%get_bathymetry(this%ir1, this%jr1)
-    debug(dep)
+    dep = fieldset%domain%get_bathymetry(this%i1, this%j1)
 
     ! The particle is past the bottom
     if (this%depth1 <= -1.0 * dep) then
-      DBG, "Setting particle to bottom depth"
       this%depth1 = -1.0 * dep
       this%state = BOTTOM
       this%w1 = ZERO
       ! if (this%kill_boundary) this%is_active = .false.
-      dbgtail(check_depth)
       return
     end if
 
     ! Reset to ACTIVE if resuspended
     if ((this%depth1 > -1.0 * dep) .and. (this%state == BOTTOM)) then
       this%state = ACTIVE
-      dbgtail(check_depth)
       return
     end if
 
-    dbgtail(check_depth)
   end subroutine check_depth
   !===========================================
   subroutine bounce(this, fieldset)
@@ -309,24 +296,20 @@ contains
     integer :: n_iter, seamask_val
     integer, parameter :: max_iter = 10
 
-    dbghead(bounce)
-
     ! We can initialise seamask_val like this, since this is the reason we're in this subroutine in the first place
     seamask_val = LAND
 
     lon_orig = this%lon0
     lat_orig = this%lat0
 
-    i0 = this%i0; debug(i0)
-    i1 = this%i1; debug(i1)
-    j0 = this%j0; debug(j0)
-    j1 = this%j1; debug(j1)
-
-    ir0 = this%ir0; debug(ir0)
-    ir1 = this%ir1; debug(ir1)
-    jr0 = this%jr0; debug(jr0)
-    jr1 = this%jr1; debug(jr1)
-
+    i0 = this%i0; 
+    i1 = this%i1; 
+    j0 = this%j0; 
+    j1 = this%j1; 
+    ir0 = this%ir0; 
+    ir1 = this%ir1; 
+    jr0 = this%jr0; 
+    jr1 = this%jr1; 
     i_orig = i0
     j_orig = j0
     ir_orig = ir0
@@ -339,9 +322,7 @@ contains
 
 #ifdef DEBUG
       if ((abs(di) > 1) .or. (abs(dj) > 1)) then
-        DBG, "|di| > 1"
-        debug(di)
-        debug(dj)
+
         call throw_warning("particle :: bounce", "di or dj greater than 1!")
         ! return ! then what?
       end if
@@ -349,7 +330,7 @@ contains
 
       if (di > ZERO) then
         ! has moved right
-        DBG, "RIGHT"
+
         dx0 = floor(ir1) - ir0
         dx1 = ir1 - floor(ir1)
         dxp = dx0 - dx1
@@ -358,7 +339,7 @@ contains
         i1 = int(ir1)
       else if (di < ZERO) then
         ! has moved left
-        DBG, "LEFT"
+
         dx0 = ir0 - floor(ir0)
         dx1 = floor(ir0) - ir1
         dxp = dx0 - dx1
@@ -369,7 +350,7 @@ contains
 
       if (dj > ZERO) then
         ! has moved up
-        DBG, "UP"
+
         dy0 = floor(jr1) - jr0
         dy1 = jr1 - floor(jr1)
         dyp = dy0 - dy1
@@ -378,7 +359,7 @@ contains
         j1 = int(jr1)
       else if (dj < ZERO) then
         ! has moved down
-        DBG, "DOWN"
+
         dy0 = jr0 - floor(jr0)
         dy1 = floor(jr0) - jr1
         dyp = dy0 - dy1
@@ -390,7 +371,7 @@ contains
       seamask_val = fieldset%domain%get_seamask(i1, j1)
 
       if (n_iter > max_iter) then
-        DBG, "max_iter exceeded. Exiting."
+
         this%i1 = i_orig
         this%j1 = j_orig
         this%ir1 = ir_orig
@@ -398,21 +379,16 @@ contains
         this%lon1 = lon_orig
         this%lat1 = lat_orig
 
-        dbgtail(bounce)
         return
       end if
     end do
-    debug(n_iter)
 
-    this%i1 = i1; debug(i1)
-    this%j1 = j1; debug(j1)
-    this%ir1 = ir1; debug(ir1)
-    this%jr1 = jr1; debug(jr1)
-
-    this%lon1 = fieldset%domain%get_lons(ir1); debug(this%lon1)
-    this%lat1 = fieldset%domain%get_lats(jr1); debug(this%lat1)
-
-    dbgtail(bounce)
+    this%i1 = i1; 
+    this%j1 = j1; 
+    this%ir1 = ir1; 
+    this%jr1 = jr1; 
+    this%lon1 = fieldset%domain%get_lons(ir1); 
+    this%lat1 = fieldset%domain%get_lats(jr1); 
     return
   end subroutine bounce
   !===========================================
@@ -434,40 +410,33 @@ contains
     integer :: n_iter
     integer, parameter :: max_iter = 10
 
-    dbghead(redirect)
-
     lon_orig = this%lon0
     lat_orig = this%lat0
 
     call fieldset%domain%lonlat2xy(this%lon0, this%lat0, x0, y0)
-    debug(x0)
-    debug(y0)
 
-    i0 = this%i0; debug(i0)
-    i1 = this%i1; debug(i1)
-    j0 = this%j0; debug(j0)
-    j1 = this%j1; debug(j1)
-
+    i0 = this%i0; 
+    i1 = this%i1; 
+    j0 = this%j0; 
+    j1 = this%j1; 
     i2 = i0
     j2 = j0
     i_orig = i0
     j_orig = j0
 
-    ir0 = this%ir0; debug(ir0)
-    ir1 = this%ir1; debug(ir1)
-    jr0 = this%jr0; debug(jr0)
-    jr1 = this%jr1; debug(jr1)
-
+    ir0 = this%ir0; 
+    ir1 = this%ir1; 
+    jr0 = this%jr0; 
+    jr1 = this%jr1; 
     ir2 = ir0
     jr2 = jr0
     ir_orig = ir0
     jr_orig = jr0
 
-    di = i1 - i0; debug(di)
-    dj = j1 - j0; debug(dj)
-    dir = ir1 - ir0; debug(dir)
-    djr = jr1 - jr0; debug(djr)
-
+    di = i1 - i0; 
+    dj = j1 - j0; 
+    dir = ir1 - ir0; 
+    djr = jr1 - jr0; 
     seamask_val = fieldset%domain%get_seamask(i1, j1)
 
     n_iter = 1
@@ -477,15 +446,13 @@ contains
       if (abs(dir) > abs(djr)) then
         call right_left()
 
-        DBG, "AFTER RIGHT/LEFT:"
-        i1 = int(ir1); debug(i1)
-        j1 = int(jr1); debug(j1)
-        di = i1 - i0; debug(di)
-        dj = j1 - j0; debug(dj)
-        dir = ir1 - ir0; debug(dir)
-        djr = jr1 - jr0; debug(djr)
-
-        seamask_val = fieldset%domain%get_seamask(i1, j1); debug(seamask_val)
+        i1 = int(ir1); 
+        j1 = int(jr1); 
+        di = i1 - i0; 
+        dj = j1 - j0; 
+        dir = ir1 - ir0; 
+        djr = jr1 - jr0; 
+        seamask_val = fieldset%domain%get_seamask(i1, j1); 
         if (seamask_val /= LAND) then
           exit
         end if
@@ -497,26 +464,22 @@ contains
         ir0 = ir_orig
         jr0 = jr_orig
 
-        DBG, "AFTER UP/DOWN:"
-        i1 = int(ir1); debug(i1)
-        j1 = int(jr1); debug(j1)
-        di = i1 - i0; debug(di)
-        dj = j1 - j0; debug(dj)
-        dir = ir1 - ir0; debug(dir)
-        djr = jr1 - jr0; debug(djr)
-
+        i1 = int(ir1); 
+        j1 = int(jr1); 
+        di = i1 - i0; 
+        dj = j1 - j0; 
+        dir = ir1 - ir0; 
+        djr = jr1 - jr0; 
       else
         call up_down()
 
-        DBG, "AFTER UP/DOWN:"
-        i1 = int(ir1); debug(i1)
-        j1 = int(jr1); debug(j1)
-        di = i1 - i0; debug(di)
-        dj = j1 - j0; debug(dj)
-        dir = ir1 - ir0; debug(dir)
-        djr = jr1 - jr0; debug(djr)
-
-        seamask_val = fieldset%domain%get_seamask(i1, j1); debug(seamask_val)
+        i1 = int(ir1); 
+        j1 = int(jr1); 
+        di = i1 - i0; 
+        dj = j1 - j0; 
+        dir = ir1 - ir0; 
+        djr = jr1 - jr0; 
+        seamask_val = fieldset%domain%get_seamask(i1, j1); 
         if (seamask_val /= LAND) then
           exit
         end if
@@ -528,21 +491,18 @@ contains
         ir0 = ir_orig
         jr0 = jr_orig
 
-        DBG, "AFTER RIGHT/LEFT:"
-        i1 = int(ir1); debug(i1)
-        j1 = int(jr1); debug(j1)
-        di = i1 - i0; debug(di)
-        dj = j1 - j0; debug(dj)
-        dir = ir1 - ir0; debug(dir)
-        djr = jr1 - jr0; debug(djr)
-
+        i1 = int(ir1); 
+        j1 = int(jr1); 
+        di = i1 - i0; 
+        dj = j1 - j0; 
+        dir = ir1 - ir0; 
+        djr = jr1 - jr0; 
       end if
 
-      seamask_val = fieldset%domain%get_seamask(i1, j1); debug(seamask_val)
-
+      seamask_val = fieldset%domain%get_seamask(i1, j1); 
       n_iter = n_iter + 1
       if (n_iter > max_iter) then
-        DBG, "max_iter exceeded. Exiting."
+
         this%i1 = i_orig
         this%j1 = j_orig
         this%ir1 = ir_orig
@@ -550,27 +510,22 @@ contains
         this%lon1 = lon_orig
         this%lat1 = lat_orig
 
-        dbgtail(redirect)
         return
       end if
     end do
-    debug(n_iter)
 
-    x1 = x0 + fieldset%domain%dx * dir; debug(x1)
-    y1 = y0 + fieldset%domain%dy * djr; debug(y1)
+    x1 = x0 + fieldset%domain%dx * dir; 
+    y1 = y0 + fieldset%domain%dy * djr; 
     call fieldset%domain%xy2lonlat(x1, y1, this%lon1, this%lat1)
 
-    this%i1 = i1; debug(i1)
-    this%j1 = j1; debug(j1)
-    this%ir1 = ir1; debug(ir1)
-    this%jr1 = jr1; debug(jr1)
-
+    this%i1 = i1; 
+    this%j1 = j1; 
+    this%ir1 = ir1; 
+    this%jr1 = jr1; 
     ! this%lon1 = fieldset%domain%get_lons(ir1);
-    debug(this%lon1)
-    ! this%lat1 = fieldset%domain%get_lats(jr1);
-    debug(this%lat1)
 
-    dbgtail(redirect)
+    ! this%lat1 = fieldset%domain%get_lats(jr1);
+
     return
 
   contains
@@ -578,20 +533,20 @@ contains
     subroutine up_down()
       if (dj > ZERO) then
         ! Up
-        DBG, "UP"
+
         if (dir > ZERO) then
           rot = 1
         else
           rot = -1
         end if
-        debug(rot)
-        dy0 = floor(jr1) - jr0; debug(dy0)
-        dy1 = jr1 - floor(jr1); debug(dy1)
-        dxp = abs((dir / djr) * dy1); debug(dxp)
-        dxp = max(dxp, SMALL); debug(dxp)
-        dyp = dy0 - min(dxp, dy0); debug(dyp)
-        ir2 = ir0 + dir + (dxp * rot); debug(ir2)
-        jr2 = jr0 + dyp; debug(jr2)
+
+        dy0 = floor(jr1) - jr0; 
+        dy1 = jr1 - floor(jr1); 
+        dxp = abs((dir / djr) * dy1); 
+        dxp = max(dxp, SMALL); 
+        dyp = dy0 - min(dxp, dy0); 
+        ir2 = ir0 + dir + (dxp * rot); 
+        jr2 = jr0 + dyp; 
         i0 = i1
         j0 = j1
         ir0 = ir1
@@ -600,20 +555,20 @@ contains
         jr1 = jr2
       else if (dj < ZERO) then
         ! Down
-        DBG, "DOWN"
+
         if (dir < ZERO) then
           rot = -1
         else
           rot = 1
         end if
-        debug(rot)
-        dy0 = jr0 - floor(jr0); debug(dy0)
-        dy1 = floor(jr0) - jr1; debug(dy1)
-        dxp = abs((dir / djr) * dy1); debug(dxp)
-        dxp = max(dxp, SMALL); debug(dxp)
-        dyp = dy0 - min(dxp, dy0); debug(dyp)
-        ir2 = ir0 + dir + (dxp * rot); debug(ir2)
-        jr2 = jr0 - dyp; debug(jr2)
+
+        dy0 = jr0 - floor(jr0); 
+        dy1 = floor(jr0) - jr1; 
+        dxp = abs((dir / djr) * dy1); 
+        dxp = max(dxp, SMALL); 
+        dyp = dy0 - min(dxp, dy0); 
+        ir2 = ir0 + dir + (dxp * rot); 
+        jr2 = jr0 - dyp; 
         i0 = i1
         j0 = j1
         ir0 = ir1
@@ -626,20 +581,20 @@ contains
     subroutine right_left()
       if (di > ZERO) then
         ! Right
-        DBG, "RIGHT"
+
         if (djr < ZERO) then
           rot = -1
         else
           rot = 1
         end if
-        debug(rot)
-        dx0 = floor(ir1) - ir0; debug(dx0)
-        dx1 = ir1 - floor(ir1); debug(dx1)
-        dyp = abs((djr / dir) * dx1); debug(dyp)
-        dyp = max(dyp, SMALL); debug(dyp)
-        dxp = dx0 - min(dyp, dx0); debug(dxp)
-        ir2 = ir0 + dxp; debug(ir2)
-        jr2 = jr0 + djr + (dyp * rot); debug(jr2)
+
+        dx0 = floor(ir1) - ir0; 
+        dx1 = ir1 - floor(ir1); 
+        dyp = abs((djr / dir) * dx1); 
+        dyp = max(dyp, SMALL); 
+        dxp = dx0 - min(dyp, dx0); 
+        ir2 = ir0 + dxp; 
+        jr2 = jr0 + djr + (dyp * rot); 
         i0 = i1
         j0 = j1
         ir0 = ir1
@@ -648,20 +603,20 @@ contains
         jr1 = jr2
       else if (di < ZERO) then
         ! Left
-        DBG, "LEFT"
+
         if (djr > ZERO) then
           rot = 1
         else
           rot = -1
         end if
-        debug(rot)
-        dx0 = ir0 - floor(ir0); debug(dx0)
-        dx1 = floor(ir0) - ir1; debug(dx1)
-        dyp = abs((djr / dir) * dx1); debug(dyp)
-        dyp = max(dyp, SMALL); debug(dyp)
-        dxp = dx0 - min(dyp, dx0); debug(dxp)
-        ir2 = ir0 - dxp; debug(ir2)
-        jr2 = jr0 + djr + (dyp * rot); debug(jr2)
+
+        dx0 = ir0 - floor(ir0); 
+        dx1 = floor(ir0) - ir1; 
+        dyp = abs((djr / dir) * dx1); 
+        dyp = max(dyp, SMALL); 
+        dxp = dx0 - min(dyp, dx0); 
+        ir2 = ir0 - dxp; 
+        jr2 = jr0 + djr + (dyp * rot); 
         i0 = i1
         j0 = j1
         ir0 = ir1
@@ -686,21 +641,15 @@ contains
     real(rk)                         :: lon_t2 = 0., lat_t2 = 0.
 #endif
 
-    dbghead(check_boundaries)
-
     ! call fieldset%domain%get_indices_2d(this%lon1, this%lat1, i=i, j=j)
     i = this%i1
     j = this%j1
 
-    debug(i); debug(j)
-
     seamask_val = fieldset%domain%get_seamask(i=i, j=j)
-
-    debug(seamask_val)
 
     select case (seamask_val)
     case (BEACH)
-      DBG, "Case BEACH"
+
       this%time_on_beach = this%time_on_beach + dt
       !---------------------------------------------
       ! Change state if beaching time exceeded or on boundary
@@ -713,7 +662,7 @@ contains
       end if
 #endif
     case (LAND)
-      DBG, "Case LAND"
+
 #if defined PARTICLE_BOUNCE
       call this%bounce(fieldset)
 #elif defined PARTICLE_REDIRECT
@@ -735,9 +684,9 @@ contains
       lon_t2 = this%lon1
       lat_t2 = this%lat1
       if ((lon_t0 == lon_t2) .and. (lat_t0 == lat_t2)) then
-        DBG, "CIRCLE"
+
       end if
-      debug(fieldset%domain%get_seamask(this%i1, this%j1))
+
       lon_t0 = lon_t1
       lat_t0 = lat_t1
       lon_t1 = lon_t2
@@ -754,17 +703,16 @@ contains
         this%state = BEACHED
       end if
     case (SEA)
-      DBG, "Case SEA"
+
       this%time_on_beach = ZERO
     case (BOUNDARY)
-      DBG, "Case BOUNDARY"
+
       if (this%kill_boundary) this%is_active = .false.
       this%state = ON_BOUNDARY
     end select
 
     if (run_3d) call this%check_depth(fieldset, time)
 
-    dbgtail(check_boundaries)
     return
   end subroutine check_boundaries
   !===========================================
@@ -772,11 +720,11 @@ contains
 
     class(t_particle), intent(in) :: this
 
-    FMT1, "Indices"
+    FMT1, "Indices (i, j, k)"
     FMT2, this%i0, this%j0, this%k0
     FMT2, this%i1, this%j1, this%k1
 
-    FMT1, "Real indices"
+    FMT1, "Real indices (ir, jr, kr)"
     FMT2, this%ir0, this%jr0, this%kr0
     FMT2, this%ir1, this%jr1, this%kr1
 
@@ -784,9 +732,13 @@ contains
     FMT2, this%lon0, this%lat0, this%depth0
     FMT2, this%lon1, this%lat1, this%depth1
 
-    FMT1, "Velocity"
+    FMT1, "Velocity (u, v, w)"
     FMT2, this%u0, this%v0, this%w0
     FMT2, this%u1, this%v1, this%w1
+
+    FMT1, "State"
+    FMT2, "state: ", this%state
+    FMT2, "is_active: ", this%is_active
 
     FMT1, "Other characteristics"
     FMT2, "Age: ", this%age
@@ -1046,8 +998,6 @@ contains
 
     call nc_read_real_1d(trim(coordfile), "n_particles", n_init_times, nInitParticles)
 
-    debug(n_init_times); debug(nInitParticles)
-
     do itime = 1, n_init_times
       init_coords(itime)%time_idx = itime
       if (itime < n_init_times) then
@@ -1058,9 +1008,6 @@ contains
         init_coords(itime)%next_idx = 1
         ! init_coords(itime)%next_idx = itime
       end if
-
-      debug(itime)
-      debug(int(nInitParticles(itime)))
 
       init_coords(itime)%n_particles = int(nInitParticles(itime))
       call init_coords(itime)%allocate_n_init_particles

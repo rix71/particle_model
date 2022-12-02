@@ -104,62 +104,44 @@ contains
     real(rk)                      :: uh0, vh0, uh1, vh1, u0h, v0h, u1h, v1h
     real(rk)                      :: dudx, dudy, dvdx, dvdy
 
-    dbghead(Ah_Smagorinsky)
-
-    debug(time); debug(i); debug(j)
-
-    i0 = real(i, rk); debug(i0)
-    j0 = real(j, rk); debug(j0)
-
-    i1 = real(i, rk) + ONE; debug(i1)
-    j1 = real(j, rk) + ONE; debug(j1)
-
-    ih = real(i, rk) + HALF; debug(ih)
-    jh = real(j, rk) + HALF; debug(jh)
-
+    i0 = real(i, rk); 
+    j0 = real(j, rk); 
+    i1 = real(i, rk) + ONE; 
+    j1 = real(j, rk) + ONE; 
+    ih = real(i, rk) + HALF; 
+    jh = real(j, rk) + HALF; 
     if (present(k)) then
-      debug(k)
-      kh = real(k, rk) + HALF; debug(kh)
 
-      uh0 = fieldset%get("U", time, ih, j0, kh); debug(uh0)
-      vh0 = fieldset%get("V", time, ih, j0, kh); debug(vh0)
-
-      uh1 = fieldset%get("U", time, ih, j1, kh); debug(uh1)
-      vh1 = fieldset%get("V", time, ih, j1, kh); debug(vh1)
-
-      u0h = fieldset%get("U", time, i0, jh, kh); debug(u0h)
-      v0h = fieldset%get("V", time, i0, jh, kh); debug(v0h)
-
-      u1h = fieldset%get("U", time, i1, jh, kh); debug(u1h)
-      v1h = fieldset%get("V", time, i1, jh, kh); debug(v1h)
+      kh = real(k, rk) + HALF; 
+      uh0 = fieldset%get("U", time, ih, j0, kh); 
+      vh0 = fieldset%get("V", time, ih, j0, kh); 
+      uh1 = fieldset%get("U", time, ih, j1, kh); 
+      vh1 = fieldset%get("V", time, ih, j1, kh); 
+      u0h = fieldset%get("U", time, i0, jh, kh); 
+      v0h = fieldset%get("V", time, i0, jh, kh); 
+      u1h = fieldset%get("U", time, i1, jh, kh); 
+      v1h = fieldset%get("V", time, i1, jh, kh); 
     else
-      uh0 = fieldset%get("U", time, ih, j0); debug(uh0)
-      vh0 = fieldset%get("V", time, ih, j0); debug(vh0)
-
-      uh1 = fieldset%get("U", time, ih, j1); debug(uh1)
-      vh1 = fieldset%get("V", time, ih, j1); debug(vh1)
-
-      u0h = fieldset%get("U", time, i0, jh); debug(u0h)
-      v0h = fieldset%get("V", time, i0, jh); debug(v0h)
-
-      u1h = fieldset%get("U", time, i1, jh); debug(u1h)
-      v1h = fieldset%get("V", time, i1, jh); debug(v1h)
+      uh0 = fieldset%get("U", time, ih, j0); 
+      vh0 = fieldset%get("V", time, ih, j0); 
+      uh1 = fieldset%get("U", time, ih, j1); 
+      vh1 = fieldset%get("V", time, ih, j1); 
+      u0h = fieldset%get("U", time, i0, jh); 
+      v0h = fieldset%get("V", time, i0, jh); 
+      u1h = fieldset%get("U", time, i1, jh); 
+      v1h = fieldset%get("V", time, i1, jh); 
     end if
 
     dx = fieldset%domain%dx
     dy = fieldset%domain%dy
 
-    dudx = (u1h - u0h) / dx; debug(dudx)
-    dudy = (uh1 - uh0) / dy; debug(dudy)
-    dvdx = (v1h - v0h) / dx; debug(dvdx)
-    dvdy = (vh1 - vh0) / dy; debug(dvdy)
-
+    dudx = (u1h - u0h) / dx; 
+    dudy = (uh1 - uh0) / dy; 
+    dvdx = (v1h - v0h) / dx; 
+    dvdy = (vh1 - vh0) / dy; 
     ! Ah_s = Cm_smagorinsky * sqrt(HALF * (dudx - dvdy)**2 + HALF * (dudy + dvdx)**2)
     Ah_s = Cm_smagorinsky * (dx * dy) * sqrt(dudx**2 + dvdy**2 + HALF * (dudy + dvdx)**2)
 
-    debug(Ah_s)
-
-    dbgtail(Ah_Smagorinsky)
     return
   end function Ah_Smagorinsky
   !===========================================
@@ -184,10 +166,6 @@ contains
                 R202, R012, R112, R022, R003, &
                 R103, R013
     real(rk) :: ss, tt, rz3, rz2, rz1, rz0, zz
-
-    dbghead(seawater_density_from_temp_and_salt)
-
-    debug(T); debug(S)
 
     SAu = 40 * 35.16504 / 35; CTu = 40; Zu = 1e4
 
@@ -229,7 +207,6 @@ contains
 
     seawater_density_from_temp_and_salt = ((rz3 * zz + rz2) * zz + rz1) * zz + rz0
 
-    dbgtail(seawater_density_from_temp_and_salt)
     return
   end function seawater_density_from_temp_and_salt
   !===========================================

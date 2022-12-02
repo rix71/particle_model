@@ -241,7 +241,7 @@ contains
     call nc_check(trim(nc_fileout_all), nf90_open(trim(nc_fileout_all), nf90_write, ncid), "write_data :: open")
     call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "time", varid), "write_data :: inq varid")
     dateval = theDate%date2num()
-    debug(dateval)
+
     call nc_check(trim(nc_fileout_all), nf90_put_var(ncid, varid, dateval, start=[nc_itime_out], count=[1]), &
                   "write_data :: put var")
     do ipart = 1, nwrite
@@ -323,10 +323,6 @@ contains
     integer, save       :: nc_itime_out = 0
     real(rk)            :: var1d(1), var2d(1, 1), dateval(1)
 
-    dbghead(write_data_only_active)
-
-    debug(nwrite)
-
     call theDate%print_short_date
     FMT2, "Saving active... ", nwrite, " particles"
 
@@ -338,9 +334,9 @@ contains
                   "write_data_active :: put var")
 
     do ipart = 1, nwrite
-      debug(ipart)
+
       if (particles(ipart)%is_active) then
-        DBG, "Writing variables"
+
         call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "lon", varid), "write_data_active :: inq varid")
         var2d = particles(ipart)%lon0
         call nc_check(trim(nc_fileout_active), &
@@ -411,7 +407,6 @@ contains
 
     call nc_check(trim(nc_fileout_active), nf90_close(ncid), "write_data_active :: close")
 
-    dbgtail(write_data_only_active)
   end subroutine write_data_only_active
   !===========================================
   subroutine write_data_snapshot(p, particle_num)

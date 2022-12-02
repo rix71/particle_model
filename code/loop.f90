@@ -41,8 +41,6 @@ contains
     integer           :: active_particles, inactive_particles
 #endif
 
-    dbghead(loop)
-
     FMT1, "======== Starting time loop ========"
     call date_and_time(date=d, time=t)
     FMT2, t(1:2), ":", t(3:4), ":", t(5:10)
@@ -98,15 +96,15 @@ contains
       !$omp parallel do shared(particles, fieldset, domain)
 #endif
       do ipart = 1, runparts
-        DBG, "----------------------------------------"
-        DBG, "    Particle nr: ", ipart, "            "
-        DBG, "----------------------------------------"
+        DBG, LINE
+        DBG, "Particle nr.", ipart
+        DBG, LINE
         !---------------------------------------------
         ! Skip inactive particles
         if (.not. particles(ipart)%is_active) cycle
-        DBG, "Still active :)"
+
         !---------------------------------------------
-        ! Advect only if the particle is alive (is_active=.true.) and active (state=3/4) 
+        ! Advect only if the particle is alive (is_active=.true.) and active (state=3/4)
         if (particles(ipart)%state >= ACTIVE) then
           ! - do advection
           call advect(particles(ipart), fieldset, time, advection_method, run_3d)
@@ -121,19 +119,20 @@ contains
         !---------------------------------------------
         ! Update particles
 #ifdef DEBUG
-        DBG, "PARTICLE BEFORE UPDATING: ", ipart
+        DBG, "Particle before updating"
         call particles(ipart)%print_info()
 #endif
         call particles(ipart)%update(fieldset, time)
 #ifdef DEBUG
-        DBG, "PARTICLE AFTER UPDATING: ", ipart
+        DBG, "Particle after updating"
         call particles(ipart)%print_info()
 #endif
 
 #ifndef USE_OMP
         !---------------------------------------------
         ! Write snapshot
-        ! Cannot use this with openMP (parallel io?)
+        ! Cannot use this with openMP 
+        ! TODO: parallel i/o
         if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
           call write_data_snapshot(particles(ipart), ipart)
         end if
@@ -174,7 +173,6 @@ contains
     FMT2, "Finished all time steps (", itime, ")"
     FMT2, LINE
 
-    dbgtail(loop)
     return
   end subroutine loop
 end module mod_loop

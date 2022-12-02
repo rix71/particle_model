@@ -138,11 +138,9 @@ contains
     end select
     f%nc_timestep = t2 - t1
     if (f%nc_timestep <= ZERO) then
-      debug(t1)
-      debug(t2)
-      debug(trim(init_path)//PROC0)
+
       ERROR, "Dataset time step <= 0: ", f%nc_timestep, " [s]"
-      call throw_error("fieldset", "Bad time step")
+      call throw_error("fieldset :: fieldset", "Bad time step")
     end if
 
     return
@@ -158,11 +156,8 @@ contains
 #ifdef DEBUG
     integer, save :: NFIELD = 0
 
-    dbghead(add_field)
-
     NFIELD = NFIELD + 1
 
-    debug(trim(field_name)); debug(trim(nc_varname)); debug(NFIELD)
 #endif
 
     fld_2d = .false.
@@ -172,18 +167,17 @@ contains
 
     select case (fld_2d)
     case (.false.)
-      DBG, "Adding 3D field"
+
       call this%fields%add_node(field_name, &
                                 t_field(this%nx, this%ny, this%nz, timestep=this%nc_timestep, nc_varname=nc_varname))
     case (.true.)
-      DBG, "Adding 2D field"
+
       call this%fields%add_node(field_name, &
                                 t_field(this%nx, this%ny, timestep=this%nc_timestep, nc_varname=nc_varname))
     end select
 
     this%num_fields = this%num_fields + 1
 
-    dbgtail(add_field)
     return
   end subroutine add_field
   !===========================================
@@ -216,25 +210,17 @@ contains
     real(rk), optional, intent(in) :: k
     type(t_field), pointer         :: p_field
 
-    dbghead(get_value_key_real_idx)
-
-    debug(trim(field_name)); debug(t); debug(i); debug(j)
-
     call this%fields%get_item(field_name, p_field)
     if (present(k)) then
-      DBG, "Getting 3D"
-      debug(k)
+
       call p_field%get(t=t, x=i, y=j, z=k, &
                        res=res)
     else
-      DBG, "Getting 2D"
+
       call p_field%get(t=t, x=i, y=j, &
                        res=res)
     end if
 
-    debug(res)
-
-    dbgtail(get_value_key_real_idx)
     return
   end function get_value_key_real_idx
   !===========================================
@@ -246,23 +232,15 @@ contains
     integer, optional, intent(in)  :: k
     type(t_field), pointer         :: p_field
 
-    dbghead(get_value_key_int_idx)
-
-    debug(trim(field_name)); debug(t); debug(i); debug(j)
-
     call this%fields%get_item(field_name, p_field)
     if (present(k)) then
-      DBG, "Getting 3D"
-      debug(k)
+
       call p_field%get(t=t, i=i, j=j, k=k, res=res)
     else
-      DBG, "Getting 2D"
+
       call p_field%get(t=t, i=i, j=j, res=res)
     end if
 
-    debug(res)
-
-    dbgtail(get_value_key_int_idx)
     return
   end function get_value_key_int_idx
   !===========================================
@@ -396,16 +374,11 @@ contains
     character(*), intent(in)         :: zax_name
     integer, intent(in)              :: zax_style
 
-    dbghead(set_zax)
-
-    debug(trim(zax_name))
-
     this%zax_style = zax_style
     this%zax_idx = this%fields%node_loc(trim(zax_name))
 
     if (this%zax_idx < 1) call throw_error("fieldset :: set_zax", "Did not find "//trim(zax_name)//" in fieldset")
 
-    dbgtail(set_zax)
     return
   end subroutine set_zax
   !===========================================
@@ -643,54 +616,49 @@ contains
     integer, save                          :: NCall = 0
 #endif
 
-    dbghead(find_folder)
-
 #ifdef DEBUG
     NCall = NCall + 1
-    debug(NCall)
-    DBG, "Date in:"
+
     call date%print_short_date()
 #endif
 
     if (this%nentries == 1) then
       write (testdir, '(a,i0.8)') trim(this%PATH)//'/', this%dirlist(1)
-      debug(trim(testdir))
+
       if (date < datetime_from_netcdf(trim(testdir)//PROC0, 1)) then
         call throw_error("fieldset :: find_folder", "The date is earlier than first date in data file")
       end if
       thedir = testdir
       if (present(folder_idx)) folder_idx = 1
-      dbgtail(find_folder)
+
       return
     end if
 
     YYYYMMDD = date%shortDate(.false.)
     do i = 1, this%nentries
       if (this%dirlist(i) .ge. YYYYMMDD) then
-        debug(YYYYMMDD)
-        debug(this%dirlist(i))
+
         write (testdir, '(a,i0.8)') trim(this%PATH)//'/', this%dirlist(i)
-        debug(testdir)
+
         if (date < datetime_from_netcdf(trim(testdir)//PROC0, 1)) then
-          DBG, "date < datetime_from_netcdf(trim(testdir)//PROC0, 1)"
+
           if (i == 1) call throw_error("fieldset :: find_folder", "The date is earlier than first date in data file")
           write (thedir, '(a,i0.8)') trim(this%PATH)//'/', this%dirlist(i - 1)
           if (present(folder_idx)) folder_idx = i - 1
-          debug(thedir)
+
         else
-          DBG, "date > datetime_from_netcdf(trim(testdir)//PROC0, 1)"
+
           write (thedir, '(a,i0.8)') trim(this%PATH)//'/', this%dirlist(i)
           if (present(folder_idx)) folder_idx = i
-          debug(thedir)
+
         end if
-        dbgtail(find_folder)
+
         return
       end if
     end do
 
     call throw_error("fieldset :: find_folder", "Did not find folder")
 
-    dbgtail(find_folder)
     return
   end subroutine find_folder
   !===========================================
@@ -709,12 +677,9 @@ contains
     type(t_datetime)                       :: testdate
 #endif
 
-    dbghead(find_file)
-
 #ifdef DEBUG
     NCall = NCall + 1
-    debug(NCall)
-    DBG, "Date in:"
+
     call date%print_short_date()
 #endif
 
@@ -722,13 +687,13 @@ contains
       write (thefile, '(a)') trim(this%PATH)//'/'//trim(this%filelist(1))
 #ifdef DEBUG
       testdate = datetime_from_netcdf(trim(thefile), 1)
-      DBG, "Test date:"; call testdate%print_short_date()
+
 #endif
       if ((date < datetime_from_netcdf(trim(thefile), 1))) then
         call throw_error("fieldset :: find_file", "The date is earlier than first date in data file")
       end if
       if (present(file_idx)) file_idx = 1
-      dbgtail(find_file)
+
       return
     end if
 
@@ -737,7 +702,7 @@ contains
         if (i == 1) call throw_error("fieldset :: find_file", "The date is earlier than first date in data file")
         write (thefile, '(a)') trim(this%PATH)//'/'//trim(this%filelist(i - 1))
         if (present(file_idx)) file_idx = i - 1
-        dbgtail(find_file)
+
         return
       end if
     end do
@@ -746,7 +711,6 @@ contains
     if (date > datetime_from_netcdf(trim(thefile), n_times)) call throw_error("fieldset :: find_file", "Did not find file")
     if (present(file_idx)) file_idx = this%nentries
 
-    dbgtail(find_file)
     return
   end subroutine find_file
   !===========================================
@@ -760,23 +724,15 @@ contains
     real(rk)                        :: dep
     integer                         :: ik
 
-    dbghead(get_indices_vertical)
-
-    debug(t); debug(z); debug(i); debug(j)
     dep = this%domain%get_bathymetry(i, j)
-
-    debug(dep)
-    debug(this%domain%get_seamask(i, j))
 
     if (dep < ZERO) then
       if (present(k)) k = this%nz
       if (present(kr)) kr = real(this%nz, rk)
 #ifdef DEBUG
-      DBG, "Particle on ground"
-      debug(k); debug(kr)
       call throw_warning("fieldset :: get_indices_vertical", "Particle on ground") ! Better error message
+      debug(dep)
 #endif
-      dbgtail(get_indices_vertical)
       return
     end if
 
@@ -784,26 +740,21 @@ contains
       if (present(k)) k = 1
       if (present(kr)) kr = 1.0d0
 #ifdef DEBUG
-      DBG, "Particle below ground"
-      debug(k); debug(kr)
       call throw_warning("fieldset :: get_indices_vertical", "Out of bounds") ! Better error message
+      debug(dep)
 #endif
-      dbgtail(get_indices_vertical)
       return
     end if
 
     zax = this%get_zax(t, i, j) ! Don't want to interpolate the Z axis in space, so we're taking the closest indices
-    debug(zax)
-
+    
     if (z > zax(this%nz)) then
       if (present(k)) k = this%nz
       if (present(kr)) kr = real(this%nz, kind=rk)
 #ifdef DEBUG
-      DBG, "Particle above surface"
-      debug(k); debug(kr)
       call throw_warning("fieldset :: get_indices_vertical", "Out of bounds") ! Better error message
+      debug(dep)
 #endif
-      dbgtail(get_indices_vertical)
       return
     end if
 
@@ -814,31 +765,25 @@ contains
         if ((zax(ik + 1) - zax(ik)) <= ZERO) cycle ! There may be zeros at the bottom
         if (present(k)) then
           k = ik
-          debug(k)
         end if
         if (present(kr)) then
           kr = ik + (z - zax(ik)) / (zax(ik + 1) - zax(ik))
           if (kr < ONE) kr = ONE
-          debug(kr)
         end if
-        dbgtail(get_indices_vertical)
         return
       end if
     end do
     if (present(k)) then
       k = this%nz
-      debug(k)
     end if
     if (present(kr)) then
       kr = real(this%nz, rk)
-      debug(kr)
     end if
 
 #ifdef DEBUG
     call throw_warning("fieldset :: get_indices_vertical", "Did not find vertical index!")
 #endif
 
-    dbgtail(get_indices_vertical)
     return
   end subroutine get_indices_vertical
   !===========================================
@@ -852,40 +797,34 @@ contains
     integer                         :: ii, jj, kk
     real(rk)                        :: iir, jjr, kkr
 
-    dbghead(search_indices)
-
-    debug(x); debug(y)
-
     call this%domain%get_indices_2d(x, y, i=ii, j=jj, ir=iir, jr=jjr)
     if (present(k) .or. present(kr)) then
       if (.not. (present(t) .and. present(z))) call throw_error("fieldset :: search_indices", "Time or depth missing!")
       if (this%zax_idx < 1) then ! Probably the fastest way to make sure the Z axis exists
         kk = this%nz; kkr = real(this%nz, kind=rk)
       else
-        debug(t); debug(z)
         call this%get_indices_vertical(t, z, ii, jj, k=kk, kr=kkr)
       end if
     end if
     if (present(i)) then
-      i = ii; debug(i)
+      i = ii; 
     end if
     if (present(j)) then
-      j = jj; debug(j)
+      j = jj; 
     end if
     if (present(k)) then
-      k = kk; debug(k)
+      k = kk; 
     end if
     if (present(ir)) then
-      ir = iir; debug(ir)
+      ir = iir; 
     end if
     if (present(jr)) then
-      jr = jjr; debug(jr)
+      jr = jjr; 
     end if
     if (present(kr)) then
-      kr = kkr; debug(kr)
+      kr = kkr; 
     end if
 
-    dbgtail(search_indices)
     return
   end subroutine search_indices
   !===========================================
@@ -898,19 +837,15 @@ contains
     real(rk)                      :: res(this%nz)
     integer                       :: ik
 
-    dbghead(get_zax)
-
-    debug(t); debug(i); debug(j)
-
     call this%fields%get_item(this%zax_idx, p_field)
     call p_field%get_array_1D(t=t, i=i, j=j, n=this%nz, dim=3, res=arr_zax)
 
     select case (this%zax_style)
     case (DEPTH_VALUES)
-      DBG, "Using depth values"
+
       res = arr_zax
     case (LAYER_THICKNESS)
-      DBG, "Using layer thickness"
+
       tmp_zax = arr_zax
       where (tmp_zax <= -5.0d0) tmp_zax = 0.0
       tmp_zax(1) = -1.0 * this%domain%get_bathymetry(i, j)
@@ -922,7 +857,6 @@ contains
       call throw_error("fieldset :: get_zax", "Z - axis style unknown: zax_style = 1 or 2")
     end select
 
-    dbgtail(get_zax)
     return
   end function get_zax
   !===========================================
@@ -956,8 +890,6 @@ contains
     type(t_field), pointer        :: p_field
     real(rk)                      :: zax(this%nz)
 
-    dbghead(sealevel)
-
     res = 0.
     if (this%fields%key_exists("ELEV")) then
       call this%fields%get_item("ELEV", p_field)
@@ -967,9 +899,7 @@ contains
       zax = this%get_zax(t, nint(i), nint(j))
       res = zax(this%nz)
     end if
-    debug(res)
 
-    dbgtail(sealevel)
     return
   end function sealevel
   !===========================================
@@ -981,8 +911,6 @@ contains
     integer                          :: i_field
     logical                          :: ign_chk, ud
 
-    dbghead(update)
-
     if (present(ignore_check)) then
       ign_chk = ignore_check
     else
@@ -991,14 +919,14 @@ contains
 
     ! Check if it's even time to read
     if ((.not. ign_chk) .and. (date < this%next_read_dt)) then
-      dbgtail(update)
+
       return
     end if
 
 #ifdef DEBUG
-    DBG, "Updating fields:"
+
     call date%print_short_date()
-    debug(this%current_path)
+
 #endif
 
     ! Read nc (if - else because loop over subdomains might need to be the other way)
@@ -1042,7 +970,6 @@ contains
       call this%date_t2%update(this%nc_timestep)
     end if
 
-    dbgtail(update)
     return
   end subroutine update
   !===========================================
@@ -1050,12 +977,9 @@ contains
     class(t_fieldset), intent(inout) :: this
     type(t_datetime), intent(in)     :: date
 
-    dbghead(read_first_timesteps)
-
     call this%update(date, update_dates=.false.)
     call this%update(date, ignore_check=.true., update_dates=.false.)
 
-    dbgtail(read_first_timesteps)
     return
   end subroutine read_first_timesteps
   !===========================================
@@ -1122,10 +1046,7 @@ contains
 
 #ifdef DEBUG
       if (mod(i_subdom, 50) .eq. 0) then
-        debug(trim(subdom_filename))
-        debug(varname)
-        debug(start)
-        debug(count)
+
       end if
 #endif
 
@@ -1233,10 +1154,6 @@ contains
     end if
 
     allocate (buffer(count(1), count(2), count(3)))
-
-    debug(varname)
-    debug(start)
-    debug(count)
 
     if (n_dims == 2) then
       call nc_read_real_3d(trim(this%current_path), trim(varname), start, count, buffer)

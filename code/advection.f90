@@ -26,8 +26,6 @@ contains
                                        u, v
     real(rk)                        :: i, j
 
-    dbghead(advect_EE_2D)
-
     i = p%ir0
     j = p%jr0
     call fieldset%domain%lonlat2xy(p%lon0, p%lat0, x0, y0)
@@ -44,7 +42,6 @@ contains
     p%u1 = u
     p%v1 = v
 
-    dbgtail(advect_EE_2D)
     return
   end subroutine advect_EE_2D
   !===========================================
@@ -61,8 +58,6 @@ contains
                                        u, v, w
     real(rk)                        :: i, j, k
 
-    dbghead(advect_EE_3D)
-
     i = p%ir0
     j = p%jr0
     k = p%kr0
@@ -71,7 +66,7 @@ contains
 
     u = fieldset%get("U", time, i, j, k)
     v = fieldset%get("V", time, i, j, k)
-#ifdef ADVECT_VERTICAL
+#ifndef NO_ADVECT_VERTICAL
     w = fieldset%get("W", time, i, j, k)
 #else
     w = ZERO
@@ -88,7 +83,6 @@ contains
     p%v1 = v
     p%w1 = w
 
-    dbgtail(advect_EE_3D)
     return
   end subroutine advect_EE_3D
   !===========================================
@@ -105,8 +99,6 @@ contains
                                        u1, u2, &
                                        v1, v2
     real(rk)                        :: i, j
-
-    dbghead(advect_RK2_2D)
 
     i = p%ir0
     j = p%jr0
@@ -133,7 +125,6 @@ contains
     p%u1 = 0.5 * (u1 + u2)
     p%v1 = 0.5 * (v1 + v2)
 
-    dbgtail(advect_RK2_2D)
     return
   end subroutine advect_RK2_2D
   !===========================================
@@ -153,8 +144,6 @@ contains
                                        w1, w2
     real(rk)                        :: i, j, k
 
-    dbghead(advect_RK2_3D)
-
     i = p%ir0
     j = p%jr0
     k = p%kr0
@@ -164,7 +153,7 @@ contains
 
     u1 = fieldset%get("U", time, i=i, j=j, k=k); if (isnan(u1)) u1 = ZERO
     v1 = fieldset%get("V", time, i=i, j=j, k=k); if (isnan(v1)) v1 = ZERO
-#ifdef ADVECT_VERTICAL
+#ifndef NO_ADVECT_VERTICAL
     w1 = fieldset%get("W", time, i=i, j=j, k=k); if (isnan(w1)) w1 = ZERO
 #else
     w1 = ZERO
@@ -179,7 +168,7 @@ contains
 
     u2 = fieldset%get("U", time + dt, i, j, k); if (isnan(u2)) u2 = ZERO
     v2 = fieldset%get("V", time + dt, i, j, k); if (isnan(v2)) v2 = ZERO
-#ifdef ADVECT_VERTICAL
+#ifndef NO_ADVECT_VERTICAL
     w2 = fieldset%get("W", time + dt, i, j, k); if (isnan(w2)) w2 = ZERO
 #else
     w2 = ZERO
@@ -197,7 +186,6 @@ contains
     p%v1 = 0.5 * (v1 + v2)
     p%w1 = 0.5 * (w1 + w2)
 
-    dbgtail(advect_RK2_3D)
     return
   end subroutine advect_RK2_3D
   !===========================================

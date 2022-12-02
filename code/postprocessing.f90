@@ -68,13 +68,10 @@ contains
     integer                                :: ierr
     real(rk)                               :: seamask(nx, ny), lons(nx), lats(ny)
 
-    dbghead(process_active_file)
-
     nc_filein_active = trim(outDir)//'/'//trim(runid)//'.active.nc'
 
     call nc_get_dim(trim(nc_filein_active), "time", ntimes)
     call nc_get_dim(trim(nc_filein_active), "particle", nparticles)
-    debug(ntimes); debug(nparticles)
 
     allocate (timevals(ntimes), x(ntimes, nparticles), y(ntimes, nparticles), age(ntimes, nparticles), stat=ierr)
     ! counts(nx, ny), &
@@ -96,10 +93,8 @@ contains
       do ipart = 1, nparticles
         if ((x(itime, ipart) > lons(1)) .and. (x(itime, ipart) < lons(nx)) &
             .and. (y(itime, ipart) > lats(1)) .and. (y(itime, ipart) < lats(ny))) then
-          debug(x(itime, ipart)); debug(y(itime, ipart))
-          call domain%get_indices_2d(particles(ipart)%lon0, particles(ipart)%lat0, i=i, j=j)
 
-          debug(i); debug(j)
+          call domain%get_indices_2d(particles(ipart)%lon0, particles(ipart)%lat0, i=i, j=j)
 
           counts(i, j) = counts(i, j) + 1
           mean_age_time(i, j) = mean_age_time(i, j) + age(itime, ipart)
@@ -126,13 +121,10 @@ contains
     !   end do
     ! end do
 
-    dbgtail(process_active_file)
   end subroutine process_active_file
   !===========================================
   subroutine postprocess
     integer :: nx, ny
-
-    dbghead(postprocess)
 
     nx = domain%nx
     ny = domain%ny
@@ -206,7 +198,6 @@ contains
       end block active
     end if
 
-    dbgtail(postprocess)
   end subroutine postprocess
 #endif
 end module mod_postprocessing

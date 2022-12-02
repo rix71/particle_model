@@ -29,8 +29,6 @@ contains
     real(rk)                        :: x0, x1, &
                                        y0, y1
 
-    dbghead(diffuse_2D)
-
     i = p%ir1
     j = p%jr1
 
@@ -48,7 +46,6 @@ contains
     call fieldset%domain%xy2lonlat(x1, y1, p%lon1, p%lat1)
     call fieldset%search_indices(x=p%lon1, y=p%lat1, i=p%i1, j=p%j1, ir=p%ir1, jr=p%jr1)
 
-    dbgtail(diffuse_2D)
     return
   end subroutine diffuse_2D
   !===========================================
@@ -62,8 +59,6 @@ contains
     real(rk)                        :: x0, x1, &
                                        y0, y1, &
                                        z0, z1
-
-    dbghead(diffuse_3D)
 
     i = p%ir1
     j = p%jr1
@@ -81,7 +76,7 @@ contains
 
     x1 = x0 + normal_random() * sqrt(2 * Ah * dt)
     y1 = y0 + normal_random() * sqrt(2 * Ah * dt)
-#ifdef DIFFUSE_VERTICAL
+#ifndef NO_DIFFUSE_VERTICAL
     z1 = z0 + normal_random() * sqrt(2 * kv * dt)
 #else
     z1 = z0
@@ -90,7 +85,6 @@ contains
     call fieldset%domain%xy2lonlat(x1, y1, p%lon1, p%lat1)
     call fieldset%search_indices(x=p%lon1, y=p%lat1, i=p%i1, j=p%j1, ir=p%ir1, jr=p%jr1)
 
-    dbgtail(diffuse_3D)
     return
   end subroutine diffuse_3D
   !===========================================

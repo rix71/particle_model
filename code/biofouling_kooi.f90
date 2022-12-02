@@ -1,3 +1,4 @@
+#warning This module is not tested
 #include "cppdefs.h"
 module mod_biofouling
   !----------------------------------------------------------------
@@ -150,6 +151,8 @@ contains
     Iz = light_intensity(hour, depth)
     mu_opt = (growth_rate_max * Iz) / (Iz + (growth_rate_max / slope_init) * (Iz / I_opt - 1)**2.)
     phi = ((T - T_max)*(T - T_min)**2.)/((T_opt - T_min) * ((T_opt - T_min)*(T - T_opt) - (T_opt - T_max)*(T_opt + T_min - 2.*T)))
+
+    res = mu_opt * phi
 
   end function primary_prod
   !===========================================
