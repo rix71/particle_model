@@ -1,24 +1,18 @@
-osakeste_mudel.docx
-response_modelleerimine.docx
+# Old scripts for compiling
 compile
 hpc_compile
-presentation.pptx
-figs/traj_eddy.png
-figs/traj1.png
-figs/traj2.png
-Particle animations/all_midn.png
-Particle animations/anim_quick_less.gif
-Particle animations/anim_quick.gif
-Particle animations/randnormtest.png
-Particle animations/test_1000m_anim.gif
-Particle animations/timeres_test_lo_anim.gif
+
+# Backup folder
 backup
 update.log
+do_backup.py
+
+# VS Code settings
+code/.vscode
+.vscode
+
+bin
 code/*.mod
 code/mod
-.vscode
-code/.vscode
-code/loop_particle.bkp.f90
-do_backup.py
 code/obj
-bin
+sync_from_base.sh
