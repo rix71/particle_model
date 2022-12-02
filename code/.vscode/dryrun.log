@@ -1,6 +1,0 @@
-make all --dry-run --keep-going --print-directory
-make: Entering directory '/mnt/d/particle_model/code'
-gfortran -O3 -cpp -ffree-line-length-none -Wall -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large -DWRITESTDOUT -DDEBUG -DNETCDFOUTPUT -I`nf-config --prefix`/include -c mod_postprocessing.f90 -o obj/mod_postprocessing.o -L`nf-config --prefix`/lib -lnetcdff -lnetcdf
-gfortran -O3 -cpp -ffree-line-length-none -Wall -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large -DWRITESTDOUT -DDEBUG -DNETCDFOUTPUT -I`nf-config --prefix`/include -o ../bin/main obj/mod_precdefs.o obj/errors.o obj/interp.o obj/nc_manager.o obj/mod_datetime.o obj/vars.o obj/physics.o obj/domain.o obj/fields.o obj/particle.o obj/output.o obj/init.o obj/loop_particle.o obj/mod_postprocessing.o obj/main.o -L`nf-config --prefix`/lib -lnetcdff -lnetcdf
-make: Leaving directory '/mnt/d/particle_model/code'
- 

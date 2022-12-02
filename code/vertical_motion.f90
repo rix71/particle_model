@@ -27,18 +27,12 @@ contains
     real(rk), intent(in)            :: time
     real(rk)                        :: vert_vel
 
-    dbghead(vertical_velocity)
-    
     vert_vel = buoyancy(p, fieldset, time, p%delta_rho) + resuspension(p, fieldset, time)
-    
+
     p%depth1 = p%depth1 + (vert_vel * dt)
     p%w1 = p%w1 + vert_vel
     p%vel_vertical = vert_vel
-    
-    debug(p%depth1)
-    debug(p%w1)
-    
-    dbgtail(vertical_velocity)
+
     return
   end subroutine vertical_velocity
   !===========================================
@@ -49,8 +43,13 @@ contains
     real(rk) :: i, j, k
     real(rk) :: u, v
 
+    dbghead(resuspension)
+
     res = ZERO
-    if (p%state /= BOTTOM) return
+    if (p%state /= BOTTOM) then
+      dbgtail(resuspension)
+      return
+    end if
 
     if (resuspension_coeff >= ZERO) then
 
@@ -58,12 +57,14 @@ contains
       j = p%jr0
       k = p%kr0
 
-      u = fieldset%get("U", time, i, j, k)
-      v = fieldset%get("V", time, i, j, k)
-
+      u = fieldset%get("U", time, i, j, k); debug(u)
+      v = fieldset%get("V", time, i, j, k); debug(v)
+      debug(resuspension_coeff)
       res = sqrt(u**2.+v**2.) * resuspension_coeff
+      debug(res)
     end if
 
+    dbgtail(resuspension)
     return
   end function resuspension
   !===========================================
@@ -82,10 +83,11 @@ contains
 
     dbghead(buoyancy)
 
-    debug(time)
-    debug(p%depth0)
-    debug(p%depth1)
-    debug(p%w1)
+    res = ZERO
+    if (p%state /= ACTIVE) then
+      dbgtail(buoyancy)
+      return
+    end if
 
     i = p%ir0
     j = p%jr0
@@ -101,6 +103,7 @@ contains
     kin_visc = seawater_viscosity(fieldset, time, i, j, k, viscosity_method)
 
     res = Kooi_vertical_velocity(delta_rho, p%radius, rho_sw, kin_visc)
+    debug(res)
 
     dbgtail(buoyancy)
     return
@@ -117,45 +120,34 @@ contains
     real(rk)             :: w_star    ! Dimensionless settling velocity
     ! real(rk)             ::  ! Density difference
 
-    dbghead(Kooi_vertical_velocity)
-
-    debug(rad_p); 
-    debug(rho_env)
-
+    ; 
     ! kin_visc = mu_env / rho_env ! NOT USING VISCOSITY???
     ! delta_rho = rho_p - rho_env
 
-    debug(kin_visc); 
-    debug(delta_rho)
-
+    ; 
     res = ZERO
 
     d_star = (delta_rho * g * (2.*rad_p)**3.) / (rho_env * (kin_visc**2.)) ! g negative?
     if (d_star < 0.05) then
-      DBG, "d_star < 0.05"
+
       w_star = 1.74e-4 * (d_star**2)
     else if (d_star > 5.e9) then
-      DBG, "d_star > 5e9"
+
       w_star = 1000.
     else
-      DBG, "0.05 > d_star > 5e9"
+
       w_star = 10.**(-3.76715 + (1.92944 * log10(d_star)) - (0.09815 * log10(d_star)**2.) &
                      - (0.00575 * log10(d_star)**3.) + (0.00056 * log10(d_star)**4.))
     end if
 
-    debug(d_star); debug(w_star)
-
     if (delta_rho > ZERO) then
-      DBG, "delta_rho > 0"; debug(delta_rho / rho_env)
+
       res = -1.0 * ((delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
     else
-      DBG, "delta_rho < 0"; debug(delta_rho / rho_env)
+
       res = (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
     end if
 
-    debug(res)
-
-    dbgtail(Kooi_vertical_velocity)
     return
   end function Kooi_vertical_velocity
 
