@@ -1,0 +1,9 @@
+[submodule "ParticlePostProcessor"]
+	path = ParticlePostProcessor
+	url = https://github.com/rix71/ParticlePostProcessor.git
+[submodule "postprocessing/,"]
+	path = postprocessing/,
+	url = https://github.com/rix71/ParticlePostProcessor.git
+[submodule "postprocessing/ParticlePostProcessor"]
+	path = postprocessing/ParticlePostProcessor
+	url = https://github.com/rix71/ParticlePostProcessor.git
