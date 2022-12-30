@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+#include "particle.h"
 module mod_loop
   !----------------------------------------------------------------
   ! Main loop
@@ -20,7 +21,7 @@ module mod_loop
                                max_age, runparts, kill_beached, kill_boundary, release_particles
   use time_vars, only: theDate, run_start_dt, run_end_dt, dt
   use mod_output, only: outputstep, restartstep, snap_interval, write_data, &
-                        write_beached, write_boundary, write_data_only_active, write_restart, &
+                        write_data_only_active, write_restart, &
                         write_all_particles, write_active_particles, write_data_snapshot, write_snapshot
   implicit none
   private
@@ -105,7 +106,7 @@ contains
 
         !---------------------------------------------
         ! Advect only if the particle is alive (is_active=.true.) and active (state=3/4)
-        if (particles(ipart)%state >= ACTIVE) then
+        if (particles(ipart)%state >= ST_SUSPENDED) then
           ! - do advection
           call advect(particles(ipart), fieldset, time, advection_method, run_3d)
           ! - do biofouling
@@ -131,7 +132,7 @@ contains
 #ifndef USE_OMP
         !---------------------------------------------
         ! Write snapshot
-        ! Cannot use this with openMP 
+        ! Cannot use this with openMP
         ! TODO: parallel i/o
         if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
           call write_data_snapshot(particles(ipart), ipart)

@@ -1,11 +1,11 @@
-Updated: Fri Dec  2 17:23:04 EET 2022
-code/biofouling_kooi.f90-109-
-code/biofouling_kooi.f90-110-    T = fieldset%get("TEMP", time, p%ir0, p%jr0, p%kr0)
-code/biofouling_kooi.f90-111-
-code/biofouling_kooi.f90:112:    ! TODO: Consider making a function for this (seawater_dyn_viscosity)
-code/biofouling_kooi.f90-113-    mu = seawater_viscosity(fieldset, time, p%ir0, p%jr0, p%kr0, viscosity_method) / &
-code/biofouling_kooi.f90-114-         seawater_density(fieldset, time, p%ir0, p%jr0, p%kr0, density_method, p%depth0)
-code/biofouling_kooi.f90-115-
+Updated: Fri Dec 30 14:04:41 EET 2022
+code/biofouling_kooi.f90-110-
+code/biofouling_kooi.f90-111-    T = fieldset%get("TEMP", time, p%ir0, p%jr0, p%kr0)
+code/biofouling_kooi.f90-112-
+code/biofouling_kooi.f90:113:    ! TODO: Consider making a function for this (seawater_dyn_viscosity)
+code/biofouling_kooi.f90-114-    mu = seawater_viscosity(fieldset, time, p%ir0, p%jr0, p%kr0, viscosity_method) / &
+code/biofouling_kooi.f90-115-         seawater_density(fieldset, time, p%ir0, p%jr0, p%kr0, density_method, p%depth0)
+code/biofouling_kooi.f90-116-
 --
 code/datetime.f90-67-  type(t_datetime) function ctor_datetime(date_str) result(res)
 code/datetime.f90-68-    !---------------------------------------------
@@ -39,48 +39,56 @@ code/datetime.f90-292-    !---------------------------------------------
 code/datetime.f90-293-    type(t_datetime), intent(in) :: start, end
 code/datetime.f90-294-    real(rk)                     :: start_num, end_num
 --
-code/domain.f90-89-    call nc_read_real_2d(trim(TOPOFILE), trim(bathy), nx, ny, d%depdata)
-code/domain.f90-90-
-code/domain.f90-91-    !---------------------------------------------
-code/domain.f90:92:    ! TODO: Seamask could have another value (4) to represent boundaries.
-code/domain.f90-93-    !       Boundary should have a thickness!
-code/domain.f90-94-    FMT2, "Making seamask"
-code/domain.f90-95-    do ii = 2, nx - 1
+code/domain.f90-90-    call nc_read_real_2d(trim(TOPOFILE), trim(bathy), nx, ny, d%depdata)
+code/domain.f90-91-
+code/domain.f90-92-    !---------------------------------------------
+code/domain.f90:93:    ! TODO: Seamask could have another value (4) to represent boundaries.
+code/domain.f90-94-    !       Boundary should have a thickness!
+code/domain.f90-95-    FMT2, "Making seamask"
+code/domain.f90-96-    do ii = 2, nx - 1
 --
-code/fieldset.f90-463-    ! Get a list of directories or files that contain the data
-code/fieldset.f90-464-    ! The files should be named so that ls command would give them
-code/fieldset.f90-465-    ! in the right order. Including the date in the file name should be enough.
-code/fieldset.f90:466:    ! TODO: Alternatively, if all the files are in one directory,
-code/fieldset.f90-467-    !       it should list all the files in this%PATH.
-code/fieldset.f90-468-    !       (separate routine e.g., init_filelist ?)
-code/fieldset.f90:469:    ! TODO (later, probably never): sort the files somehow so all of this
-code/fieldset.f90-470-    !       would not depend on ls getting it right.
-code/fieldset.f90-471-    !---------------------------------------------
-code/fieldset.f90-472-    class(t_fieldset), intent(inout) :: this
+code/fieldset.f90-479-    ! Get a list of directories or files that contain the data
+code/fieldset.f90-480-    ! The files should be named so that ls command would give them
+code/fieldset.f90-481-    ! in the right order. Including the date in the file name should be enough.
+code/fieldset.f90:482:    ! TODO: Alternatively, if all the files are in one directory,
+code/fieldset.f90-483-    !       it should list all the files in this%PATH.
+code/fieldset.f90-484-    !       (separate routine e.g., init_filelist ?)
+code/fieldset.f90:485:    ! TODO (later, probably never): sort the files somehow so all of this
+code/fieldset.f90-486-    !       would not depend on ls getting it right.
+code/fieldset.f90-487-    !---------------------------------------------
+code/fieldset.f90-488-    class(t_fieldset), intent(inout) :: this
 --
-code/fieldset.f90-523-  subroutine init_proc_mask(this)
-code/fieldset.f90-524-    !---------------------------------------------
-code/fieldset.f90-525-    ! This maps the pieces of GETM data using par_setup.
-code/fieldset.f90:526:    ! TODO: Since pmask takes up a lot of unnecessary space,
-code/fieldset.f90-527-    !       maybe this should only be called when par_setup is wanted
-code/fieldset.f90-528-    !      (either a compilation flag or "if (parallel)" or something in init_model)
-code/fieldset.f90-529-    ! EDIT: This is called from init_model only if this%has_subdomains=.true.
+code/fieldset.f90-539-  subroutine init_proc_mask(this)
+code/fieldset.f90-540-    !---------------------------------------------
+code/fieldset.f90-541-    ! This maps the pieces of GETM data using par_setup.
+code/fieldset.f90:542:    ! TODO: Since pmask takes up a lot of unnecessary space,
+code/fieldset.f90-543-    !       maybe this should only be called when par_setup is wanted
+code/fieldset.f90-544-    !      (either a compilation flag or "if (parallel)" or something in init_model)
+code/fieldset.f90-545-    ! EDIT: This is called from init_model only if this%has_subdomains=.true.
 --
-code/fieldset.f90-599-  !===========================================
-code/fieldset.f90-600-  subroutine find_folder(this, date, thedir, folder_idx)
-code/fieldset.f90-601-    !---------------------------------------------
-code/fieldset.f90:602:    ! TODO: might have to check if nc files start at time
-code/fieldset.f90-603-    ! [date] 00:00:00 or [date] 00:00:10 (at least in this particular example)
-code/fieldset.f90-604-    ! Compare every time?
-code/fieldset.f90-605-    ! Some validity check would be nice
+code/fieldset.f90-615-  !===========================================
+code/fieldset.f90-616-  subroutine find_folder(this, date, thedir, folder_idx)
+code/fieldset.f90-617-    !---------------------------------------------
+code/fieldset.f90:618:    ! TODO: might have to check if nc files start at time
+code/fieldset.f90-619-    ! [date] 00:00:00 or [date] 00:00:10 (at least in this particular example)
+code/fieldset.f90-620-    ! Compare every time?
+code/fieldset.f90-621-    ! Some validity check would be nice
 --
-code/init.f90-161-  subroutine init_fieldset
-code/init.f90-162-    !---------------------------------------------
-code/init.f90-163-    ! Allocate arrays for current data.
-code/init.f90:164:    ! TODO: Right now it is assumed that all subdomains
-code/init.f90-165-    !       are the same size. Also it is assumed that subdomains
-code/init.f90-166-    !       exist at all. There should be a switch (e.g. has_subdomains).
-code/init.f90-167-    !       This also changes allocation.
+code/init.f90-168-  subroutine init_fieldset
+code/init.f90-169-    !---------------------------------------------
+code/init.f90-170-    ! Allocate arrays for current data.
+code/init.f90:171:    ! TODO: Right now it is assumed that all subdomains
+code/init.f90-172-    !       are the same size. Also it is assumed that subdomains
+code/init.f90-173-    !       exist at all. There should be a switch (e.g. has_subdomains).
+code/init.f90-174-    !       This also changes allocation.
+--
+code/init.f90-245-
+code/init.f90-246-      if (nc_var_exists(trim(filename), trim(elevvarname))) then
+code/init.f90-247-        call fieldset%add_field("ELEV", elevvarname, is_2d=.true.)
+code/init.f90:248:        ! TODO: set_elev for faster lookup
+code/init.f90-249-        field_count = field_count + 1
+code/init.f90-250-      end if
+code/init.f90-251-    end if
 --
 code/interp.f90-46-    !      c_k
 code/interp.f90-47-    !        1 - bottom point along y-axis
@@ -90,45 +98,45 @@ code/interp.f90-50-    !---------------------------------------------
 code/interp.f90-51-
 code/interp.f90-52-    real(rk), intent(in)  :: x1, x2
 --
-code/loop.f90-132-        !---------------------------------------------
-code/loop.f90-133-        ! Write snapshot
-code/loop.f90-134-        ! Cannot use this with openMP 
-code/loop.f90:135:        ! TODO: parallel i/o
-code/loop.f90-136-        if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
-code/loop.f90-137-          call write_data_snapshot(particles(ipart), ipart)
-code/loop.f90-138-        end if
+code/loop.f90-133-        !---------------------------------------------
+code/loop.f90-134-        ! Write snapshot
+code/loop.f90-135-        ! Cannot use this with openMP
+code/loop.f90:136:        ! TODO: parallel i/o
+code/loop.f90-137-        if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
+code/loop.f90-138-          call write_data_snapshot(particles(ipart), ipart)
+code/loop.f90-139-        end if
 --
-code/output.f90-226-  subroutine write_data(nwrite)
-code/output.f90-227-    !---------------------------------------------
-code/output.f90-228-    ! Write the output
-code/output.f90:229:    ! TODO: selection for output
-code/output.f90-230-    !---------------------------------------------
-code/output.f90-231-
-code/output.f90-232-    integer, intent(in) :: nwrite
+code/output.f90-209-  subroutine write_data(nwrite)
+code/output.f90-210-    !---------------------------------------------
+code/output.f90-211-    ! Write the output
+code/output.f90:212:    ! TODO: selection for output
+code/output.f90-213-    !---------------------------------------------
+code/output.f90-214-
+code/output.f90-215-    integer, intent(in) :: nwrite
 --
-code/particle.f90-246-  !===========================================
-code/particle.f90-247-  subroutine check_depth(this, fieldset, t)
-code/particle.f90-248-    !---------------------------------------------
-code/particle.f90:249:    ! TODO: Interpolation for bathymetry?
-code/particle.f90-250-    !---------------------------------------------
-code/particle.f90-251-
-code/particle.f90-252-    class(t_particle), intent(inout) :: this
+code/particle.f90-249-  !===========================================
+code/particle.f90-250-  subroutine check_depth(this, fieldset, t)
+code/particle.f90-251-    !---------------------------------------------
+code/particle.f90:252:    ! TODO: Interpolation for bathymetry?
+code/particle.f90-253-    !---------------------------------------------
+code/particle.f90-254-
+code/particle.f90-255-    class(t_particle), intent(inout) :: this
 --
-code/particle.f90-757-  ! This module includes variables related to particles:
-code/particle.f90-758-  ! - number of particles, initial locations or something (maybe)...
-code/particle.f90-759-  ! - anything else?
-code/particle.f90:760:  ! TODO: Initial coordinates from netCDF
-code/particle.f90-761-  !----------------------------------------------------------------
-code/particle.f90-762-  use mod_precdefs
-code/particle.f90-763-  use mod_errors
+code/particle.f90-759-  ! This module includes variables related to particles:
+code/particle.f90-760-  ! - number of particles, initial locations or something (maybe)...
+code/particle.f90-761-  ! - anything else?
+code/particle.f90:762:  ! TODO: Initial coordinates from netCDF
+code/particle.f90-763-  !----------------------------------------------------------------
+code/particle.f90-764-  use mod_precdefs
+code/particle.f90-765-  use mod_errors
 --
-code/physics.f90-5-module mod_physics
-code/physics.f90-6-  !----------------------------------------------------------------
-code/physics.f90-7-  ! This module contains the physics methods
-code/physics.f90:8:  ! TODO:
-code/physics.f90-9-  ! - diffusion
-code/physics.f90-10-  ! - biofouling
-code/physics.f90-11-  ! - drag
+code/physics.f90-6-module mod_physics
+code/physics.f90-7-  !----------------------------------------------------------------
+code/physics.f90-8-  ! This module contains functions to calculate physical parameters
+code/physics.f90:9:  ! TODO:
+code/physics.f90-10-  ! - drag
+code/physics.f90-11-  !----------------------------------------------------------------
+code/physics.f90-12-  use mod_errors
 --
 code/vars.f90-15-module mod_params
 code/vars.f90-16-  !----------------------------------------------------------------
@@ -138,10 +146,18 @@ code/vars.f90-19-  !   viscosity and density defaults in namelist?
 code/vars.f90-20-  !----------------------------------------------------------------
 code/vars.f90-21-  use mod_precdefs
 --
-code/vertical_motion.f90-71-  real(rk) function buoyancy(p, fieldset, time, delta_rho) result(res)
-code/vertical_motion.f90-72-    !---------------------------------------------
-code/vertical_motion.f90-73-    ! Calculate the vertical velocity due to buoyancy
-code/vertical_motion.f90:74:    ! TODO: Which timestep should be used? (original or t + dt?)
-code/vertical_motion.f90-75-    !---------------------------------------------
-code/vertical_motion.f90-76-    type(t_particle), intent(in)    :: p
-code/vertical_motion.f90-77-    type(t_fieldset), intent(in)    :: fieldset
+code/vertical_motion.f90-42-    !---------------------------------------------
+code/vertical_motion.f90-43-    ! Gives a settled particle vertical velocity if
+code/vertical_motion.f90-44-    ! the bottom friction velocity exceeds a certain threshold
+code/vertical_motion.f90:45:    ! TODO: currently, resuspension_threshold is a namelist parameter,
+code/vertical_motion.f90-46-    ! perhaps should be calculated as the particles' critical flow velocity.
+code/vertical_motion.f90-47-    ! Ref: Erosion Behavior of Different Microplastic Particles in Comparison to Natural Sediments
+code/vertical_motion.f90-48-    !       Kryss Waldschläger and Holger Schüttrumpf
+--
+code/vertical_motion.f90-83-  real(rk) function buoyancy(p, fieldset, time, delta_rho) result(res)
+code/vertical_motion.f90-84-    !---------------------------------------------
+code/vertical_motion.f90-85-    ! Calculate the vertical velocity due to buoyancy
+code/vertical_motion.f90:86:    ! TODO: Which timestep should be used? (original or t + dt?)
+code/vertical_motion.f90-87-    !---------------------------------------------
+code/vertical_motion.f90-88-    type(t_particle), intent(in)    :: p
+code/vertical_motion.f90-89-    type(t_fieldset), intent(in)    :: fieldset

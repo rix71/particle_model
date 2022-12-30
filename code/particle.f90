@@ -1,4 +1,7 @@
 #include "cppdefs.h"
+#include "particle.h"
+#include "field.h"
+#include "file.h"
 module mod_particle
   !----------------------------------------------------------------
   ! This is the particle type definition
@@ -23,7 +26,7 @@ module mod_particle
     logical  :: is_active = .true.          ! Skip particle in loop if is_active == .false.
     logical  :: kill_beached, kill_boundary ! Set is_active=.false. if beached or on boundary?
     integer  :: warnings = 0
-    integer  :: state = ACTIVE              ! States: active, beached, on boundary, bottom. Enumerated in cppdefs.h
+    integer  :: state = ST_SUSPENDED              ! States: active, beached, on boundary, bottom. Enumerated in cppdefs.h
     real(rk) :: id                          ! Origin of particle, number
     !---------------------------------------------
     ! Indices
@@ -205,7 +208,7 @@ contains
     call this%check_age()
 
     ! Only update the age if the particle is beached or otherwise not active (but still alive)
-    if (this%state < ACTIVE) return
+    if (this%state < ST_SUSPENDED) return
 
     call this%check_boundaries(fieldset, time)
 
@@ -268,15 +271,14 @@ contains
     ! The particle is past the bottom
     if (this%depth1 <= -1.0 * dep) then
       this%depth1 = -1.0 * dep
-      this%state = BOTTOM
+      this%state = ST_BOTTOM
       this%w1 = ZERO
-      ! if (this%kill_boundary) this%is_active = .false.
       return
     end if
 
-    ! Reset to ACTIVE if resuspended
-    if ((this%depth1 > -1.0 * dep) .and. (this%state == BOTTOM)) then
-      this%state = ACTIVE
+    ! Reset to SUSPENDED if resuspended
+    if ((this%depth1 > -1.0 * dep) .and. (this%state == ST_BOTTOM)) then
+      this%state = ST_SUSPENDED
       return
     end if
 
@@ -297,7 +299,7 @@ contains
     integer, parameter :: max_iter = 10
 
     ! We can initialise seamask_val like this, since this is the reason we're in this subroutine in the first place
-    seamask_val = LAND
+    seamask_val = DOM_LAND
 
     lon_orig = this%lon0
     lat_orig = this%lat0
@@ -316,7 +318,7 @@ contains
     jr_orig = jr0
 
     n_iter = 1
-    do while (seamask_val == LAND)
+    do while (seamask_val == DOM_LAND)
       di = i1 - i0
       dj = j1 - j0
 
@@ -440,7 +442,7 @@ contains
     seamask_val = fieldset%domain%get_seamask(i1, j1)
 
     n_iter = 1
-    do while (seamask_val == LAND)
+    do while (seamask_val == DOM_LAND)
 
       ! Choosing the order based on displacement
       if (abs(dir) > abs(djr)) then
@@ -453,7 +455,7 @@ contains
         dir = ir1 - ir0; 
         djr = jr1 - jr0; 
         seamask_val = fieldset%domain%get_seamask(i1, j1); 
-        if (seamask_val /= LAND) then
+        if (seamask_val /= DOM_LAND) then
           exit
         end if
 
@@ -480,7 +482,7 @@ contains
         dir = ir1 - ir0; 
         djr = jr1 - jr0; 
         seamask_val = fieldset%domain%get_seamask(i1, j1); 
-        if (seamask_val /= LAND) then
+        if (seamask_val /= DOM_LAND) then
           exit
         end if
 
@@ -648,7 +650,7 @@ contains
     seamask_val = fieldset%domain%get_seamask(i=i, j=j)
 
     select case (seamask_val)
-    case (BEACH)
+    case (DOM_BEACH)
 
       this%time_on_beach = this%time_on_beach + dt
       !---------------------------------------------
@@ -657,11 +659,11 @@ contains
       if (this%time_on_beach >= this%beaching_time) then
 #endif
         if (this%kill_beached) this%is_active = .false.
-        this%state = BEACHED
+        this%state = ST_BEACHED
 #ifndef PARTICLE_BEACH_IMMEDIATELY
       end if
 #endif
-    case (LAND)
+    case (DOM_LAND)
 
 #if defined PARTICLE_BOUNCE
       call this%bounce(fieldset)
@@ -669,7 +671,7 @@ contains
       call this%redirect(fieldset)
 #elif defined PARTICLE_BEACH_IMMEDIATELY
       if (this%kill_beached) this%is_active = .false.
-      this%state = BEACHED
+      this%state = ST_BEACHED
 #else
       this%i1 = this%i0
       this%j1 = this%j0
@@ -700,15 +702,15 @@ contains
       ! Change state if beaching time exceeded or on boundary
       if (this%time_on_beach >= this%beaching_time) then
         if (this%kill_beached) this%is_active = .false.
-        this%state = BEACHED
+        this%state = ST_BEACHED
       end if
-    case (SEA)
+    case (DOM_SEA)
 
       this%time_on_beach = ZERO
-    case (BOUNDARY)
+    case (DOM_BOUNDARY)
 
       if (this%kill_boundary) this%is_active = .false.
-      this%state = ON_BOUNDARY
+      this%state = ST_BOUNDARY
     end select
 
     if (run_3d) call this%check_depth(fieldset, time)
@@ -931,7 +933,7 @@ contains
         call throw_error("particle_vars :: check_initial_coordinates", "Particle initialised outside of domain")
       end if
       call domain%get_indices_2d(this%x(ipart), this%y(ipart), i=i, j=j)
-      if (domain%get_seamask(i, j) == LAND) then
+      if (domain%get_seamask(i, j) == DOM_LAND) then
         ! call throw_warning("particle_vars :: check_initial_coordinates", "Particle initialised on land")
         on_land = on_land + 1
       end if

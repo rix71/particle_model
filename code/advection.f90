@@ -1,4 +1,6 @@
 #include "cppdefs.h"
+#include "particle.h"
+#include "advection.h"
 module mod_advection
   use mod_precdefs
   use mod_errors
@@ -195,6 +197,8 @@ contains
     real(rk), intent(in)            :: time
     integer, intent(in)             :: adv_method
     logical, intent(in)             :: adv_3d
+
+    if (p%state /= ST_SUSPENDED) return
 
     select case (adv_method)
     case (ADV_NONE)

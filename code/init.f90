@@ -1,4 +1,6 @@
 #include "cppdefs.h"
+#include "field.h"
+#include "file.h"
 module mod_initialise
   !----------------------------------------------------------------
   ! This module is used to read namelists, initialise variables,
@@ -8,10 +10,10 @@ module mod_initialise
   use mod_errors
   use run_params, only: runid, dry_run, restart, restart_path
   use mod_fieldset
-  use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, has_density, has_viscosity, &
+  use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, has_density, has_viscosity, has_bottom_stress, &
                         file_prefix, file_suffix, nlevels, &
                         uvarname, vvarname, wvarname, zaxvarname, elevvarname, rhovarname, &
-                        tempvarname, saltvarname, viscvarname, zax_style, fieldset
+                        tempvarname, saltvarname, viscvarname, taubxvarname, taubyvarname, zax_style, zax_direction, fieldset
   use mod_domain_vars, only: TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny, domain
   use mod_domain
   use nc_manager, only: nc_read_time_val, nc_var_exists
@@ -23,7 +25,7 @@ module mod_initialise
   use mod_datetime
   use mod_biofouling, only: init_biofouling
   use mod_params, only: do_diffusion, do_velocity, do_biofouling, advection_method, &
-                        diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky, resuspension_coeff
+     diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky, resuspension_coeff, resuspension_threshold, roughness_height
   implicit none
   private
   !===================================================
@@ -52,14 +54,14 @@ contains
     !---------------------------------------------
     ! Namelists
     !---------------------------------------------
-    namelist /params/ do_diffusion, do_velocity, do_biofouling, run_3d, advection_method, diffusion_hor_const, diffusion_vert_const, Cm_smagorinsky, resuspension_coeff
+    namelist /params/ do_diffusion, do_velocity, do_biofouling, run_3d, advection_method, diffusion_hor_const, diffusion_vert_const, Cm_smagorinsky, resuspension_coeff, resuspension_threshold, roughness_height
     namelist /domain_vars/ TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny
     namelist /particle_vars/ inputstep, particle_init_method, coordfile, max_age, kill_beached, kill_boundary
     namelist /time_vars/ run_start, run_end, dt
     namelist /field_vars/ GETMPATH, PMAPFILE, has_subdomains, &
       file_prefix, file_suffix, nlevels, &
       uvarname, vvarname, wvarname, zaxvarname, elevvarname, rhovarname, &
-      tempvarname, saltvarname, viscvarname, zax_style
+      tempvarname, saltvarname, viscvarname, taubxvarname, taubyvarname, zax_style, zax_direction
 
     FMT1, "======== Init namelist ========"
 
@@ -84,6 +86,8 @@ contains
     FMT3, var2val(diffusion_vert_const)
     FMT3, var2val(Cm_smagorinsky)
     FMT3, var2val(resuspension_coeff)
+    FMT3, var2val(resuspension_threshold)
+    FMT3, var2val(roughness_height)
     FMT2, LINE
     FMT2, "&domain_vars"
     FMT3, var2val_char(TOPOFILE)
@@ -116,7 +120,10 @@ contains
     FMT3, var2val_char(tempvarname)
     FMT3, var2val_char(saltvarname)
     FMT3, var2val_char(viscvarname)
+    FMT3, var2val_char(taubxvarname)
+    FMT3, var2val_char(taubyvarname)
     FMT3, var2val(zax_style)
+    FMT3, var2val(zax_direction)
 
     FMT2, "Finished init namelist"
 
@@ -229,7 +236,7 @@ contains
 
       if (nc_var_exists(trim(filename), trim(zaxvarname))) then
         call fieldset%add_field("ZAX", zaxvarname)
-        call fieldset%set_zax("ZAX", zax_style)
+        call fieldset%set_zax("ZAX", zax_style, zax_direction)
       else
         call throw_error("initialise :: init_fieldset", "Variable for Z axis does not exist: "//trim(zaxvarname))
       end if
@@ -238,7 +245,7 @@ contains
 
       if (nc_var_exists(trim(filename), trim(elevvarname))) then
         call fieldset%add_field("ELEV", elevvarname, is_2d=.true.)
-        ! set_elev for faster lookup
+        ! TODO: set_elev for faster lookup
         field_count = field_count + 1
       end if
     end if
@@ -273,6 +280,13 @@ contains
       else
         call throw_warning("initialise :: init_fieldset", "Could not find viscosity ('nuh') in "//trim(filename)// &
                            ". Using default viscosity.")
+      end if
+      !---------------------------------------------
+      ! Fields for bottom friction
+      if ((nc_var_exists(trim(filename), trim(taubxvarname)) .and. (nc_var_exists(trim(filename), trim(taubyvarname))))) then
+        call fieldset%add_field("TAUBX", taubxvarname, is_2d=.true.)
+        call fieldset%add_field("TAUBY", taubyvarname, is_2d=.true.)
+        has_bottom_stress = .true.
       end if
     end if
 

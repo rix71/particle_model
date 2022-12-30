@@ -15,18 +15,20 @@
 !===============================
 ! Physical parameters
 !-------------------------------
-! do_diffusion         - [bool]  Diffuse particles if True
-! do_velocity          - [bool]  Calculate particles' own velocity (True)
-!                                or advect with current speed (False)
-! run_3d               - [bool]  Do 3D simulation
-! advection_method     - [int]   Advection scheme
-!                                0 - no advection
-!                                1 - explicit Euler
-!                                2 - RK2
-! diffusion_hor_const  - [float] Horisontal diffusion constant
-! diffusion_vert_const - [float] Vertical diffusion constant
-! Cm_smagorinsky       - [float] Empirical parameter in Smagorinsky 
-! resuspension_coeff   - [float] Resuspension coefficient
+! do_diffusion           - [bool]  Diffuse particles if True
+! do_velocity            - [bool]  Calculate particles' own velocity (True)
+!                                  or advect with current speed (False)
+! run_3d                 - [bool]  Do 3D simulation
+! advection_method       - [int]   Advection scheme
+!                                  0 - no advection
+!                                  1 - explicit Euler
+!                                  2 - RK2
+! diffusion_hor_const    - [float] Horisontal diffusion constant
+! diffusion_vert_const   - [float] Vertical diffusion constant
+! Cm_smagorinsky         - [float] Empirical parameter in Smagorinsky 
+! resuspension_coeff     - [float] Resuspension coefficient
+! resuspension_threshold - [float] Critical bottom friction velocity [m/s]
+! roughness_height       - [float] Parameter z0 to calculate the bottom friction velocity
 !===============================
 &params
   do_diffusion = .false.
@@ -38,6 +40,8 @@
   diffusion_vert_const = 0.0001
   Cm_smagorinsky = 0.2
   resuspension_coeff = 0.5
+  resuspension_threshold = 0.2
+  roughness_height = 0.002
 /
 !===============================
 ! Domain variables
@@ -111,9 +115,16 @@
 ! tempvarname    - [char] Name of temperature variable in GETM data
 ! saltvarname    - [char] Name of salinity variable in GETM data
 ! viscvarname    - [char] Name of viscosity variable in GETM data
+! taubxvarname   - [char] Name of bottom stress x-component in GETM data
+! taubyvarname   - [char] Name of bottom stress y-component in GETM data
 ! zax_style      - [int]  Vertical coordinate values 
 !                         1 - depth values 
 !                         2 - layer thickness
+! zax_direction  - [int]  Direction of z-axis
+!                         > 0 - positive up
+!                         < 0 - positive down
+!                         It is also assumed that the layers are numbered in the same direction 
+!                         (i.e. for > 0 bottom layer is at k=1 and for < 0 bottom layer is at k=nlevels)
 !===============================
 &field_vars
   GETMPATH = './data'
@@ -131,7 +142,10 @@
   tempvarname = 'temp'
   saltvarname = 'salt'
   viscvarname = 'nuh'
+  taubxvarname = 'taubx'
+  taubyvarname = 'tauby'
   zax_style = 1
+  zax_direction = 1
 /
 !===============================
 ! Biofouling variables

@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+#include "field.h"
 #if (defined(SNAP_TO_BOUNDS) && defined(DEBUG))
 #warning SNAP_TO_BOUNDS defined, indices can be modified
 #endif
@@ -99,44 +100,44 @@ contains
               (d%depdata(ii, jj + 1) .le. 0.0) .or. (d%depdata(ii, jj - 1) .le. 0.0) .or. &
               (d%depdata(ii + 1, jj + 1) .le. 0.0) .or. (d%depdata(ii + 1, jj - 1) .le. 0.0) .or. &
               (d%depdata(ii - 1, jj - 1) .le. 0.0) .or. (d%depdata(ii - 1, jj + 1) .le. 0.0)) then
-            d%seamask(ii, jj) = BEACH
+            d%seamask(ii, jj) = DOM_BEACH
           else
-            d%seamask(ii, jj) = SEA
+            d%seamask(ii, jj) = DOM_SEA
           end if
         else
-          d%seamask(ii, jj) = LAND
+          d%seamask(ii, jj) = DOM_LAND
         end if
       end do
     end do
     do ii = 1, nx
       if (d%depdata(ii, 1) .gt. ZERO) then
-        d%seamask(ii, 1) = BOUNDARY
+        d%seamask(ii, 1) = DOM_BOUNDARY
       else
-        d%seamask(ii, 1) = LAND
+        d%seamask(ii, 1) = DOM_LAND
       end if
       if (d%depdata(ii, ny) .gt. ZERO) then
-        d%seamask(ii, ny) = BOUNDARY
+        d%seamask(ii, ny) = DOM_BOUNDARY
       else
-        d%seamask(ii, ny) = LAND
+        d%seamask(ii, ny) = DOM_LAND
       end if
     end do
     do jj = 1, ny
       if (d%depdata(1, jj) .gt. ZERO) then
-        d%seamask(1, jj) = BOUNDARY
+        d%seamask(1, jj) = DOM_BOUNDARY
       else
-        d%seamask(1, jj) = LAND
+        d%seamask(1, jj) = DOM_LAND
       end if
       if (d%depdata(nx, jj) .gt. ZERO) then
-        d%seamask(nx, jj) = BOUNDARY
+        d%seamask(nx, jj) = DOM_BOUNDARY
       else
-        d%seamask(nx, jj) = LAND
+        d%seamask(nx, jj) = DOM_LAND
       end if
     end do
 
-    FMT2, sum(d%seamask, mask=d%seamask == LAND), " land points"
-    FMT2, sum(d%seamask, mask=d%seamask == SEA) / SEA, " sea points"
-    FMT2, sum(d%seamask, mask=d%seamask == BEACH) / BEACH, " beach points"
-    FMT2, sum(d%seamask, mask=d%seamask == BOUNDARY) / BOUNDARY, " boundary points"
+    FMT2, sum(d%seamask, mask=d%seamask == DOM_LAND), " land points"
+    FMT2, sum(d%seamask, mask=d%seamask == DOM_SEA) / DOM_SEA, " sea points"
+    FMT2, sum(d%seamask, mask=d%seamask == DOM_BEACH) / DOM_BEACH, " beach points"
+    FMT2, sum(d%seamask, mask=d%seamask == DOM_BOUNDARY) / DOM_BOUNDARY, " boundary points"
     FMT2, nx * ny, " total points"
 
 #ifdef DEBUG

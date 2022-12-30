@@ -8,7 +8,7 @@ program main
   use run_params, only: dry_run
   use mod_initialise, only: init_run, init_model
   use mod_loop, only: loop
-  use mod_output, only: init_output, open_beach_bdy_files, close_beach_bdy_files
+  use mod_output, only: init_output
 #ifdef POSTPROCESS
   use mod_postprocessing, only: postprocess
 #endif

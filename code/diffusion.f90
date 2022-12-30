@@ -2,6 +2,7 @@
 #error SMAGORINSKY_FULL_FIELD not implemented
 #endif
 #include "cppdefs.h"
+#include "particle.h"
 module mod_diffusion
   use mod_precdefs
   use mod_errors
@@ -94,6 +95,8 @@ contains
     type(t_fieldset), intent(in)    :: fieldset
     real(rk), intent(in)            :: time
     logical, intent(in)             :: dif_3d
+
+    if (p%state /= ST_SUSPENDED) return
 
     select case (dif_3d)
     case (.true.)

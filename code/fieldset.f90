@@ -1,4 +1,6 @@
 #include "cppdefs.h"
+#include "field.h"
+#include "file.h"
 module mod_fieldset
   use mod_precdefs
   use mod_errors
@@ -33,8 +35,10 @@ module mod_fieldset
     integer, allocatable :: v_mask(:, :)
     !---------------------------------------------
     ! Z axis variables
-    integer      :: zax_style = DEPTH_VALUES
-    integer      :: zax_idx = 0
+    integer         :: zax_style = DEPTH_VALUES
+    integer         :: zax_dir = 1 ! Default: positive up
+    integer         :: zax_idx = 0
+    integer, public :: zax_bot_idx = 1, zax_top_idx = 1 ! Calling this bottom and top (not surface) to be more general (e.g. for meteo too)
     !---------------------------------------------
     ! netCDF read variables
     logical                   :: read_first = .true.
@@ -70,6 +74,9 @@ module mod_fieldset
     procedure         :: get_v_comp_mask
     procedure, public :: set_zax
     procedure, public :: get_zax
+    procedure, public :: top_is_nan
+    procedure, public :: bottom_is_nan
+    procedure, public :: zax_direction
     procedure, public :: get_gradient
     procedure, public :: set_start_time
     procedure, public :: set_simulation_timestep
@@ -311,10 +318,10 @@ contains
     this%u_mask = 0
     do i = 1, this%nx
       do j = 1, this%ny
-        if (this%domain%get_seamask(i, j) == BEACH) then
-          if (this%domain%get_seamask(i, j + 1) == LAND) then
+        if (this%domain%get_seamask(i, j) == DOM_BEACH) then
+          if (this%domain%get_seamask(i, j + 1) == DOM_LAND) then
             this%u_mask(i, j) = -1
-          else if (this%domain%get_seamask(i, j - 1) == LAND) then
+          else if (this%domain%get_seamask(i, j - 1) == DOM_LAND) then
             this%u_mask(i, j) = 1
           end if
         end if
@@ -332,10 +339,10 @@ contains
     this%v_mask = 0
     do i = 1, this%nx
       do j = 1, this%ny
-        if (this%domain%get_seamask(i, j) == BEACH) then
-          if (this%domain%get_seamask(i + 1, j) == LAND) then
+        if (this%domain%get_seamask(i, j) == DOM_BEACH) then
+          if (this%domain%get_seamask(i + 1, j) == DOM_LAND) then
             this%v_mask(i, j) = -1
-          else if (this%domain%get_seamask(i - 1, j) == LAND) then
+          else if (this%domain%get_seamask(i - 1, j) == DOM_LAND) then
             this%v_mask(i, j) = 1
           end if
         end if
@@ -369,14 +376,23 @@ contains
 
   end subroutine set_v_component
   !===========================================
-  subroutine set_zax(this, zax_name, zax_style)
+  subroutine set_zax(this, zax_name, zax_style, zax_direction)
     class(t_fieldset), intent(inout) :: this
     character(*), intent(in)         :: zax_name
     integer, intent(in)              :: zax_style
+    integer, intent(in)              :: zax_direction
 
     this%zax_style = zax_style
+    if (zax_direction > 0) then
+      this%zax_dir = 1
+      this%zax_bot_idx = 1
+      this%zax_top_idx = this%nz
+    else
+      this%zax_dir = -1
+      this%zax_bot_idx = this%nz
+      this%zax_top_idx = 1
+    end if
     this%zax_idx = this%fields%node_loc(trim(zax_name))
-
     if (this%zax_idx < 1) call throw_error("fieldset :: set_zax", "Did not find "//trim(zax_name)//" in fieldset")
 
     return
@@ -747,7 +763,7 @@ contains
     end if
 
     zax = this%get_zax(t, i, j) ! Don't want to interpolate the Z axis in space, so we're taking the closest indices
-    
+
     if (z > zax(this%nz)) then
       if (present(k)) k = this%nz
       if (present(kr)) kr = real(this%nz, kind=rk)
@@ -859,6 +875,34 @@ contains
 
     return
   end function get_zax
+  !===========================================
+  logical function top_is_nan(this, field_name)
+    class(t_fieldset), intent(in) :: this
+    character(*), intent(in) :: field_name
+    type(t_field), pointer :: p_field
+
+    call this%fields%get_item(trim(field_name), p_field)
+    top_is_nan = p_field%top_is_nan()
+
+    return
+  end function top_is_nan
+  !===========================================
+  logical function bottom_is_nan(this, field_name)
+    class(t_fieldset), intent(in) :: this
+    character(*), intent(in) :: field_name
+    type(t_field), pointer :: p_field
+
+    call this%fields%get_item(trim(field_name), p_field)
+    bottom_is_nan = p_field%bottom_is_nan()
+
+    return
+  end function bottom_is_nan
+  !===========================================
+  integer function zax_direction(this)
+    class(t_fieldset), intent(in) :: this
+    zax_direction = this%zax_dir
+    return
+  end function zax_direction
   !===========================================
   function get_gradient(this, field_name, t, dim) result(res)
     class(t_fieldset), intent(in) :: this
@@ -994,6 +1038,10 @@ contains
     real(rk), dimension(:, :, :), allocatable    :: buffer, tmp_arr
     integer, allocatable                         :: start(:), count(:)
     integer                                      :: i, j, i_subdom, ioff, joff, istart, jstart
+    logical                                      :: t_nan, b_nan
+
+    t_nan = .false.
+    b_nan = .false.
 
     if (field_idx == this%u_idx) then
       c_field = "u"
@@ -1117,7 +1165,12 @@ contains
 
     where (buffer <= MISSING_VAL) buffer = ZERO
 
-    call p_field%set(buffer)
+    if (n_dims == 3) then
+      t_nan = all(buffer(:, :, this%zax_top_idx) == ZERO)
+      b_nan = all(buffer(:, :, this%zax_bot_idx) == ZERO)
+    end if
+
+    call p_field%set(buffer, t_nan, b_nan)
 
   end subroutine read_field_subdomains
   !===========================================
@@ -1131,6 +1184,10 @@ contains
     real(rk), dimension(:, :, :), allocatable :: buffer
     integer, allocatable                      :: start(:), count(:)
     integer                                   :: i, j
+    logical                                   :: t_nan, b_nan
+
+    t_nan = .false.
+    b_nan = .false.
 
     if (field_idx == this%u_idx) then
       c_field = "u"
@@ -1215,7 +1272,15 @@ contains
 
     where (buffer <= MISSING_VAL) buffer = ZERO
 
-    call p_field%set(buffer)
+    if (n_dims == 3) then
+      DBG, "Checking top and bottom for NaNs"
+      debug(this%zax_top_idx)
+      debug(this%zax_bot_idx)
+      t_nan = all(buffer(:, :, this%zax_top_idx) == ZERO)
+      b_nan = all(buffer(:, :, this%zax_bot_idx) == ZERO)
+    end if
+
+    call p_field%set(buffer, t_nan, b_nan)
 
   end subroutine read_field
 end module mod_fieldset

@@ -1,5 +1,6 @@
 #warning This module is not tested
 #include "cppdefs.h"
+#include "file.h"
 module mod_biofouling
   !----------------------------------------------------------------
   ! Biological growth on microplastic particles. Causes density changes.

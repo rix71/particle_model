@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+#include "file.h"
 module mod_output
   !----------------------------------------------------------------
   ! Module for writing the output
@@ -19,9 +20,9 @@ module mod_output
   private
   !===================================================
   !---------------------------------------------
-  public :: outputstep, restartstep, snap_interval, init_output, open_beach_bdy_files, &
-            close_beach_bdy_files, write_data, &
-            write_beached, write_boundary, write_data_only_active, write_restart, &
+  public :: outputstep, restartstep, snap_interval, init_output, &
+            write_data, &
+            write_data_only_active, write_restart, &
             write_all_particles, write_active_particles, &
             write_data_snapshot, outDir, write_snapshot
   !---------------------------------------------
@@ -142,6 +143,9 @@ contains
     call nc_add_attr(file_name, "trajectory", "units", "m")
     call nc_add_attr(file_name, "trajectory", "name", "distance travelled")
 
+    call nc_add_variable(file_name, "state", "int", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "state", "name", "state of the particle: 1-beached, 2-on boundary, 3-active, 4-bottom")
+
     call nc_add_variable(file_name, "particle_num", "int", 1, [nc_p_dimid])
 
   end subroutine init_nc_snapshot
@@ -197,31 +201,10 @@ contains
     call nc_add_attr(file_name, "trajectory", "units", "m")
     call nc_add_attr(file_name, "trajectory", "name", "distance travelled")
 
+    call nc_add_variable(file_name, "state", "int", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "state", "name", "state of the particle: 1-beached, 2-on boundary, 3-active, 4-bottom")
+
   end subroutine init_nc_output
-  !===========================================
-  subroutine open_beach_bdy_files
-
-    FMT2, "Opening beached.dat..."
-    open (BCHFILE, file=trim(outDir)//'/'//'beached.dat', iostat=ierr)
-    if (ierr .ne. 0) call throw_error("output :: open_beach_bdy_files", "Failed to open beached.dat", ierr)
-    FMT2, "Opening boundary.dat..."
-    open (BDYFILE, file=trim(outDir)//'/'//'boundary.dat', iostat=ierr)
-    if (ierr .ne. 0) call throw_error("output :: open_beach_bdy_files", "Failed to open boundary.dat", ierr)
-
-    return
-  end subroutine open_beach_bdy_files
-  !===========================================
-  subroutine close_beach_bdy_files
-
-    FMT2, "Closing beached.dat..."
-    close (BCHFILE, iostat=ierr)
-    if (ierr .ne. 0) call throw_error("output :: close_beach_bdy_files", "Failed to close beached.dat", ierr)
-    FMT2, "Closing boundary.dat..."
-    close (BDYFILE, iostat=ierr)
-    if (ierr .ne. 0) call throw_error("output :: close_beach_bdy_files", "Failed to close boundary.dat", ierr)
-
-    return
-  end subroutine close_beach_bdy_files
   !===========================================
   subroutine write_data(nwrite)
     !---------------------------------------------
@@ -233,6 +216,7 @@ contains
     integer             :: ipart, ncid, varid
     integer, save       :: nc_itime_out = 0
     real(rk)            :: var1d(1), var2d(1, 1), dateval(1)
+    integer             :: var2d_int(1, 1)
 
     call theDate%print_short_date
     FMT2, "Saving all... ", nwrite, " particles"
@@ -310,6 +294,12 @@ contains
       call nc_check(trim(nc_fileout_all), &
                     nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
+
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "state", varid), "write_data :: inq varid")
+      var2d_int = particles(ipart)%state
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d_int, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
     end do
     call nc_check(trim(nc_fileout_all), nf90_close(ncid), "write :: close")
 
@@ -322,6 +312,7 @@ contains
     integer             :: ipart, ncid, varid
     integer, save       :: nc_itime_out = 0
     real(rk)            :: var1d(1), var2d(1, 1), dateval(1)
+    integer             :: var2d_int(1, 1)
 
     call theDate%print_short_date
     FMT2, "Saving active... ", nwrite, " particles"
@@ -402,6 +393,12 @@ contains
         call nc_check(trim(nc_fileout_active), &
                       nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                       "write_data_active :: put var")
+
+        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "state", varid), "write_data_active :: inq varid")
+        var2d_int = particles(ipart)%state
+        call nc_check(trim(nc_fileout_active), &
+                      nf90_put_var(ncid, varid, var2d_int, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data_active :: put var")
       end if
     end do
 
@@ -416,6 +413,7 @@ contains
     integer             :: ncid, varid
     integer, save       :: nc_itime_out = 0
     real(rk)            :: var1d(1), dateval(1)
+    integer             :: var1d_int(1)
 
     nc_itime_out = nc_itime_out + 1
     call nc_check(trim(nc_fileout_snap), nf90_open(trim(nc_fileout_snap), nf90_write, ncid), "write_data_snap :: open")
@@ -490,6 +488,12 @@ contains
                   nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
 
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "state", varid), "write_data_snap :: inq varid")
+    var1d_int = p%state
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d_int, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "particle_num", varid), "write_data_snap :: inq varid")
     var1d = particle_num
     call nc_check(trim(nc_fileout_snap), &
@@ -530,31 +534,4 @@ contains
     close (RESTARTFILE)
 
   end subroutine write_restart
-  !===========================================
-  subroutine write_beached(p)
-
-    type(t_particle), intent(in) :: p
-
-    if (p%state .eq. 1.) then
-      write (BCHFILE, *) p%lon0, p%lat0, p%id, p%age, p%traj_len
-    else
-      call throw_warning("output :: write_beached", "This particle should not be beached")
-    end if
-
-    return
-  end subroutine write_beached
-  !===========================================
-  subroutine write_boundary(p)
-
-    type(t_particle), intent(in) :: p
-
-    if (p%state .eq. 2.) then
-      write (BDYFILE, *) p%lon0, p%lat0, p%id, p%age, p%traj_len
-    else
-      call throw_warning("output :: write_boundary", "This particle should not be on boundary")
-    end if
-
-    return
-  end subroutine write_boundary
-
 end module mod_output

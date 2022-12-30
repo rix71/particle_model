@@ -2,18 +2,18 @@
 #error SMAGORINSKY_FULL_FIELD not implemented
 #endif
 #include "cppdefs.h"
+#include "field.h"
 module mod_physics
   !----------------------------------------------------------------
-  ! This module contains the physics methods
+  ! This module contains functions to calculate physical parameters
   ! TODO:
-  ! - diffusion
-  ! - biofouling
   ! - drag
   !----------------------------------------------------------------
   use mod_errors
   use mod_interp
   use mod_precdefs
   use mod_params
+  use field_vars, only: has_bottom_stress
   use time_vars, only: dt
   use mod_fieldset, only: t_fieldset
   implicit none
@@ -21,7 +21,7 @@ module mod_physics
   !===================================================
   !---------------------------------------------
   public :: seawater_viscosity, seawater_density, diffusion_brown, &
-            light_intensity, Ah_Smagorinsky, normal_random
+            light_intensity, Ah_Smagorinsky, bottom_friction_velocity, normal_random
   !---------------------------------------------
   ! integer :: ierr ! Unused for now
   !===================================================
@@ -140,10 +140,79 @@ contains
     dvdx = (v1h - v0h) / dx; 
     dvdy = (vh1 - vh0) / dy; 
     ! Ah_s = Cm_smagorinsky * sqrt(HALF * (dudx - dvdy)**2 + HALF * (dudy + dvdx)**2)
-    Ah_s = Cm_smagorinsky * (dx * dy) * sqrt(dudx**2 + dvdy**2 + HALF * (dudy + dvdx)**2)
+    Ah_s = Cm_smagorinsky * (dx * dy) * sqrt(dudx**2 + dvdy**2 + HALF * (dudy + dvdx)**2.)
 
     return
   end function Ah_Smagorinsky
+  !===========================================
+  subroutine bottom_stress(fieldset, time, i, j, k, taubx, tauby)
+    !---------------------------------------------
+    ! Calculate the bottom stress using a logarithmic profile
+    ! Returns taubx/rho, tauby/rho (stress divided by density)
+    !---------------------------------------------
+    type(t_fieldset), intent(in)  :: fieldset
+    real(rk), intent(in)          :: time
+    real(rk), intent(in)          :: i, j
+    real(rk), intent(in)          :: k
+    real(rk), intent(out)         :: taubx, tauby
+    real(rk)                      :: u, v, h
+    real(rk)                      :: C ! Drag coefficient
+    real(rk), parameter           :: von_Karman = 0.4_rk
+    real(rk), parameter           :: c_drag_min = 0.0025_rk ! Minimum drag coefficient
+    real(rk), allocatable         :: zax(:)
+    real(rk)                      :: level_idx
+
+    dbghead(bottom_stress)
+    debug(i)
+    debug(j)
+    debug(k)
+
+    if (int(k) /= fieldset%zax_bot_idx) call throw_error("physics :: bottom_stress", "Not bottom layer index!")
+
+    level_idx = real(int(k), rk)
+    if (fieldset%bottom_is_nan("U")) level_idx = level_idx + ONE * fieldset%zax_direction()
+    debug(level_idx)
+
+    u = fieldset%get("U", time, i, j, k=level_idx)
+    v = fieldset%get("V", time, i, j, k=level_idx)
+    ! Automatic allocation should happen here!!!
+    zax = fieldset%get_zax(time, int(i), int(j))
+    h = -zax(int(level_idx))
+    C = max((von_Karman**2./((log(h / roughness_height))**2.)), c_drag_min)
+    taubx = -C * sqrt(u**2.+v**2.) * u
+    tauby = -C * sqrt(u**2.+v**2.) * v
+
+    debug(taubx)
+    debug(tauby)
+    dbgtail(bottom_stress)
+    return
+  end subroutine bottom_stress
+  !===========================================
+  real(rk) function bottom_friction_velocity(fieldset, time, i, j, k) result(u_star)
+    !---------------------------------------------
+    ! Calculate the bottom friction velocity u_star from the velocity components
+    ! of the above layer
+    !---------------------------------------------
+    type(t_fieldset), intent(in)  :: fieldset
+    real(rk), intent(in)          :: time
+    real(rk), intent(in)          :: i, j
+    real(rk), intent(in)          :: k
+    real(rk)                      :: taubx, tauby ! Bottom stress
+
+    dbghead(bottom_friction_velocity)
+
+    if (has_bottom_stress) then
+      taubx = fieldset%get("TAUBX", time, i, j)
+      tauby = fieldset%get("TAUBY", time, i, j)
+    else
+      call bottom_stress(fieldset, time, i, j, k, taubx, tauby)
+    end if
+    u_star = (taubx**2.+tauby**2.)**0.25
+
+    debug(u_star)
+    dbgtail(bottom_friction_velocity)
+    return
+  end function bottom_friction_velocity
   !===========================================
   real(rk) function seawater_density_from_temp_and_salt(T, S, Z)
     !---------------------------------------------

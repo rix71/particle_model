@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+#include "particle.h"
 module mod_vertical_motion
   !----------------------------------------------------------------
   ! Calculates the particles' vertical velocity
@@ -8,8 +9,9 @@ module mod_vertical_motion
   use mod_params
   use time_vars, only: dt
   use field_vars, only: density_method => has_density, viscosity_method => has_viscosity
-  use mod_physics, only: seawater_density, seawater_viscosity
+  use mod_physics, only: seawater_density, seawater_viscosity, bottom_friction_velocity
   use mod_particle, only: t_particle
+
   use mod_fieldset, only: t_fieldset
   implicit none
   private
@@ -37,16 +39,26 @@ contains
   end subroutine vertical_velocity
   !===========================================
   real(rk) function resuspension(p, fieldset, time) result(res)
+    !---------------------------------------------
+    ! Gives a settled particle vertical velocity if
+    ! the bottom friction velocity exceeds a certain threshold
+    ! TODO: currently, resuspension_threshold is a namelist parameter,
+    ! perhaps should be calculated as the particles' critical flow velocity.
+    ! Ref: Erosion Behavior of Different Microplastic Particles in Comparison to Natural Sediments
+    !       Kryss Waldschläger and Holger Schüttrumpf
+    !       Environmental Science & Technology 2019 53 (22), 13219-13227
+    !       DOI: 10.1021/acs.est.9b05394
+    !---------------------------------------------
     type(t_particle), intent(in) :: p
     type(t_fieldset), intent(in) :: fieldset
     real(rk), intent(in) :: time
     real(rk) :: i, j, k
-    real(rk) :: u, v
+    real(rk) :: u_star
 
     dbghead(resuspension)
 
     res = ZERO
-    if (p%state /= BOTTOM) then
+    if (p%state /= ST_BOTTOM) then
       dbgtail(resuspension)
       return
     end if
@@ -57,13 +69,13 @@ contains
       j = p%jr0
       k = p%kr0
 
-      u = fieldset%get("U", time, i, j, k); debug(u)
-      v = fieldset%get("V", time, i, j, k); debug(v)
-      debug(resuspension_coeff)
-      res = sqrt(u**2.+v**2.) * resuspension_coeff
-      debug(res)
+      u_star = bottom_friction_velocity(fieldset, time, i, j, k)
+      if (u_star > resuspension_threshold) then
+        res = u_star * resuspension_coeff
+      end if
     end if
 
+    debug(res)
     dbgtail(resuspension)
     return
   end function resuspension
@@ -84,7 +96,7 @@ contains
     dbghead(buoyancy)
 
     res = ZERO
-    if (p%state /= ACTIVE) then
+    if (p%state /= ST_SUSPENDED) then
       dbgtail(buoyancy)
       return
     end if
@@ -120,31 +132,22 @@ contains
     real(rk)             :: w_star    ! Dimensionless settling velocity
     ! real(rk)             ::  ! Density difference
 
-    ; 
     ! kin_visc = mu_env / rho_env ! NOT USING VISCOSITY???
     ! delta_rho = rho_p - rho_env
 
-    ; 
     res = ZERO
-
     d_star = (delta_rho * g * (2.*rad_p)**3.) / (rho_env * (kin_visc**2.)) ! g negative?
     if (d_star < 0.05) then
-
       w_star = 1.74e-4 * (d_star**2)
     else if (d_star > 5.e9) then
-
       w_star = 1000.
     else
-
       w_star = 10.**(-3.76715 + (1.92944 * log10(d_star)) - (0.09815 * log10(d_star)**2.) &
                      - (0.00575 * log10(d_star)**3.) + (0.00056 * log10(d_star)**4.))
     end if
-
     if (delta_rho > ZERO) then
-
       res = -1.0 * ((delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
     else
-
       res = (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
     end if
 

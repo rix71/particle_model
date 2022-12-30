@@ -22,6 +22,7 @@ module mod_field
     logical                   :: set_t1 = .false.
     logical                   :: set_t2 = .false.
     real(rk)                  :: timestep
+    logical                   :: nan_bottom = .false., nan_top = .false.
 
   contains
     private
@@ -36,6 +37,8 @@ module mod_field
     generic           :: time_interp => time_interp_scalar, time_interp_vector, time_interp_matrix
     procedure         :: time_interp_scalar, time_interp_vector, time_interp_matrix
     procedure, public :: get_array_1D
+    procedure, public :: top_is_nan
+    procedure, public :: bottom_is_nan
     final             :: dtor_field
   end type t_field
   !---------------------------------------------
@@ -240,7 +243,7 @@ contains
 !
 !
 
-!       else if (seamask(i, j) == BEACH) then
+!       else if (seamask(i, j) == DOM_BEACH) then
 
 !         f1 = this%data_t1(i, j, k);
 !         f2 = this%data_t2(i, j, k);
@@ -298,7 +301,7 @@ contains
 !
 !
 
-!       else if (seamask(i, j) == BEACH) then
+!       else if (seamask(i, j) == DOM_BEACH) then
 
 !         f1 = this%data_t1(i, j, 1);
 !         f2 = this%data_t2(i, j, 1);
@@ -391,9 +394,10 @@ contains
     return
   end subroutine get_array_1D
   !===========================================
-  subroutine set(this, data)
+  subroutine set(this, data, t_nan, b_nan)
     class(t_field), intent(inout) :: this
     real(rk), intent(in) :: data(this%nx, this%ny, this%nz)
+    logical, optional, intent(in) :: b_nan, t_nan
 
     if (.not. this%set_t1) then
 
@@ -406,6 +410,9 @@ contains
     else
       call throw_error("field :: set", "Fields T1 and T2 already exist!")
     end if
+
+    if (present(b_nan)) this%nan_bottom = b_nan
+    if (present(t_nan)) this%nan_top = t_nan
 
     return
   end subroutine set
@@ -452,6 +459,18 @@ contains
     grad = grad / dx
 
   end function gradient
+  !===========================================
+  logical function top_is_nan(this)
+    class(t_field), intent(in) :: this
+    top_is_nan = this%nan_top
+    return
+  end function top_is_nan
+  !===========================================
+  logical function bottom_is_nan(this)
+    class(t_field), intent(in)::this
+    bottom_is_nan = this%nan_bottom
+    return
+  end function bottom_is_nan
   !===========================================
   subroutine swap(this)
     class(t_field), intent(inout) :: this
