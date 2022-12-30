@@ -6,5 +6,6 @@
 - [x] Resuspension tests
 - [ ] Biofouling tests
 - [ ] Restart tests
+- [ ] Add run scripts
 
 More to-do in TODO.txt
