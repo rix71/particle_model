@@ -155,8 +155,8 @@ contains
     character(len=LEN_CHAR_L), intent(in) :: file_name
 
     call nc_initialise(file_name)
-    call nc_add_dimension(file_name, "particle", nc_p_dimid)
     call nc_add_dimension(file_name, "time", nc_t_dimid)
+    call nc_add_dimension(file_name, "particle", nc_p_dimid)
 
     call nc_add_variable(file_name, "time", "float", 1, [nc_t_dimid])
     call nc_add_attr(file_name, "time", "units", "seconds since 1900-01-01 00:00:00")
