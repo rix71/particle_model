@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+# ---------------------
+# ! Uses a LOT^3 of memory
+# TODO: Fix the above
+import sys
+import numpy as np
+import xarray as xr
+import matplotlib.pyplot as plt
+try:
+    from colorama import Fore, Style
+except ImportError:
+    Fore = Style = type("Colorama", (object,), {"GREEN": "", "YELLOW": "", "RESET_ALL": ""})
+
+
+def print_heads(dfs):
+    for df in dfs:
+        print("--------------------")
+        print(df)
+
+
+def pad_array(arr, size, vname):
+    """Make an empty array of a given size and fill it with the values of another array.
+    Fills from index 0 to the end of the (2D) array. If the new array is larger, the remaining
+    values are filled with NaN.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        2D array of values to be resized
+    size : np.ndarray or list or tuple
+        a 2D array or tuple (n_time, n_particles) with the new dimensions
+
+    Returns
+    -------
+    np.ndarray
+        2D array with the new dimensions
+    """
+    if (arr.shape == size):
+        return arr
+    print(f"{Fore.GREEN}++{Style.RESET_ALL} Resizing {vname} from {arr.shape} to {size}...")
+    if (arr.ndim == 1):
+        out = np.full(size, np.nan)
+        out[:arr.shape[0]] = arr
+        return out
+    elif (arr.ndim == 2):
+        out = np.full(size, np.nan)
+        out[:arr.shape[0], :arr.shape[1]] = arr
+        return out
+    else:
+        raise ValueError("Array must be 1D or 2D")
+
+
+def resize_dataset(df, size):
+    """Resize dataset to a given size
+
+    Parameters
+    ----------
+    df : xarray.Dataset
+        Dataset from particle model output file
+    size : np.ndarray or list or tuple
+        a 2D array or tuple (n_time, n_particles) with the new dimensions
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset with the new dimensions
+    """
+    if (df.time.size, df.particle.size) == size:
+        return df
+    dim_size = {}
+    for vname in df.data_vars:
+        dim_size[vname] = size if df[vname].dims == (
+            "time", "particle") else (size[1],)
+    return xr.Dataset(
+        data_vars={
+            vname: (df[vname].dims, pad_array(df[vname].values, dim_size[vname], vname), df[vname].attrs) for vname in df.data_vars},
+        coords={"time": df.time.values})
+
+
+def main(argv):
+    files = argv[:-1]
+    print("Files to merge: \n", "\n ".join(files))
+    out = argv[-1]
+
+    dfs = [xr.open_dataset(f) for f in files]
+
+    # Sort by time (starting time of each file)
+    b_times = np.array([df.time.values[[0, -1]] for df in dfs])
+    time_order = np.argsort(b_times[:, 0])
+    b_times = b_times[time_order]
+    files = np.array(files)[time_order]
+    dfs = [dfs[i] for i in time_order]
+
+    # Check if times overlap
+    for i in range(len(b_times) - 1):
+        if b_times[i, 1] > b_times[i + 1, 0]:
+            # Crop overlapping times
+            print(f"{Fore.YELLOW}Times overlap, cropping...{Style.RESET_ALL}")
+            print("File {} ends at {} and file {} starts at {}".format(
+                files[i], b_times[i, 1], files[i + 1], b_times[i + 1, 0]))
+            idx = np.squeeze(
+                np.where(dfs[i].time.values >= b_times[i + 1, 0]))[0]
+            dfs[i] = dfs[i].isel(time=slice(0, idx))
+
+    # Get dimensions
+    s_t_dim = [df.time.size for df in dfs]
+    s_p_dim = [df.particle.size for df in dfs]
+    # * Time dimension is concatenated, particle dimension should be extended to the maximum number of particles
+    s_t_dim_merge = sum(s_t_dim)  # ! Sum of time dimensions
+    s_p_dim_merge = max(s_p_dim)  # ! Maximum number of particles
+    print(f"New dimensions: {s_t_dim_merge} x {s_p_dim_merge}")
+
+    # * Copy id from last file to be overwritten
+    # ! Takes the minimum, since missing values are 9.96920997e+36, not NaN.
+    # ! This needs to be fixed in the model code, although it's not a big deal
+    # ! as long as the real ids are less than 9.96920997e+36 (probably)
+    print(f"{Fore.GREEN}+{Style.RESET_ALL} Merging id first...")
+    id_copy = np.nanmin(
+        [pad_array(df.id.values, (s_p_dim_merge,), "id") for df in dfs], axis=0)
+
+    for i in range(len(dfs)):
+        print(f"{Fore.GREEN}+{Style.RESET_ALL} Resizing file {files[i]}...")
+        dfs[i] = resize_dataset(dfs[i], (dfs[i].time.size, s_p_dim_merge))
+
+    # Merge datasets
+    print("Merging files...")
+    dfs = xr.concat(dfs, dim="time")
+    # * Overwrite id to make sure its dimension is correct ((n_particles) instead of (n_time, n_particles))
+    # TODO: Maybe this can be done during concatenation
+    dfs['id'] = xr.DataArray(
+        data=id_copy,
+        dims=["particle"],
+        attrs=dfs.id.attrs
+    )
+
+    # Disable FillValue
+    encoding = {var: {'_FillValue': None} for var in dfs.keys()}
+    # * dfs.keys() or dfs.data_vars don't include time
+    encoding = {**encoding, **
+                {'time': {'_FillValue': None, 'dtype': 'float64'}}}
+    # * xarray reads state as float64, but it should be int32
+    encoding["state"]["dtype"] = "int32"
+
+    # Save merged data
+    print("Saving merged data...")
+    dfs.to_netcdf(out, encoding=encoding)
+    print("Merged data saved to {}".format(out))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
