@@ -24,6 +24,7 @@ module mod_biofouling
   use mod_particle, only: t_particle
   use mod_fieldset, only: t_fieldset
   use mod_datetime, only: t_datetime
+  ! ? Light intensity and brownian diffusion are used only in this module. Is it necessary to have them in the physics module? 
   use mod_physics, only: seawater_viscosity, seawater_density, diffusion_brown, light_intensity
   use time_vars, only: dt
   use field_vars, only: viscosity_method => has_viscosity, density_method => has_density
