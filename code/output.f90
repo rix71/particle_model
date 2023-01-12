@@ -7,7 +7,7 @@ module mod_output
   use mod_precdefs
   use mod_errors
   use mod_particle
-  use run_params, only: runid
+  use run_params, only: runid, nmlfilename
   use mod_params, only: run_3d
   use mod_particle_vars, only: particles
   use time_vars, only: theDate, nTimes, dt
@@ -39,16 +39,16 @@ module mod_output
 contains
   !===========================================
   subroutine init_output
-
     logical :: dirExists
 
     FMT1, "======== Init output ========"
 
-    open (NMLFILE, file=NMLFILENAME, action='read', iostat=ierr)
-    if (ierr .ne. 0) call throw_error("output :: init_output", "Failed to open "//NMLFILENAME, ierr)
-    read (NMLFILE, nml=output_vars)
+    open (NMLFILE, file=trim(nmlfilename), action='read', iostat=ierr)
+    if (ierr .ne. 0) call throw_error("output :: init_output", "Failed to open "//trim(nmlfilename), ierr)
+    read (NMLFILE, nml=output_vars, iostat=ierr)
+    if (ierr .ne. 0) call throw_error("output :: init_output", "Failed to read "//trim(nmlfilename), ierr)
     close (NMLFILE, iostat=ierr)
-    if (ierr .ne. 0) call throw_error("output :: init_output", "Failed to close "//NMLFILENAME, ierr)
+    if (ierr .ne. 0) call throw_error("output :: init_output", "Failed to close "//trim(nmlfilename), ierr)
 
     inquire (file=trim(outDir), exist=dirExists)
     if (.not. dirExists) then

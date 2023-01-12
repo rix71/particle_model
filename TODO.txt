@@ -1,12 +1,4 @@
-Updated: Mon Jan  9 16:25:50 EET 2023
-code/biofouling_kooi.f90-110-
-code/biofouling_kooi.f90-111-    T = fieldset%get("TEMP", time, p%ir0, p%jr0, p%kr0)
-code/biofouling_kooi.f90-112-
-code/biofouling_kooi.f90:113:    ! TODO: Consider making a function for this (seawater_dyn_viscosity)
-code/biofouling_kooi.f90-114-    mu = seawater_viscosity(fieldset, time, p%ir0, p%jr0, p%kr0, viscosity_method) / &
-code/biofouling_kooi.f90-115-         seawater_density(fieldset, time, p%ir0, p%jr0, p%kr0, density_method, p%depth0)
-code/biofouling_kooi.f90-116-
---
+Updated: Thu Jan 12 10:00:13 EET 2023
 code/datetime.f90-67-  type(t_datetime) function ctor_datetime(date_str) result(res)
 code/datetime.f90-68-    !---------------------------------------------
 code/datetime.f90-69-    ! Constructor for datetime
@@ -39,13 +31,13 @@ code/datetime.f90-292-    !---------------------------------------------
 code/datetime.f90-293-    type(t_datetime), intent(in) :: start, end
 code/datetime.f90-294-    real(rk)                     :: start_num, end_num
 --
-code/domain.f90-90-    call nc_read_real_2d(trim(TOPOFILE), trim(bathy), nx, ny, d%depdata)
-code/domain.f90-91-
-code/domain.f90-92-    !---------------------------------------------
-code/domain.f90:93:    ! TODO: Seamask could have another value (4) to represent boundaries.
-code/domain.f90-94-    !       Boundary should have a thickness!
-code/domain.f90-95-    FMT2, "Making seamask"
-code/domain.f90-96-    do ii = 2, nx - 1
+code/domain.f90-87-    call nc_read_real_2d(trim(TOPOFILE), trim(bathy), nx, ny, d%depdata)
+code/domain.f90-88-
+code/domain.f90-89-    !---------------------------------------------
+code/domain.f90:90:    ! TODO: Seamask could have another value (4) to represent boundaries.
+code/domain.f90-91-    !       Boundary should have a thickness!
+code/domain.f90-92-    FMT2, "Making seamask"
+code/domain.f90-93-    do ii = 2, nx - 1
 --
 code/fieldset.f90-479-    ! Get a list of directories or files that contain the data
 code/fieldset.f90-480-    ! The files should be named so that ls command would give them
@@ -74,21 +66,21 @@ code/fieldset.f90-619-    ! [date] 00:00:00 or [date] 00:00:10 (at least in this
 code/fieldset.f90-620-    ! Compare every time?
 code/fieldset.f90-621-    ! Some validity check would be nice
 --
-code/init.f90-168-  subroutine init_fieldset
-code/init.f90-169-    !---------------------------------------------
-code/init.f90-170-    ! Allocate arrays for current data.
-code/init.f90:171:    ! TODO: Right now it is assumed that all subdomains
-code/init.f90-172-    !       are the same size. Also it is assumed that subdomains
-code/init.f90-173-    !       exist at all. There should be a switch (e.g. has_subdomains).
-code/init.f90-174-    !       This also changes allocation.
+code/init.f90-169-  subroutine init_fieldset
+code/init.f90-170-    !---------------------------------------------
+code/init.f90-171-    ! Allocate arrays for current data.
+code/init.f90:172:    ! TODO: Right now it is assumed that all subdomains
+code/init.f90-173-    !       are the same size. Also it is assumed that subdomains
+code/init.f90-174-    !       exist at all. There should be a switch (e.g. has_subdomains).
+code/init.f90-175-    !       This also changes allocation.
 --
-code/init.f90-245-
-code/init.f90-246-      if (nc_var_exists(trim(filename), trim(elevvarname))) then
-code/init.f90-247-        call fieldset%add_field("ELEV", elevvarname, is_2d=.true.)
-code/init.f90:248:        ! TODO: set_elev for faster lookup
-code/init.f90-249-        field_count = field_count + 1
-code/init.f90-250-      end if
-code/init.f90-251-    end if
+code/init.f90-246-
+code/init.f90-247-      if (nc_var_exists(trim(filename), trim(elevvarname))) then
+code/init.f90-248-        call fieldset%add_field("ELEV", elevvarname, is_2d=.true.)
+code/init.f90:249:        ! TODO: set_elev for faster lookup
+code/init.f90-250-        field_count = field_count + 1
+code/init.f90-251-      end if
+code/init.f90-252-    end if
 --
 code/interp.f90-46-    !      c_k
 code/interp.f90-47-    !        1 - bottom point along y-axis
@@ -98,13 +90,21 @@ code/interp.f90-50-    !---------------------------------------------
 code/interp.f90-51-
 code/interp.f90-52-    real(rk), intent(in)  :: x1, x2
 --
-code/loop.f90-133-        !---------------------------------------------
-code/loop.f90-134-        ! Write snapshot
-code/loop.f90-135-        ! Cannot use this with openMP
-code/loop.f90:136:        ! TODO: parallel i/o
-code/loop.f90-137-        if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
-code/loop.f90-138-          call write_data_snapshot(particles(ipart), ipart)
-code/loop.f90-139-        end if
+code/loop.f90-137-        !---------------------------------------------
+code/loop.f90-138-        ! Write snapshot
+code/loop.f90-139-        ! Cannot use this with openMP
+code/loop.f90:140:        ! TODO: parallel i/o
+code/loop.f90-141-        if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
+code/loop.f90-142-          call write_data_snapshot(particles(ipart), ipart)
+code/loop.f90-143-        end if
+--
+code/main.f90-6-  use run_params, only: runid
+code/main.f90-7-#endif
+code/main.f90-8-  use run_params, only: dry_run, nmlfilename
+code/main.f90:9:! TODO: General biofouling flag
+code/main.f90-10-#if (defined(BIOFOULING_KOOI) || defined(BIOFOULING_TSIARAS) || defined(BIOFOULING_SIMPLE))
+code/main.f90-11-  use run_params, only: biofouling_nmlfilename
+code/main.f90-12-#endif
 --
 code/output.f90-209-  subroutine write_data(nwrite)
 code/output.f90-210-    !---------------------------------------------
@@ -114,21 +114,21 @@ code/output.f90-213-    !---------------------------------------------
 code/output.f90-214-
 code/output.f90-215-    integer, intent(in) :: nwrite
 --
-code/particle.f90-249-  !===========================================
-code/particle.f90-250-  subroutine check_depth(this, fieldset, t)
-code/particle.f90-251-    !---------------------------------------------
-code/particle.f90:252:    ! TODO: Interpolation for bathymetry?
+code/particle.f90-251-  !===========================================
+code/particle.f90-252-  subroutine check_depth(this, fieldset, t)
 code/particle.f90-253-    !---------------------------------------------
-code/particle.f90-254-
-code/particle.f90-255-    class(t_particle), intent(inout) :: this
+code/particle.f90:254:    ! TODO: Interpolation for bathymetry?
+code/particle.f90-255-    !---------------------------------------------
+code/particle.f90-256-
+code/particle.f90-257-    class(t_particle), intent(inout) :: this
 --
-code/particle.f90-759-  ! This module includes variables related to particles:
-code/particle.f90-760-  ! - number of particles, initial locations or something (maybe)...
-code/particle.f90-761-  ! - anything else?
-code/particle.f90:762:  ! TODO: Initial coordinates from netCDF
-code/particle.f90-763-  !----------------------------------------------------------------
-code/particle.f90-764-  use mod_precdefs
-code/particle.f90-765-  use mod_errors
+code/particle.f90-761-  ! This module includes variables related to particles:
+code/particle.f90-762-  ! - number of particles, initial locations or something (maybe)...
+code/particle.f90-763-  ! - anything else?
+code/particle.f90:764:  ! TODO: Initial coordinates from netCDF
+code/particle.f90-765-  !----------------------------------------------------------------
+code/particle.f90-766-  use mod_precdefs
+code/particle.f90-767-  use mod_errors
 --
 code/physics.f90-6-module mod_physics
 code/physics.f90-7-  !----------------------------------------------------------------
@@ -138,13 +138,13 @@ code/physics.f90-10-  ! - drag
 code/physics.f90-11-  !----------------------------------------------------------------
 code/physics.f90-12-  use mod_errors
 --
-code/vars.f90-15-module mod_params
-code/vars.f90-16-  !----------------------------------------------------------------
-code/vars.f90-17-  ! This includes the model parameters/constants
-code/vars.f90:18:  ! TODO (later): Diffusion? Biofouling? ...?
-code/vars.f90-19-  !   viscosity and density defaults in namelist?
-code/vars.f90-20-  !----------------------------------------------------------------
-code/vars.f90-21-  use mod_precdefs
+code/vars.f90-17-module mod_params
+code/vars.f90-18-  !----------------------------------------------------------------
+code/vars.f90-19-  ! This includes the model parameters/constants
+code/vars.f90:20:  ! TODO (later): Diffusion? Biofouling? ...?
+code/vars.f90-21-  !   viscosity and density defaults in namelist?
+code/vars.f90-22-  !----------------------------------------------------------------
+code/vars.f90-23-  use mod_precdefs
 --
 code/vertical_motion.f90-42-    !---------------------------------------------
 code/vertical_motion.f90-43-    ! Gives a settled particle vertical velocity if

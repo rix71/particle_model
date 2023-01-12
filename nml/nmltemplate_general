@@ -1,0 +1,172 @@
+!===============================
+! Run parameters
+!-------------------------------
+! runid        - [char] Name of the run
+! dry_run      - [bool] Start loop
+! restart      - [bool] Seed particles from restart file
+! restart_path - [char] Path to restart file
+!===============================
+&run_params
+  runid = 'exp01'
+  dry_run = .false.
+  restart = .false.
+  restart_path = './'
+/
+!===============================
+! Physical parameters
+!-------------------------------
+! do_diffusion           - [bool]  Diffuse particles if True
+! do_velocity            - [bool]  Calculate particles' own velocity (True)
+!                                  or advect with current speed (False)
+! run_3d                 - [bool]  Do 3D simulation
+! advection_method       - [int]   Advection scheme
+!                                  0 - no advection
+!                                  1 - explicit Euler
+!                                  2 - RK2
+! diffusion_hor_const    - [float] Horisontal diffusion constant
+! diffusion_vert_const   - [float] Vertical diffusion constant
+! Cm_smagorinsky         - [float] Empirical parameter in Smagorinsky 
+! resuspension_coeff     - [float] Resuspension coefficient
+! resuspension_threshold - [float] Critical bottom friction velocity [m/s]
+! roughness_height       - [float] Parameter z0 to calculate the bottom friction velocity
+!===============================
+&params
+  do_diffusion = .false.
+  do_velocity = .false.
+  do_biofouling = .false.
+  run_3d = .false.
+  advection_method = 2
+  diffusion_hor_const = 0.01
+  diffusion_vert_const = 0.0001
+  Cm_smagorinsky = 0.2
+  resuspension_coeff = 0.5
+  resuspension_threshold = 0.2
+  roughness_height = 0.002
+/
+!===============================
+! Domain variables
+!-------------------------------
+! topofile     - [char] Topography file
+! bathyvarname - [char] Name of bathymetry variable in topofile
+! lonvarname   - [char] Name of longitude variable in topofile
+! latvarname   - [char] Name of latitude variable in topofile
+! nx           - [int]  Number of x-points
+! ny           - [int]  Number of y-points
+!===============================
+&domain_vars
+  topofile = 'topo.nc'
+  bathyvarname = 'bathymetry'
+  lonvarname = 'lon'
+  latvarname = 'lat'
+  nx = 1557
+  ny = 890
+/
+!===============================
+! Particle variables
+!-------------------------------
+! inputstep     - [int]   Interval at which particles will be released
+! init_method   - [int]   Particle initialisation method
+!                         1 - initialise from text file
+!                         2 - initialise from netCDF
+! coordfile     - [char]  Particle initialisation file
+! max_age       - [float] Life time of (all) particles in seconds
+!                         < 0 - immortality
+! kill_beached  - [bool]  Set beached particle as inactive
+! kill_boundary - [bool]  Set particle on boundary as inactive
+!===============================
+&particle_vars
+  inputstep = 1800
+  particle_init_method = 1
+  coordfile = 'particle_coords.dat'
+  max_age = -1
+  kill_beached = .true.
+  kill_boundary = .true.
+/
+!===============================
+! Time variables
+!-------------------------------
+! run_start - [char]  Start of simulation
+! run_end   - [char]  End of simulation
+! dt        - [float] Time step [s]
+!===============================
+&time_vars
+  run_start = '2017-07-29 03:00:00'
+  run_end = '2017-08-10 03:00:00'
+  dt = 600.0
+/
+!===============================
+! Field variables
+!-------------------------------
+! GETMPATH       - [char] Path to GETM data
+! pmapfile       - [char] Parallel setup file
+!                         only needed if has_subdomains=.true.
+! has_subdomains - [bool] Data in multiple files or one file
+!                         .true.  - search for directories (named as start dates e.g. 20190131) "GETMPATH/*/"
+!                         .false. - assume all files are in one directory and search for file names "GETMPATH/[prefix]*[suffix]*.nc"
+! file_prefix    - [char] Before processor number
+! file_suffix    - [char] After processor number
+! nlevels        - [int]  Number of vertical levels
+! uvarname       - [char] Name of current x-component variable in GETM data
+! vvarname       - [char] Name of current y-component variable in GETM data
+! wvarname       - [char] Name of current z-component variable in GETM data
+! zaxvarname     - [char] Name of vertical layer depth variable in GETM data
+! elevvarname    - [char] Name of elevation variable in GETM data
+! rhovarname     - [char] Name of density variable in GETM data
+! tempvarname    - [char] Name of temperature variable in GETM data
+! saltvarname    - [char] Name of salinity variable in GETM data
+! viscvarname    - [char] Name of viscosity variable in GETM data
+! taubxvarname   - [char] Name of bottom stress x-component in GETM data
+! taubyvarname   - [char] Name of bottom stress y-component in GETM data
+! zax_style      - [int]  Vertical coordinate values 
+!                         1 - depth values 
+!                         2 - layer thickness
+! zax_direction  - [int]  Direction of z-axis
+!                         > 0 - positive up
+!                         < 0 - positive down
+!                         It is also assumed that the layers are numbered in the same direction 
+!                         (i.e. for > 0 bottom layer is at k=1 and for < 0 bottom layer is at k=nlevels)
+!===============================
+&field_vars
+  GETMPATH = './data'
+  pmapfile = 'par_setup.dat'
+  has_subdomains = .true.
+  file_prefix = ''
+  file_suffix = ''
+  nlevels = 1
+  uvarname = 'velx3d'
+  vvarname = 'vely3d'
+  wvarname = 'w'
+  zaxvarname = 'zcn'
+  elevvarname = ''
+  rhovarname = 'rho'
+  tempvarname = 'temp'
+  saltvarname = 'salt'
+  viscvarname = 'nuh'
+  taubxvarname = 'taubx'
+  taubyvarname = 'tauby'
+  zax_style = 1
+  zax_direction = 1
+/
+!===============================
+! Output variables
+!-------------------------------
+! outDir                 - [char]  Where to save the data
+! outputstep             - [int]   How often to save the data
+! restartstep            - [int]   How often to save restart files
+!                                  < 0 - never save
+!                                    0 - save at end of simulation
+!                                  > 0 - interval in time steps
+! snap_interval          - [float] Snapshot interval (in seconds)
+! write_all_particles    - [bool]  Write all (active and inactive) particles
+! write_active_particles - [bool]  Write only active particles
+! write_snapshot         - [bool]  Save a particle by age (in intervals of snap_interval)
+!===============================
+&output_vars
+  outDir = './'
+  outputstep = 1
+  restartstep = 0
+  snap_interval = 86400.
+  write_all_particles = .false.
+  write_active_particles = .true.
+  write_snapshot = .true.
+/

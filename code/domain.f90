@@ -1,8 +1,5 @@
 #include "cppdefs.h"
 #include "field.h"
-#if (defined(SNAP_TO_BOUNDS) && defined(DEBUG))
-#warning SNAP_TO_BOUNDS defined, indices can be modified
-#endif
 module mod_domain
   !----------------------------------------------------------------
   ! Initialise domain and seamask

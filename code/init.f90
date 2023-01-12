@@ -8,7 +8,7 @@ module mod_initialise
   !----------------------------------------------------------------
   use mod_precdefs
   use mod_errors
-  use run_params, only: runid, dry_run, restart, restart_path
+  use run_params, only: runid, dry_run, restart, restart_path, nmlfilename
   use mod_fieldset
   use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, has_density, has_viscosity, has_bottom_stress, &
                         file_prefix, file_suffix, nlevels, &
@@ -26,6 +26,7 @@ module mod_initialise
   use mod_biofouling, only: init_biofouling
   use mod_params, only: do_diffusion, do_velocity, do_biofouling, advection_method, &
      diffusion_hor_const, diffusion_vert_const, run_3d, Cm_smagorinsky, resuspension_coeff, resuspension_threshold, roughness_height
+  use mod_output, only: init_output
   implicit none
   private
   !===================================================
@@ -42,15 +43,15 @@ contains
     !---------------------------------------------
     namelist /run_params/ runid, dry_run, restart, restart_path
 
-    open (NMLFILE, file=NMLFILENAME, action='read', iostat=ierr)
-    if (ierr .ne. 0) call throw_error('initialise :: init_run', "Failed to open "//NMLFILENAME, ierr)
+    open (NMLFILE, file=trim(nmlfilename), action='read', iostat=ierr)
+    if (ierr .ne. 0) call throw_error('initialise :: init_run', "Failed to open "//trim(nmlfilename), ierr)
     read (NMLFILE, nml=run_params)
     close (NMLFILE, iostat=ierr)
-    if (ierr .ne. 0) call throw_error('initialise :: init_run', "Failed to close "//NMLFILENAME, ierr)
+    if (ierr .ne. 0) call throw_error('initialise :: init_run', "Failed to close "//trim(nmlfilename), ierr)
 
   end subroutine init_run
   !===========================================
-  subroutine init_namelist
+  subroutine init_namelist()
     !---------------------------------------------
     ! Namelists
     !---------------------------------------------
@@ -65,15 +66,15 @@ contains
 
     FMT1, "======== Init namelist ========"
 
-    open (NMLFILE, file=NMLFILENAME, action='read', iostat=ierr)
-    if (ierr .ne. 0) call throw_error('initialise :: init_namelist', "Failed to open "//NMLFILENAME, ierr)
+    open (NMLFILE, file=trim(nmlfilename), action='read', iostat=ierr)
+    if (ierr .ne. 0) call throw_error('initialise :: init_namelist', "Failed to open "//trim(nmlfilename), ierr)
     read (NMLFILE, nml=params, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'params' namelist", ierr)
     read (NMLFILE, nml=domain_vars, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'domain_vars' namelist", ierr)
     read (NMLFILE, nml=particle_vars, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'particle_vars' namelist", ierr)
     read (NMLFILE, nml=time_vars, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'time_vars' namelist", ierr)
     read (NMLFILE, nml=field_vars, iostat=ierr); if (ierr .ne. 0) call throw_error("initialise :: init_namelist", "Could not read 'field_vars' namelist", ierr)
     close (NMLFILE, iostat=ierr)
-    if (ierr .ne. 0) call throw_error('initialise :: init_namelist', "Failed to close "//NMLFILENAME, ierr)
+    if (ierr .ne. 0) call throw_error('initialise :: init_namelist', "Failed to close "//trim(nmlfilename), ierr)
 
     FMT2, LINE
     FMT2, "&params"
@@ -292,7 +293,7 @@ contains
 
     !---------------------------------------------
     if (do_biofouling) then
-      call init_biofouling(fieldset, filename)
+      call init_biofouling(fieldset)
     end if
     !---------------------------------------------
     ! if (has_subdomains) call fieldset%init_proc_mask()
@@ -313,6 +314,7 @@ contains
     call init_time                     ! init.f90
     call init_fieldset                 ! init.f90
     call init_particles
+    call init_output                   ! output.f90
 
   end subroutine init_model
 

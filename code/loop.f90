@@ -110,7 +110,11 @@ contains
           ! - do advection
           call advect(particles(ipart), fieldset, time, advection_method, run_3d)
           ! - do biofouling
+#ifdef BIOFOULING_KOOI
           if (do_biofouling) call biofouling(particles(ipart), fieldset, time, theDate)
+#else
+          if (do_biofouling) call biofouling(particles(ipart), fieldset, time)
+#endif
           ! - do Kooi vertical velocity
           if (do_velocity .and. run_3d) call vertical_velocity(particles(ipart), fieldset, time)
           ! - do diffusion

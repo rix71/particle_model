@@ -182,9 +182,12 @@ contains
     taubx = -C * sqrt(u**2.+v**2.) * u
     tauby = -C * sqrt(u**2.+v**2.) * v
 
+#define MT 0
+#if MT
     debug(taubx)
     debug(tauby)
     dbgtail(bottom_stress)
+#endif
     return
   end subroutine bottom_stress
   !===========================================

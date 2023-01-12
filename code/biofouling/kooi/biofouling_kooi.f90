@@ -20,11 +20,12 @@ module mod_biofouling
   !----------------------------------------------------------------
   use mod_precdefs
   use mod_errors
+  use run_params, only: biofouling_nmlfilename
   use mod_params, only: pi
   use mod_particle, only: t_particle
   use mod_fieldset, only: t_fieldset
   use mod_datetime, only: t_datetime
-  ! ? Light intensity and brownian diffusion are used only in this module. Is it necessary to have them in the physics module? 
+  ! ? Light intensity and brownian diffusion are used only in this module. Is it necessary to have them in the physics module?
   use mod_physics, only: seawater_viscosity, seawater_density, diffusion_brown, light_intensity
   use time_vars, only: dt
   use field_vars, only: viscosity_method => has_viscosity, density_method => has_density
@@ -46,9 +47,8 @@ module mod_biofouling
               T_min, T_max, T_opt ! Minimum, maximum and optimal temperature to sustain algae growth
   !---------------------------------------------
   interface
-    module subroutine set_biofouling_fields(fieldset, filename)
+    module subroutine set_biofouling_fields(fieldset)
       type(t_fieldset), intent(inout)       :: fieldset
-      character(len=LEN_CHAR_L), intent(in) :: filename
     end subroutine set_biofouling_fields
     !---------------------------------------------
     module function get_alg_ambient(fieldset, time, i, j, k) result(res)
@@ -63,20 +63,20 @@ module mod_biofouling
   !===================================================
 contains
   !===========================================
-  subroutine init_biofouling(fieldset, filename)
+  subroutine init_biofouling(fieldset)
     type(t_fieldset), intent(inout)       :: fieldset
-    character(len=LEN_CHAR_L), intent(in) :: filename
     namelist /biofouling/ vol_algal, rho_bf, gamma, &
       growth_rate_max, q10, r20, mortality_rate, &
       slope_init, I_opt, T_min, T_max, T_opt
 
     FMT1, "======== Init biofouling ========"
 
-    open (NMLFILE, file=NMLFILENAME, action='read', iostat=ierr)
-    if (ierr .ne. 0) call throw_error('biofouling :: init_biofouling', "Failed to open "//NMLFILENAME, ierr)
-    read (NMLFILE, nml=biofouling)
+    open (NMLFILE, file=trim(biofouling_nmlfilename), action='read', iostat=ierr)
+    if (ierr .ne. 0) call throw_error('biofouling :: init_biofouling', "Failed to open "//trim(biofouling_nmlfilename), ierr)
+    read (NMLFILE, nml=biofouling, iostat=ierr)
+    if (ierr .ne. 0) call throw_error('biofouling :: init_biofouling', "Failed to read "//trim(biofouling_nmlfilename), ierr)
     close (NMLFILE, iostat=ierr)
-    if (ierr .ne. 0) call throw_error('biofouling :: init_biofouling', "Failed to close "//NMLFILENAME, ierr)
+    if (ierr .ne. 0) call throw_error('biofouling :: init_biofouling', "Failed to close "//trim(biofouling_nmlfilename), ierr)
 
     FMT2, LINE
     FMT2, "&biofouling"
@@ -93,7 +93,7 @@ contains
     FMT3, var2val(T_max)
     FMT3, var2val(T_opt)
 
-    call set_biofouling_fields(fieldset, filename)
+    call set_biofouling_fields(fieldset)
 
     return
   end subroutine init_biofouling

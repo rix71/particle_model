@@ -33,33 +33,36 @@ FFLAGS += -DPARTICLE_SNAP_SEALVL
 
 # Land interaction methods
 # FFLAGS += -DPARTICLE_BOUNCE
-FFLAGS += -DPARTICLE_REDIRECT
-# FFLAGS += -DPARTICLE_BEACH_IMMEDIATELY
+# FFLAGS += -DPARTICLE_REDIRECT
+FFLAGS += -DPARTICLE_BEACH_IMMEDIATELY
 
 # Compile and run the postprocessing module
 # FFLAGS += -DPOSTPROCESS
 
 # Use OpenMP
-FFLAGS += -DUSE_OMP -fopenmp
+# FFLAGS += -DUSE_OMP -fopenmp
 
 #--------------------------------------------------
 # Biofouling model (Kooi, Tsiaras or Simple)
-BF_MODEL = Kooi
+BF_MODEL = Simple
 
 ifeq ($(BF_MODEL), Kooi)
 	FFLAGS += -DBIOFOULING_KOOI
 	BF_PATH = biofouling/kooi
+	# BF_FILES = $(wildcard $(BF_PATH)/*.f90)
+	BF_FILES = $(BF_PATH)/biofouling_kooi.f90 $(BF_PATH)/biofouling_kooi_funcs.f90
 else ifeq ($(BF_MODEL), Tsiaras)
 	FFLAGS += -DBIOFOULING_TSIARAS
 	BF_PATH = biofouling/tsiaras
+	BF_FILES = $(wildcard $(BF_PATH)/*.f90)
 else ifeq ($(BF_MODEL), Simple)
 	FFLAGS += -DBIOFOULING_SIMPLE
 	BF_PATH = biofouling/simple
+	# BF_FILES = $(wildcard $(BF_PATH)/*.f90)
+	BF_FILES = $(BF_PATH)/biofouling_simple.f90 $(BF_PATH)/biofouling_simple_funcs.f90
 else
 	$(error "Unknown biofouling model")
 endif
-
-BF_FILES = $(wildcard $(BF_PATH)/*.f90)
 
 #--------------------------------------------------
 # OBJ=./obj
@@ -100,7 +103,7 @@ define fc-command
 $(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 endef
 #--------------------------------------------------
-PROGRAM = $(BIN)/main_test
+PROGRAM = $(BIN)/main
 
 all: $(PROGRAM)
 

@@ -1,0 +1,30 @@
+!===============================
+! Biofouling variables (Kooi (2017) model)
+!-------------------------------
+! vol_algal       - [float] Volume of one algal cell [m3]
+! rho_bf          - [float] Density of biofilm [kg/m3]
+! gamma           - [float] Shear rate [1/s]
+! growth_rate_max - [float] Maximum growth rate of algae under optimal conditions [1/s]
+! mortality_rate  - [float] Mortality rate [1/s]
+! r20             - [float] Respiration rate [1/s]
+! q10             - [float] Coefficient of temperature dependency of respiration
+! slope_init      - [float] Initial slope of optimal growth [1/s]
+! I_opt           - [float] Optimal light intensity for algae growth [muE/m2/s]
+! T_min           - [float] Minimum temperature to sustain algae growth [oC]
+! T_max           - [float] Maximum temperature to sustain algae growth [oC]
+! T_opt           - [float] Optimal temperature to sustain algae growth [oC]
+!===============================
+&biofouling
+  vol_algal = 2.0e-16
+  rho_bf = 1388.
+  gamma = 2.
+  growth_rate_max = 2.1412e-5
+  q10 = 2.
+  r20 = 1.1574e-6
+  mortality_rate = 4.5138e-6
+  slope_init = 5.787e-7
+  I_opt = 2.75e2
+  T_min = 5.2
+  T_max = 45.8
+  T_opt = 38.7
+/

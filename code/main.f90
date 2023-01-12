@@ -5,10 +5,14 @@ program main
 #ifdef WRITESTDOUT
   use run_params, only: runid
 #endif
-  use run_params, only: dry_run
+  use run_params, only: dry_run, nmlfilename
+! TODO: General biofouling flag
+#if (defined(BIOFOULING_KOOI) || defined(BIOFOULING_TSIARAS) || defined(BIOFOULING_SIMPLE))
+  use run_params, only: biofouling_nmlfilename
+#endif
   use mod_initialise, only: init_run, init_model
   use mod_loop, only: loop
-  use mod_output, only: init_output
+  ! use mod_output, only: init_output
 #ifdef POSTPROCESS
   use mod_postprocessing, only: postprocess
 #endif
@@ -20,7 +24,7 @@ program main
   open (STDOUT, file=trim(runid)//".stdout")
 #endif
   call init_model
-  call init_output
+  ! call init_output
   !---------------------------------------------
   if (.not. dry_run) then
     call loop
@@ -52,6 +56,14 @@ contains
       case ('-c', '--compile')
         call print_compile_info()
         stop
+      case ('-nml', '--namelist')
+        call getarg(i + 1, nmlfilename)
+        i = i + 1
+#if (defined(BIOFOULING_KOOI) || defined(BIOFOULING_TSIARAS) || defined(BIOFOULING_SIMPLE))
+      case ('-bnml', '--biofouling-namelist')
+        call getarg(i + 1, biofouling_nmlfilename)
+        i = i + 1
+#endif
       case default
         ERROR, "Command line argument not recognised: "//trim(arg)
         call print_help()
@@ -76,12 +88,13 @@ contains
     FMT1, ""
     FMT1, "Usage: ", trim(cmd), " [OPTIONS]"
     FMT1, ""
-    FMT1, "Without any options, the program will continue execution."
-    FMT1, "All options for execution (and dry run) are set in the namelist (name in cppdefs.h)."
-    FMT1, ""
     FMT1, "Command line options:"
-    FMT2, "-h, --help      print this help message and exit"
-    FMT2, "-c, --compile   print compliation options and exit"
+    FMT2, "-h, --help                               print this help message and exit"
+    FMT2, "-c, --compile                            print compliation options and exit"
+    FMT2, "-nml, --namelist <filename>              use <filename> as namelist (default: input.inp)"
+#if (defined(BIOFOULING_KOOI) || defined(BIOFOULING_TSIARAS) || defined(BIOFOULING_SIMPLE))
+    FMT2, "-bnml, --biofouling-namelist <filename>  use <filename> as biofouling namelist (default: biofouling.inp)"
+#endif
     FMT1, ""
 
     return

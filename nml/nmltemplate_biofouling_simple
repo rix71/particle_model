@@ -1,0 +1,11 @@
+!===============================
+! Biofouling variables (Simple model)
+!-------------------------------
+
+!===============================
+&biofouling
+growth_init_threshold = 1.1
+growth_timescale = 20.
+h_bf_max = 0.05  
+rho_bf = 1380.
+/

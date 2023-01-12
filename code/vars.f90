@@ -9,6 +9,8 @@ module run_params
   logical                   :: dry_run
   logical                   :: restart
   character(len=LEN_CHAR_L) :: restart_path
+  character(len=LEN_CHAR_L) :: nmlfilename = "input.inp"
+  character(len=LEN_CHAR_L) :: biofouling_nmlfilename = "biofouling.inp"
 
 end module run_params
 !===================================================

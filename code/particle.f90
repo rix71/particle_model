@@ -63,7 +63,9 @@ module mod_particle
     real(rk) :: time_on_beach = ZERO        ! Time spent in the beach area
     real(rk) :: beaching_time               ! Different particles may essentialy have different beaching times
     !---------------------------------------------
+#ifdef BIOFOULING_KOOI    
     real(rk) :: aa_growth = ZERO            ! Attached algal growth
+#endif
     real(rk) :: h_biofilm = ZERO            ! Thickness of biofilm
 
   contains
