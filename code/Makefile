@@ -7,7 +7,7 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 FFLAGS += -DWRITESTDOUT
 
 # Print debug messages
-# FFLAGS += -DDEBUG
+FFLAGS += -DDEBUG
 
 # Silence all messages (except warnings and errors)
 # FFLAGS += -DSAY_LESS
@@ -70,7 +70,7 @@ BIN=../bin
 BUILD=../build
 MOD=$(BUILD)/mod
 
-ifneq ($(MOD),)
+ifneq ($(wildcard $(MOD)),)
 	FFLAGS += -I${MOD}
 endif
 

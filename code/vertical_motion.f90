@@ -55,11 +55,8 @@ contains
     real(rk) :: i, j, k
     real(rk) :: u_star
 
-    dbghead(resuspension)
-
     res = ZERO
     if (p%state /= ST_BOTTOM) then
-      dbgtail(resuspension)
       return
     end if
 
@@ -75,8 +72,6 @@ contains
       end if
     end if
 
-    debug(res)
-    dbgtail(resuspension)
     return
   end function resuspension
   !===========================================
@@ -93,11 +88,8 @@ contains
     real(rk), intent(out)           :: delta_rho ! Density difference
     real(rk)                        :: kin_visc
 
-    dbghead(buoyancy)
-
     res = ZERO
     if (p%state /= ST_SUSPENDED) then
-      dbgtail(buoyancy)
       return
     end if
 
@@ -115,9 +107,7 @@ contains
     kin_visc = seawater_viscosity(fieldset, time, i, j, k, viscosity_method)
 
     res = Kooi_vertical_velocity(delta_rho, p%radius, rho_sw, kin_visc)
-    debug(res)
 
-    dbgtail(buoyancy)
     return
   end function buoyancy
   !===========================================

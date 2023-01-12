@@ -162,16 +162,10 @@ contains
     real(rk), allocatable         :: zax(:)
     real(rk)                      :: level_idx
 
-    dbghead(bottom_stress)
-    debug(i)
-    debug(j)
-    debug(k)
-
     if (int(k) /= fieldset%zax_bot_idx) call throw_error("physics :: bottom_stress", "Not bottom layer index!")
 
     level_idx = real(int(k), rk)
     if (fieldset%bottom_is_nan("U")) level_idx = level_idx + ONE * fieldset%zax_direction()
-    debug(level_idx)
 
     u = fieldset%get("U", time, i, j, k=level_idx)
     v = fieldset%get("V", time, i, j, k=level_idx)
@@ -182,12 +176,6 @@ contains
     taubx = -C * sqrt(u**2.+v**2.) * u
     tauby = -C * sqrt(u**2.+v**2.) * v
 
-#define MT 0
-#if MT
-    debug(taubx)
-    debug(tauby)
-    dbgtail(bottom_stress)
-#endif
     return
   end subroutine bottom_stress
   !===========================================
@@ -202,8 +190,6 @@ contains
     real(rk), intent(in)          :: k
     real(rk)                      :: taubx, tauby ! Bottom stress
 
-    dbghead(bottom_friction_velocity)
-
     if (has_bottom_stress) then
       taubx = fieldset%get("TAUBX", time, i, j)
       tauby = fieldset%get("TAUBY", time, i, j)
@@ -212,8 +198,6 @@ contains
     end if
     u_star = (taubx**2.+tauby**2.)**0.25
 
-    debug(u_star)
-    dbgtail(bottom_friction_velocity)
     return
   end function bottom_friction_velocity
   !===========================================

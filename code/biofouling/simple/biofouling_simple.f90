@@ -84,15 +84,20 @@ contains
     real(rk), intent(in) :: time
     real(rk) :: chla, bf_growth
 
+    dbghead(biofouling)
+
     chla = get_ambient_chla(fieldset, time, p%i0, p%j0, p%k0)
+    debug(chla); debug(p%i0); debug(p%j0); debug(p%k0)
     ! If chl-a concentration is above a threshold, biofouling can occur
     if (chla > growth_init_threshold) then
       bf_growth = (h_bf_max - p%h_biofilm) / growth_timescale * dt
       p%h_biofilm = p%h_biofilm + bf_growth
-      p%radius = p%radius + p%h_biofilm
+      p%radius = p%radius0 + p%h_biofilm
       p%rho = (p%radius0**3.*p%rho0 + (p%radius**3.-p%radius0**3.) * rho_bf) / (p%radius)**3.
     end if
 
+    dbgtail(biofouling)
+    return
   end subroutine biofouling
 
 end module mod_biofouling

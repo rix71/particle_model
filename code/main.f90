@@ -154,6 +154,15 @@ contains
 #ifdef POSTPROCESS
     FMT2, "-POSTPROCESS"
 #endif
+#ifdef BIOFOULING_KOOI
+    FMT2, "-BIOFOULING_KOOI"
+#endif
+#ifdef BIOFOULING_SIMPLE
+    FMT2, "-BIOFOULING_SIMPLE"
+#endif
+#ifdef BIOFOULING_TSIARAS
+    FMT2, "-BIOFOULING_TSIARAS"
+#endif
 
     return
   end subroutine print_compile_info

@@ -747,7 +747,7 @@ contains
       if (present(kr)) kr = real(this%nz, rk)
 #ifdef DEBUG
       call throw_warning("fieldset :: get_indices_vertical", "Particle on ground") ! Better error message
-      debug(dep)
+
 #endif
       return
     end if
@@ -757,7 +757,7 @@ contains
       if (present(kr)) kr = 1.0d0
 #ifdef DEBUG
       call throw_warning("fieldset :: get_indices_vertical", "Out of bounds") ! Better error message
-      debug(dep)
+
 #endif
       return
     end if
@@ -769,7 +769,7 @@ contains
       if (present(kr)) kr = real(this%nz, kind=rk)
 #ifdef DEBUG
       call throw_warning("fieldset :: get_indices_vertical", "Out of bounds") ! Better error message
-      debug(dep)
+
 #endif
       return
     end if
@@ -1274,8 +1274,7 @@ contains
 
     if (n_dims == 3) then
       DBG, "Checking top and bottom for NaNs"
-      debug(this%zax_top_idx)
-      debug(this%zax_bot_idx)
+
       t_nan = all(buffer(:, :, this%zax_top_idx) == ZERO)
       b_nan = all(buffer(:, :, this%zax_bot_idx) == ZERO)
     end if
