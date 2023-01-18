@@ -1,0 +1,31 @@
+#ifdef DEBUG
+#define OUT_ID
+#define OUT_VELOCITY
+#define OUT_SETTLING_VELOCITY
+#define OUT_DENSITY
+#define OUT_DENSITY_PLASTIC
+#define OUT_DELTA_RHO
+#define OUT_RADIUS
+#define OUT_RADIUS_PLASTIC
+#define OUT_AGE
+#define OUT_TRAJECTORY
+#define OUT_TIME_ON_BEACH
+#define OUT_BEACHING_TIME
+#define OUT_H_BIOFILM
+#define OUT_GROWTH_BIOFILM
+#define OUT_STATE
+#define OUT_KIN_VISCOSITY
+#define OUT_FRICTION_VELOCITY
+#else
+#define OUT_ID
+#define OUT_VELOCITY
+#define OUT_SETTLING_VELOCITY
+#define OUT_DENSITY
+#define OUT_RADIUS
+#define OUT_AGE
+#define OUT_TIME_ON_BEACH
+#define OUT_BEACHING_TIME
+#define OUT_H_BIOFILM
+#define OUT_GROWTH_BIOFILM
+#define OUT_STATE
+#endif

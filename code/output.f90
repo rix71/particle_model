@@ -1,5 +1,6 @@
 #include "cppdefs.h"
 #include "file.h"
+#include "output.h"
 module mod_output
   !----------------------------------------------------------------
   ! Module for writing the output
@@ -103,6 +104,8 @@ contains
     call nc_add_variable(file_name, "time", "float", 1, [nc_p_dimid])
     call nc_add_attr(file_name, "time", "units", "seconds since 1900-01-01 00:00:00")
 
+    call nc_add_variable(file_name, "particle", "int", 1, [nc_p_dimid])
+
     call nc_add_variable(file_name, "lon", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "lon", "units", "degrees east")
 
@@ -112,7 +115,11 @@ contains
     call nc_add_variable(file_name, "depth", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "depth", "units", "m")
     call nc_add_attr(file_name, "depth", "name", "depth")
-
+#ifdef OUT_ID
+    call nc_add_variable(file_name, "id", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "id", "name", "particle id")
+#endif
+#ifdef OUT_VELOCITY
     call nc_add_variable(file_name, "vx", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "vx", "units", "m/s")
     call nc_add_attr(file_name, "vx", "name", "eastward velocity")
@@ -124,29 +131,81 @@ contains
     call nc_add_variable(file_name, "vz", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "vz", "units", "m/s")
     call nc_add_attr(file_name, "vz", "name", "vertical velocity")
-
-    call nc_add_variable(file_name, "vel_kooi", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-    call nc_add_attr(file_name, "vel_kooi", "units", "m/s")
-    call nc_add_attr(file_name, "vel_kooi", "name", "vertical velocity calculated from density difference")
-
+#endif
+#ifdef OUT_SETTLING_VELOCITY
+    call nc_add_variable(file_name, "vs", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "vs", "units", "m/s")
+    call nc_add_attr(file_name, "vs", "name", "vertical (settling) velocity calculated from density difference")
+#endif
+#ifdef OUT_DENSITY
+    call nc_add_variable(file_name, "rho", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "rho", "units", "kg/m3")
+    call nc_add_attr(file_name, "rho", "name", "density")
+#endif
+#ifdef OUT_DENSITY_PLASTIC
+    call nc_add_variable(file_name, "rho_plastic", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "rho_plastic", "units", "kg/m3")
+    call nc_add_attr(file_name, "rho_plastic", "name", "initial density of plastic particle")
+#endif
+#ifdef OUT_DELTA_RHO
     call nc_add_variable(file_name, "delta_rho", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "delta_rho", "units", "kg/m3")
     call nc_add_attr(file_name, "delta_rho", "name", "density difference")
-
+#endif
+#ifdef OUT_RADIUS
+    call nc_add_variable(file_name, "radius", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "radius", "units", "m")
+    call nc_add_attr(file_name, "radius", "name", "radius")
+#endif
+#ifdef OUT_RADIUS_PLASTIC
+    call nc_add_variable(file_name, "radius_plastic", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "radius_plastic", "units", "m")
+    call nc_add_attr(file_name, "radius_plastic", "name", "initial radius of plastic particle")
+#endif
+#ifdef OUT_AGE
     call nc_add_variable(file_name, "age", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "age", "units", "s")
-
-    call nc_add_variable(file_name, "id", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-    call nc_add_attr(file_name, "id", "name", "particle id")
-
+    call nc_add_attr(file_name, "age", "name", "age of the particle")
+#endif
+#ifdef OUT_TRAJECTORY
     call nc_add_variable(file_name, "trajectory", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "trajectory", "units", "m")
     call nc_add_attr(file_name, "trajectory", "name", "distance travelled")
-
+#endif
+#ifdef OUT_TIME_ON_BEACH
+    call nc_add_variable(file_name, "time_on_beach", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "time_on_beach", "units", "s")
+    call nc_add_attr(file_name, "time_on_beach", "name", "time on beach")
+#endif
+#ifdef OUT_BEACHING_TIME
+    call nc_add_variable(file_name, "beaching_time", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "beaching_time", "units", "s")
+    call nc_add_attr(file_name, "beaching_time", "name", "time of beaching")
+#endif
+#ifdef OUT_KIN_VISCOSITY
+    call nc_add_variable(file_name, "kin_vicosity", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "kin_vicosity", "units", "m2/s")
+    call nc_add_attr(file_name, "kin_vicosity", "name", "kinematic viscosity of the surrouding seawater")
+#endif
+#ifdef OUT_FRICTION_VELOCITY
+    call nc_add_variable(file_name, "u_star", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "u_star", "units", "m/s")
+    call nc_add_attr(file_name, "u_star", "name", "friction velocity")
+#endif
+#ifdef OUT_H_BIOFILM
+    call nc_add_variable(file_name, "h_biofilm", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "h_biofilm", "units", "m")
+    call nc_add_attr(file_name, "h_biofilm", "name", "thickness of biofilm")
+#endif
+#ifdef OUT_GROWTH_BIOFILM
+    call nc_add_variable(file_name, "growth_biofilm", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "growth_biofilm", "units", "m/s")
+    call nc_add_attr(file_name, "growth_biofilm", "name", "growth rate of biofilm")
+#endif
+#ifdef OUT_STATE
     call nc_add_variable(file_name, "state", "int", 1, [nc_p_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "state", "name", "state of the particle: 1-beached, 2-on boundary, 3-active, 4-bottom")
-
-    call nc_add_variable(file_name, "particle_num", "int", 1, [nc_p_dimid])
+#endif
 
   end subroutine init_nc_snapshot
   !===========================================
@@ -170,7 +229,11 @@ contains
     call nc_add_variable(file_name, "depth", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "depth", "units", "m")
     call nc_add_attr(file_name, "depth", "name", "depth")
-
+#ifdef OUT_ID
+    call nc_add_variable(file_name, "id", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "id", "name", "particle id")
+#endif
+#ifdef OUT_VELOCITY
     call nc_add_variable(file_name, "vx", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "vx", "units", "m/s")
     call nc_add_attr(file_name, "vx", "name", "eastward velocity")
@@ -182,27 +245,81 @@ contains
     call nc_add_variable(file_name, "vz", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "vz", "units", "m/s")
     call nc_add_attr(file_name, "vz", "name", "vertical velocity")
-
-    call nc_add_variable(file_name, "vel_kooi", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
-    call nc_add_attr(file_name, "vel_kooi", "units", "m/s")
-    call nc_add_attr(file_name, "vel_kooi", "name", "vertical velocity calculated from density difference")
-
+#endif
+#ifdef OUT_SETTLING_VELOCITY
+    call nc_add_variable(file_name, "vs", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "vs", "units", "m/s")
+    call nc_add_attr(file_name, "vs", "name", "vertical velocity (settling) calculated from density difference")
+#endif
+#ifdef OUT_DENSITY
+    call nc_add_variable(file_name, "rho", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "rho", "units", "kg/m3")
+    call nc_add_attr(file_name, "rho", "name", "density")
+#endif
+#ifdef OUT_DENSITY_PLASTIC
+    call nc_add_variable(file_name, "rho_plastic", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "rho_plastic", "units", "kg/m3")
+    call nc_add_attr(file_name, "rho_plastic", "name", "initial density of plastic particle")
+#endif
+#ifdef OUT_DELTA_RHO
     call nc_add_variable(file_name, "delta_rho", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "delta_rho", "units", "kg/m3")
     call nc_add_attr(file_name, "delta_rho", "name", "density difference")
-
+#endif
+#ifdef OUT_RADIUS
+    call nc_add_variable(file_name, "radius", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "radius", "units", "m")
+    call nc_add_attr(file_name, "radius", "name", "radius")
+#endif
+#ifdef OUT_RADIUS_PLASTIC
+    call nc_add_variable(file_name, "radius_plastic", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "radius_plastic", "units", "m")
+    call nc_add_attr(file_name, "radius_plastic", "name", "initial radius of plastic particle")
+#endif
+#ifdef OUT_AGE
     call nc_add_variable(file_name, "age", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "age", "units", "s")
-
-    call nc_add_variable(file_name, "id", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
-    call nc_add_attr(file_name, "id", "name", "particle id")
-
+    call nc_add_attr(file_name, "age", "name", "age of the particle")
+#endif
+#ifdef OUT_TRAJECTORY
     call nc_add_variable(file_name, "trajectory", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "trajectory", "units", "m")
     call nc_add_attr(file_name, "trajectory", "name", "distance travelled")
-
+#endif
+#ifdef OUT_TIME_ON_BEACH
+    call nc_add_variable(file_name, "time_on_beach", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "time_on_beach", "units", "s")
+    call nc_add_attr(file_name, "time_on_beach", "name", "time on beach")
+#endif
+#ifdef OUT_BEACHING_TIME
+    call nc_add_variable(file_name, "beaching_time", "float", 1, [nc_p_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "beaching_time", "units", "s")
+    call nc_add_attr(file_name, "beaching_time", "name", "time of beaching")
+#endif
+#ifdef OUT_KIN_VISCOSITY
+    call nc_add_variable(file_name, "kin_viscosity", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "kin_viscosity", "units", "m2/s")
+    call nc_add_attr(file_name, "kin_viscosity", "name", "kinematic viscosity of the surrounding seawater")
+#endif
+#ifdef OUT_FRICTION_VELOCITY
+    call nc_add_variable(file_name, "u_star", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "u_star", "units", "m/s")
+    call nc_add_attr(file_name, "u_star", "name", "friction velocity")
+#endif
+#ifdef OUT_H_BIOFILM
+    call nc_add_variable(file_name, "h_biofilm", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "h_biofilm", "units", "m")
+    call nc_add_attr(file_name, "h_biofilm", "name", "thickness of biofilm")
+#endif
+#ifdef OUT_GROWTH_BIOFILM
+    call nc_add_variable(file_name, "growth_biofilm", "float", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
+    call nc_add_attr(file_name, "growth_biofilm", "units", "m/s")
+    call nc_add_attr(file_name, "growth_biofilm", "name", "growth rate of biofilm")
+#endif
+#ifdef OUT_STATE
     call nc_add_variable(file_name, "state", "int", 2, [nc_p_dimid, nc_t_dimid], FILLVALUE_BIG)
     call nc_add_attr(file_name, "state", "name", "state of the particle: 1-beached, 2-on boundary, 3-active, 4-bottom")
+#endif
 
   end subroutine init_nc_output
   !===========================================
@@ -246,7 +363,14 @@ contains
       call nc_check(trim(nc_fileout_all), &
                     nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
-
+#ifdef OUT_ID
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "id", varid), "write_data :: inq varid")
+      var1d = particles(ipart)%id
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var1d, start=[ipart], count=[1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_VELOCITY
       call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "vx", varid), "write_data :: inq varid")
       var2d = particles(ipart)%u0
       call nc_check(trim(nc_fileout_all), &
@@ -264,42 +388,105 @@ contains
       call nc_check(trim(nc_fileout_all), &
                     nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
-
-      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "vel_kooi", varid), "write_data :: inq varid")
+#endif
+#ifdef OUT_SETTLING_VELOCITY
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "vs", varid), "write_data :: inq varid")
       var2d = particles(ipart)%vel_vertical
       call nc_check(trim(nc_fileout_all), &
                     nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
-
+#endif
+#ifdef OUT_DENSITY
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "rho", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%rho
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_DENSITY_PLASTIC
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "rho_plastic", varid), "write_data :: inq varid")
+      var1d = particles(ipart)%rho0
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart], count=[1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_DELTA_RHO
       call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "delta_rho", varid), "write_data :: inq varid")
       var2d = particles(ipart)%delta_rho
       call nc_check(trim(nc_fileout_all), &
                     nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
-
+#endif
+#ifdef OUT_RADIUS
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "radius", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%radius
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_RADIUS_PLASTIC
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "radius_plastic", varid), "write_data :: inq varid")
+      var1d = particles(ipart)%radius0
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var1d, start=[ipart], count=[1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_AGE
       call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "age", varid), "write_data :: inq varid")
       var2d = particles(ipart)%age
       call nc_check(trim(nc_fileout_all), &
                     nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
-
-      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "id", varid), "write_data :: inq varid")
-      var1d = particles(ipart)%id
-      call nc_check(trim(nc_fileout_all), &
-                    nf90_put_var(ncid, varid, var1d, start=[ipart], count=[1]), &
-                    "write_data :: put var")
-
+#endif
+#ifdef OUT_TRAJECTORY
       call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "trajectory", varid), "write_data :: inq varid")
       var2d = particles(ipart)%traj_len
       call nc_check(trim(nc_fileout_all), &
                     nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
-
+#endif
+#ifdef OUT_BEACHING_TIME
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "beaching_time", varid), "write_data :: inq varid")
+      var1d = particles(ipart)%time_on_beach
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart], count=[1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_KIN_VISCOSITY
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "kin_viscosity", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%kin_visc
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_FRICTION_VELOCITY
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "u_star", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%u_star
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_H_BIOFILM
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "h_biofilm", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%h_biofilm
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_GROWTH_BIOFILM
+      call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "growth_biofilm", varid), "write_data :: inq varid")
+      var2d = particles(ipart)%growth_biofilm
+      call nc_check(trim(nc_fileout_all), &
+                    nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                    "write_data :: put var")
+#endif
+#ifdef OUT_STATE
       call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "state", varid), "write_data :: inq varid")
       var2d_int = particles(ipart)%state
       call nc_check(trim(nc_fileout_all), &
                     nf90_put_var(ncid, varid, var2d_int, start=[ipart, nc_itime_out], count=[1, 1]), &
                     "write_data :: put var")
+#endif
     end do
     call nc_check(trim(nc_fileout_all), nf90_close(ncid), "write :: close")
 
@@ -328,77 +515,147 @@ contains
 
       if (particles(ipart)%is_active) then
 
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "lon", varid), "write_data_active :: inq varid")
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "lon", varid), "write_data :: inq varid")
         var2d = particles(ipart)%lon0
-        call nc_check(trim(nc_fileout_active), &
+        call nc_check(trim(nc_fileout_all), &
                       nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
+                      "write_data :: put var")
 
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "lat", varid), "write_data_active :: inq varid")
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "lat", varid), "write_data :: inq varid")
         var2d = particles(ipart)%lat0
-        call nc_check(trim(nc_fileout_active), &
+        call nc_check(trim(nc_fileout_all), &
                       nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
+                      "write_data :: put var")
 
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "depth", varid), "write_data_active :: inq varid")
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "depth", varid), "write_data :: inq varid")
         var2d = particles(ipart)%depth0
-        call nc_check(trim(nc_fileout_active), &
+        call nc_check(trim(nc_fileout_all), &
                       nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
-
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "vx", varid), "write_data_active :: inq varid")
-        var2d = particles(ipart)%u0
-        call nc_check(trim(nc_fileout_active), &
-                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
-
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "vy", varid), "write_data_active :: inq varid")
-        var2d = particles(ipart)%v0
-        call nc_check(trim(nc_fileout_active), &
-                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
-
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "vz", varid), "write_data_active :: inq varid")
-        var2d = particles(ipart)%w0
-        call nc_check(trim(nc_fileout_active), &
-                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
-
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "vel_kooi", varid), "write_data_active :: inq varid")
-        var2d = particles(ipart)%vel_vertical
-        call nc_check(trim(nc_fileout_active), &
-                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
-
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "delta_rho", varid), "write_data_active :: inq varid")
-        var2d = particles(ipart)%delta_rho
-        call nc_check(trim(nc_fileout_active), &
-                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
-
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "age", varid), "write_data_active :: inq varid")
-        var2d = particles(ipart)%age
-        call nc_check(trim(nc_fileout_active), &
-                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
-
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "id", varid), "write_data_active :: inq varid")
+                      "write_data :: put var")
+#ifdef OUT_ID
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "id", varid), "write_data :: inq varid")
         var1d = particles(ipart)%id
-        call nc_check(trim(nc_fileout_active), &
+        call nc_check(trim(nc_fileout_all), &
                       nf90_put_var(ncid, varid, var1d, start=[ipart], count=[1]), &
-                      "write_data_active :: put var")
-
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "trajectory", varid), "write_data_active :: inq varid")
-        var2d = particles(ipart)%traj_len
-        call nc_check(trim(nc_fileout_active), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_VELOCITY
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "vx", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%u0
+        call nc_check(trim(nc_fileout_all), &
                       nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
+                      "write_data :: put var")
 
-        call nc_check(trim(nc_fileout_active), nf90_inq_varid(ncid, "state", varid), "write_data_active :: inq varid")
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "vy", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%v0
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "vz", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%w0
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_SETTLING_VELOCITY
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "vs", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%vel_vertical
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_DENSITY
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "rho", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%rho
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_DENSITY_PLASTIC
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "rho_plastic", varid), "write_data :: inq varid")
+        var1d = particles(ipart)%rho0
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart], count=[1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_DELTA_RHO
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "delta_rho", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%delta_rho
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_RADIUS
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "radius", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%radius
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_RADIUS_PLASTIC
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "radius_plastic", varid), "write_data :: inq varid")
+        var1d = particles(ipart)%radius0
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var1d, start=[ipart], count=[1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_AGE
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "age", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%age
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_TRAJECTORY
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "trajectory", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%traj_len
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_BEACHING_TIME
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "beaching_time", varid), "write_data :: inq varid")
+        var1d = particles(ipart)%time_on_beach
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart], count=[1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_KIN_VISCOSITY
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "kin_viscosity", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%kin_visc
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_FRICTION_VELOCITY
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "u_star", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%u_star
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_H_BIOFILM
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "h_biofilm", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%h_biofilm
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_GROWTH_BIOFILM
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "growth_biofilm", varid), "write_data :: inq varid")
+        var2d = particles(ipart)%growth_biofilm
+        call nc_check(trim(nc_fileout_all), &
+                      nf90_put_var(ncid, varid, var2d, start=[ipart, nc_itime_out], count=[1, 1]), &
+                      "write_data :: put var")
+#endif
+#ifdef OUT_STATE
+        call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "state", varid), "write_data :: inq varid")
         var2d_int = particles(ipart)%state
-        call nc_check(trim(nc_fileout_active), &
+        call nc_check(trim(nc_fileout_all), &
                       nf90_put_var(ncid, varid, var2d_int, start=[ipart, nc_itime_out], count=[1, 1]), &
-                      "write_data_active :: put var")
+                      "write_data :: put var")
+#endif
       end if
     end do
 
@@ -422,6 +679,12 @@ contains
     call nc_check(trim(nc_fileout_snap), nf90_put_var(ncid, varid, dateval, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
 
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "particle", varid), "write_data_snap :: inq varid")
+    var1d = particle_num
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "lon", varid), "write_data_snap :: inq varid")
     var1d = p%lon0
     call nc_check(trim(nc_fileout_snap), &
@@ -439,7 +702,14 @@ contains
     call nc_check(trim(nc_fileout_snap), &
                   nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
-
+#ifdef OUT_ID
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "id", varid), "write_data_snap :: inq varid")
+    var1d = p%id
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_VELOCITY
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "vx", varid), "write_data_active :: inq varid")
     var1d = p%u0
     call nc_check(trim(nc_fileout_snap), &
@@ -457,54 +727,121 @@ contains
     call nc_check(trim(nc_fileout_snap), &
                   nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
-
-    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "vel_kooi", varid), "write_data_snap :: inq varid")
+#endif
+#ifdef OUT_SETTLING_VELOCITY
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "vs", varid), "write_data_snap :: inq varid")
     var1d = p%vel_vertical
     call nc_check(trim(nc_fileout_snap), &
                   nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
-
+#endif
+#ifdef OUT_DENSITY
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "rho", varid), "write_data_snap :: inq varid")
+    var1d = p%rho
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_DENSITY_PLASTIC
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "rho_plastic", varid), "write_data_snap :: inq varid")
+    var1d = p%rho0
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_DELTA_RHO
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "delta_rho", varid), "write_data_snap :: inq varid")
     var1d = p%delta_rho
     call nc_check(trim(nc_fileout_snap), &
                   nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
-
+#endif
+#ifdef OUT_RADIUS
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "radius", varid), "write_data_snap :: inq varid")
+    var1d = p%radius
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_RADIUS_PLASTIC
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "radius_plastic", varid), "write_data_snap :: inq varid")
+    var1d = p%radius0
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_AGE
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "age", varid), "write_data_snap :: inq varid")
     var1d = p%age
     call nc_check(trim(nc_fileout_snap), &
                   nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
-
-    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "id", varid), "write_data_snap :: inq varid")
-    var1d = p%id
-    call nc_check(trim(nc_fileout_snap), &
-                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
-                  "write_data_snap :: put var")
-
+#endif
+#ifdef OUT_TRAJECTORY
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "trajectory", varid), "write_data_snap :: inq varid")
     var1d = p%traj_len
     call nc_check(trim(nc_fileout_snap), &
                   nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
-
+#endif
+#ifdef OUT_TIME_ON_BEACH
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "time_on_beach", varid), "write_data_snap :: inq varid")
+    var1d = p%time_on_beach
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_BEACHING_TIME
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "beaching_time", varid), "write_data_snap :: inq varid")
+    var1d = p%beaching_time
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_KIN_VISCOSITY
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "kin_vicosity", varid), "write_data_snap :: inq varid")
+    var1d = p%kin_visc
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_FRICTION_VELOCITY
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "u_star", varid), "write_data_snap :: inq varid")
+    var1d = p%u_star
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_H_BIOFILM
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "h_biofilm", varid), "write_data_snap :: inq varid")
+    var1d = p%h_biofilm
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_GROWTH_BIOFILM
+    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "growth_biofilm", varid), "write_data_snap :: inq varid")
+    var1d = p%growth_biofilm
+    call nc_check(trim(nc_fileout_snap), &
+                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
+                  "write_data_snap :: put var")
+#endif
+#ifdef OUT_STATE
     call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "state", varid), "write_data_snap :: inq varid")
     var1d_int = p%state
     call nc_check(trim(nc_fileout_snap), &
                   nf90_put_var(ncid, varid, var1d_int, start=[nc_itime_out], count=[1]), &
                   "write_data_snap :: put var")
-
-    call nc_check(trim(nc_fileout_snap), nf90_inq_varid(ncid, "particle_num", varid), "write_data_snap :: inq varid")
-    var1d = particle_num
-    call nc_check(trim(nc_fileout_snap), &
-                  nf90_put_var(ncid, varid, var1d, start=[nc_itime_out], count=[1]), &
-                  "write_data_snap :: put var")
-
+#endif
     call nc_check(trim(nc_fileout_snap), nf90_close(ncid), "write_data_snap :: close")
 
   end subroutine write_data_snapshot
   !===========================================
   subroutine write_restart(nwrite)
+    ! ---------------------------------------
+    ! Write restart file
+    ! TODO: this should be a method of the particle (array) class
+    ! ---------------------------------------
     integer, intent(in) :: nwrite
     character(len=LEN_CHAR_L) :: restart_file
     character(len=14) :: time_str
