@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+#include "output.h"
 program main
   use mod_errors
   use mod_precdefs
@@ -56,6 +57,9 @@ contains
       case ('-c', '--compile')
         call print_compile_info()
         stop
+      case ('--variables')
+        call print_variables()
+        stop
       case ('-nml', '--namelist')
         call getarg(i + 1, nmlfilename)
         i = i + 1
@@ -91,6 +95,7 @@ contains
     FMT1, "Command line options:"
     FMT2, "-h, --help                               print this help message and exit"
     FMT2, "-c, --compile                            print compliation options and exit"
+    FMT2, "--variables                              print output variables and exit"
     FMT2, "-nml, --namelist <filename>              use <filename> as namelist (default: input.inp)"
 #if (defined(BIOFOULING_KOOI) || defined(BIOFOULING_TSIARAS) || defined(BIOFOULING_SIMPLE))
     FMT2, "-bnml, --biofouling-namelist <filename>  use <filename> as biofouling namelist (default: biofouling.inp)"
@@ -166,4 +171,67 @@ contains
 
     return
   end subroutine print_compile_info
+  !===========================================
+  subroutine print_variables
+    FMT1, ""
+    FMT1, "Output variables:"
+    FMT1, LINE
+    FMT1, "time:           time"
+    FMT1, "lon:            longitude"
+    FMT1, "lat:            latitude"
+    FMT1, "depth:          depth"
+#ifdef OUT_ID
+    FMT1, "id:             particle (source) id"
+#endif
+#ifdef OUT_VELOCITY
+    FMT1, "vx:             x-velocity"
+    FMT1, "vy:             y-velocity"
+    FMT1, "vz:             z-velocity"
+#endif
+#ifdef OUT_SETTLING_VELOCITY
+    FMT1, "vs:             settling velocity"
+#endif
+#ifdef OUT_DENSITY
+    FMT1, "rho:            density"
+#endif
+#ifdef OUT_DENSITY_PLASTIC
+    FMT1, "rho_plastic:    density of plastic particle"
+#endif
+#ifdef OUT_DELTA_RHO
+    FMT1, "delta_rho:      density difference between particle and fluid"
+#endif
+#ifdef OUT_RADIUS
+    FMT1, "radius:         radius"
+#endif
+#ifdef OUT_RADIUS_PLASTIC
+    FMT1, "radius_plastic: radius of plastic particle"
+#endif
+#ifdef OUT_AGE
+    FMT1, "age:            age of particle"
+#endif
+#ifdef OUT_TRAJECTORY
+    FMT1, "trajectory:     total distance travelled by particle"
+#endif
+#ifdef OUT_TIME_ON_BEACH
+    FMT1, "time_on_beach:  time particle has been on beach"
+#endif
+#ifdef OUT_BEACHING_TIME
+    FMT1, "beaching_time:  maximum time particle can be on beach before it is removed"
+#endif
+#ifdef OUT_KIN_VISCOSITY
+    FMT1, "kin_viscosity:  kinematic viscosity"
+#endif
+#ifdef OUT_FRICTION_VELOCITY
+    FMT1, "u_star:         friction velocity"
+#endif
+#ifdef OUT_H_BIOFILM
+    FMT1, "h_biofilm:      thickness of biofilm"
+#endif
+#ifdef OUT_GROWTH_BIOFILM
+    FMT1, "growth_biofilm: growth rate of biofilm"
+#endif
+#ifdef OUT_STATE 
+    FMT1, "state:          state of particle"
+#endif
+  end subroutine print_variables
 end program main
