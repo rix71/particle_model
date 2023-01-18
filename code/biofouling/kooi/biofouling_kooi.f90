@@ -26,9 +26,9 @@ module mod_biofouling
   use mod_fieldset, only: t_fieldset
   use mod_datetime, only: t_datetime
   ! ? Light intensity and brownian diffusion are used only in this module. Is it necessary to have them in the physics module?
-  use mod_physics, only: seawater_viscosity, seawater_density, diffusion_brown, light_intensity
+  use mod_physics, only: diffusion_brown, light_intensity, seawater_viscosity, seawater_density,
   use time_vars, only: dt
-  use field_vars, only: viscosity_method => has_viscosity, density_method => has_density
+  ! use field_vars, only: viscosity_method => has_viscosity, density_method => density_method
   implicit none
   private
   !===================================================
@@ -112,19 +112,19 @@ contains
     T = fieldset%get("TEMP", time, p%ir0, p%jr0, p%kr0)
 
     ! TODO: Consider making a function for this (seawater_dyn_viscosity)
-    mu = seawater_viscosity(fieldset, time, p%ir0, p%jr0, p%kr0, viscosity_method) / &
-         seawater_density(fieldset, time, p%ir0, p%jr0, p%kr0, density_method, p%depth0)
+    mu = seawater_viscosity(fieldset, time, p%ir0, p%jr0, p%kr0) / &
+         seawater_density(fieldset, time, p%ir0, p%jr0, p%kr0, p%depth0)
 
     alg_ambient = get_alg_ambient(fieldset, time, p%ir0, p%jr0, p%kr0)
 
     a_coll = (encounter_rate(p, T, mu) * alg_ambient) / p%surface_area()
-    a_growth = primary_prod(T, p%depth0, real(date%hour, rk)) * p%aa_growth
-    a_mort = mortality_rate * p%aa_growth
-    a_resp = (q10**((T - 20.) / 10.)) * r20 * p%aa_growth
+    a_growth = primary_prod(T, p%depth0, real(date%hour, rk)) * p%growth_biofilm
+    a_mort = mortality_rate * p%growth_biofilm
+    a_resp = (q10**((T - 20.) / 10.)) * r20 * p%growth_biofilm
 
-    p%aa_growth = p%aa_growth + (a_coll + a_growth - a_mort - a_resp) * dt
+    p%growth_biofilm = p%growth_biofilm + (a_coll + a_growth - a_mort - a_resp) * dt
 
-    v_bf = (vol_algal * p%aa_growth) * p%surface_area()
+    v_bf = (vol_algal * p%growth_biofilm) * p%surface_area()
     v_tot = v_bf + p%volume()
     p%h_biofilm = ((v_tot * (3./(4.*pi)))**(1./3.)) - p%radius0
 

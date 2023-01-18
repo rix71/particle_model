@@ -21,7 +21,7 @@ module mod_biofouling
   public :: init_biofouling, biofouling
   !---------------------------------------------
   real(rk) :: growth_init_threshold
-  real(rk) :: h_bf_max
+  real(rk) :: h_bf_max_ratio
   real(rk) :: growth_timescale
   real(rk) :: rho_bf
   !---------------------------------------------
@@ -56,7 +56,7 @@ contains
   !===========================================
   subroutine init_biofouling(fieldset)
     type(t_fieldset), intent(inout) :: fieldset
-    namelist /biofouling/ growth_init_threshold, growth_timescale, h_bf_max, rho_bf
+    namelist /biofouling/ growth_init_threshold, growth_timescale, h_bf_max_ratio, rho_bf
 
     FMT1, "======== Init biofouling ========"
     open (NMLFILE, file=trim(biofouling_nmlfilename), action='read', iostat=ierr)
@@ -70,7 +70,7 @@ contains
     FMT2, "&biofouling"
     FMT3, var2val(growth_init_threshold)
     FMT3, var2val(growth_timescale)
-    FMT3, var2val(h_bf_max)
+    FMT3, var2val(h_bf_max_ratio)
     FMT3, var2val(rho_bf)
 
     call set_biofouling_fields(fieldset)
@@ -83,6 +83,7 @@ contains
     type(t_fieldset), intent(in) :: fieldset
     real(rk), intent(in) :: time
     real(rk) :: chla, bf_growth
+    real(rk) :: h_bf_max, h_bf, r_pl, rho_pl, r_tot, rho_tot
 
     dbghead(biofouling)
 
@@ -90,10 +91,23 @@ contains
     debug(chla); debug(p%i0); debug(p%j0); debug(p%k0)
     ! If chl-a concentration is above a threshold, biofouling can occur
     if (chla > growth_init_threshold) then
-      bf_growth = (h_bf_max - p%h_biofilm) / growth_timescale * dt
-      p%h_biofilm = p%h_biofilm + bf_growth
-      p%radius = p%radius0 + p%h_biofilm
-      p%rho = (p%radius0**3.*p%rho0 + (p%radius**3.-p%radius0**3.) * rho_bf) / (p%radius)**3.
+      h_bf = p%h_biofilm
+      r_pl = p%radius0
+      rho_pl = p%rho0
+      h_bf_max = h_bf_max_ratio * r_pl
+
+      debug(h_bf_max); debug(h_bf); debug(r_pl); debug(rho_pl); 
+      bf_growth = (h_bf_max - h_bf) / growth_timescale * dt
+      h_bf = h_bf + bf_growth
+      r_tot = r_pl + h_bf
+      rho_tot = (r_pl**3.*rho_pl + (r_tot**3.-r_pl**3.) * rho_bf) / (r_tot)**3.
+
+      debug(bf_growth); debug(h_bf); debug(r_tot); debug(rho_tot)
+
+      p%growth_biofilm = bf_growth
+      p%radius = max(r_tot, r_pl)
+      p%rho = max(rho_tot, rho_pl)
+      p%h_biofilm = h_bf
     end if
 
     dbgtail(biofouling)

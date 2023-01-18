@@ -1,11 +1,14 @@
 !===============================
 ! Biofouling variables (Simple model)
 !-------------------------------
-
+! growth_init_threshold - [float] Minimum concentration of chl-a to begin biofouling [mg/m3]
+! growth_timescale      - [float] Biofouling (saturation) time scale [s]
+! h_bf_max_ratio        - [float] Ratio of particle radius to maximum biofilm thickness 
+! rho_bf                - [float] Biofilm density [kg/m3]
 !===============================
 &biofouling
 growth_init_threshold = 1.1
 growth_timescale = 20.
-h_bf_max = 0.05  
-rho_bf = 1380.
+h_bf_max_ratio = 0.05  
+rho_bf = 1388.
 /
