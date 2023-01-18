@@ -37,8 +37,8 @@ module mod_params
   real(rk), parameter :: pi = 4.*atan(1.), &                          ! 3, plus a little extra
                          g = 9.81, &
                          k_b = 1.380649e-23, &                        ! Boltzmann constant [m2 kg s-2 K-1]
-                         mu_default = 0.0010016, &                    ! Default dynamic viscosity of water at 20 degrees Celcius [N s/m2]
-                         rho_default = 1000.0d0                       ! Default density
+                         kin_visc_default = 1.1512e-6_rk, &           ! Default kinematic viscosity of sea water (S=10 [g/kg], T=15 [degC]]) [m2 s-1]
+                         sw_rho_default = 1000.0_rk                   ! Default density of sea water
 
 end module mod_params
 !===================================================
@@ -84,12 +84,12 @@ module field_vars
   use mod_fieldset
 
   logical                   :: has_subdomains, &               ! Is the data in multiple files (true) or one file (false)?
-                               has_viscosity, &
-                               has_bottom_stress
+                               has_bottom_stress               ! TODO: bottom_stress_method
   integer                   :: nlevels, &
                                zax_style, &                    ! Depth values (1) or layer thickness (2)
                                zax_direction, &                ! > 0 - positive up, < 0 - positive down
-                               has_density                     ! 0 - default density, 1 - has variable, 2 - calculate from T/S
+                               density_method, &               ! 0 - default density, 1 - has variable, 2 - calculate from T/S
+                               viscosity_method                ! 0 - default viscosity, 1 - has variable, 2 - calculate from T/S
   character(len=LEN_CHAR_S) :: uvarname, vvarname, wvarname, & ! Names of the variables. Necessary?
                                zaxvarname, elevvarname, &
                                rhovarname, tempvarname, &

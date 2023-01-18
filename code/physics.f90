@@ -13,7 +13,7 @@ module mod_physics
   use mod_interp
   use mod_precdefs
   use mod_params
-  use field_vars, only: has_bottom_stress
+  use field_vars, only: has_bottom_stress, density_method, viscosity_method
   use time_vars, only: dt
   use mod_fieldset, only: t_fieldset
   implicit none
@@ -27,46 +27,50 @@ module mod_physics
   !===================================================
 contains
   !===========================================
-  real(rk) function seawater_viscosity(fieldset, time, i, j, k, method) result(res)
+  real(rk) function seawater_viscosity(fieldset, time, i, j, k, depth) result(res)
     !---------------------------------------------
-    ! Kinematic viscosity
+    ! Kinematic viscosity of seawater
     !---------------------------------------------
     type(t_fieldset), intent(in) :: fieldset
     real(rk), intent(in)         :: time
     real(rk), intent(in)         :: i, j, k
-    logical, intent(in)          :: method
+    real(rk), intent(in)         :: depth
 
-    select case (method)
-    case (.true.)
+    res = ZERO
+    select case (viscosity_method)
+    case (VISC_VARIABLE)
       res = fieldset%get("VISC", time, i, j, k)
-      if (isnan(res) .or. (res <= ZERO)) res = mu_default
-    case (.false.)
-      res = mu_default
+      if (isnan(res) .or. (res <= ZERO)) res = kin_visc_default
+    case (VISC_CALC)
+      res = seawater_viscosity_from_temp_and_salt(fieldset%get("TEMP", time, i, j, k), &
+                                                  fieldset%get("SALT", time, i, j, k))
+      res = res / seawater_density(fieldset, time, i, j, k, depth)
+    case (VISC_DEFAULT)
+      res = kin_visc_default
+    case default
+      call throw_error("physics :: seawater_viscosity", "Viscosity method not recognized!")
     end select
 
     return
   end function seawater_viscosity
   !===========================================
-  real(rk) function seawater_density(fieldset, time, i, j, k, method, depth) result(res)
+  real(rk) function seawater_density(fieldset, time, i, j, k, depth) result(res)
     type(t_fieldset), intent(in) :: fieldset
     real(rk), intent(in)         :: time
     real(rk), intent(in)         :: i, j, k
     real(rk), intent(in)         :: depth
-    integer, intent(in)          :: method
-    real(rk)                     :: T, S
 
-    select case (method)
-    case (DENSITY)
+    res = ZERO
+    select case (density_method)
+    case (RHO_VARIABLE)
       res = fieldset%get("RHO", time, i, j, k)
-    case (TEMP_SALT)
-      T = fieldset%get("TEMP", time, i, j, k)
-      S = fieldset%get("SALT", time, i, j, k)
-      res = seawater_density_from_temp_and_salt(T, S, depth)
-    case (DEFAULT_DENSITY)
-      res = rho_default
+    case (RHO_CALC)
+      res = seawater_density_from_temp_and_salt(fieldset%get("TEMP", time, i, j, k), &
+                                                fieldset%get("SALT", time, i, j, k), &
+                                                depth)
+    case (RHO_DEFAULT)
+      res = sw_rho_default
     case default
-      ! May be unnecessary as the program sets the method...
-      res = 1000.0_rk
       call throw_error("physics :: seawater_density", "Density method not recognized!")
     end select
 
@@ -200,6 +204,23 @@ contains
 
     return
   end function bottom_friction_velocity
+  !===========================================
+  real(rk) function seawater_viscosity_from_temp_and_salt(T, S)
+    !---------------------------------------------
+    ! Dynamic viscosity of seawater
+    ! TODO: Add proper reference
+    ! https://ittc.info/media/4048/75-02-01-03.pdf
+    !---------------------------------------------
+    real(rk), intent(in) :: T, S
+    real(rk) :: A, B, mu
+
+    A = 1.541_rk + 1.998e-2_rk * T - 9.52e-5_rk * T**2.
+    B = 7.974_rk - 7.561e-2_rk * T + 4.724e-4_rk * T**2.
+    mu = 4.2844e-5_rk + (ONE / (0.156_rk * (T + 64.993_rk)**2.-91.296_rk))
+    seawater_viscosity_from_temp_and_salt = mu * (ONE + A * S + B * S**2.)
+
+    return
+  end function seawater_viscosity_from_temp_and_salt
   !===========================================
   real(rk) function seawater_density_from_temp_and_salt(T, S, Z)
     !---------------------------------------------
