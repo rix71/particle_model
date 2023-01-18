@@ -3,11 +3,14 @@ FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
 	 -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
+# Profiling flags
+# FFLAGS += -pg -no-pie
+
 # Print everything to .stdout file
 FFLAGS += -DWRITESTDOUT
 
 # Print debug messages
-FFLAGS += -DDEBUG
+# FFLAGS += -DDEBUG
 
 # Silence all messages (except warnings and errors)
 # FFLAGS += -DSAY_LESS
@@ -33,14 +36,14 @@ FFLAGS += -DPARTICLE_SNAP_SEALVL
 
 # Land interaction methods
 # FFLAGS += -DPARTICLE_BOUNCE
-# FFLAGS += -DPARTICLE_REDIRECT
-FFLAGS += -DPARTICLE_BEACH_IMMEDIATELY
+FFLAGS += -DPARTICLE_REDIRECT
+# FFLAGS += -DPARTICLE_BEACH_IMMEDIATELY
 
 # Compile and run the postprocessing module
 # FFLAGS += -DPOSTPROCESS
 
 # Use OpenMP
-# FFLAGS += -DUSE_OMP -fopenmp
+FFLAGS += -DUSE_OMP -fopenmp
 
 #--------------------------------------------------
 # Biofouling model (Kooi, Tsiaras or Simple)
