@@ -128,10 +128,6 @@ contains
         call particles(ipart)%print_info()
 #endif
         call particles(ipart)%update(fieldset, time)
-#ifdef DEBUG
-        DBG, "Particle after updating"
-        call particles(ipart)%print_info()
-#endif
 
 #ifndef USE_OMP
         !---------------------------------------------
