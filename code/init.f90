@@ -10,7 +10,7 @@ module mod_initialise
   use mod_errors
   use run_params, only: runid, dry_run, restart, restart_path, nmlfilename
   use mod_fieldset
-  use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, has_density, has_viscosity, has_bottom_stress, &
+  use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, density_method, viscosity_method, has_bottom_stress, &
                         file_prefix, file_suffix, nlevels, &
                         uvarname, vvarname, wvarname, zaxvarname, elevvarname, rhovarname, &
                         tempvarname, saltvarname, viscvarname, taubxvarname, taubyvarname, zax_style, zax_direction, fieldset
@@ -256,38 +256,58 @@ contains
       ! Field for density
       if (nc_var_exists(trim(filename), trim(rhovarname))) then
         call fieldset%add_field("RHO", rhovarname)
-        has_density = DENSITY
         field_count = field_count + 1
+        density_method = RHO_VARIABLE
       else
-        call throw_warning("initialise :: init_fieldset", "Could not find density ('rho') in "//trim(filename))
+        call throw_warning("initialise :: init_fieldset", "Could not find density ('"//trim(rhovarname)//"') in "//trim(filename))
         if (nc_var_exists(trim(filename), trim(tempvarname)) .and. &
             nc_var_exists(trim(filename), trim(saltvarname))) then
           call fieldset%add_field("TEMP", tempvarname)
           call fieldset%add_field("SALT", saltvarname)
-          has_density = TEMP_SALT
           field_count = field_count + 2
+          density_method = RHO_CALC
         else
-  call throw_warning("initialise :: init_fieldset", "Could not find temperature or salinity ('temp'/'salt') in "//trim(filename)// &
+          call throw_warning("initialise :: init_fieldset", "Could not find temperature or salinity ('" &
+                             //trim(tempvarname)//"'/'"//trim(saltvarname)//"') in "//trim(filename)// &
                              ". Using default density.")
-          has_density = DEFAULT_DENSITY
+          density_method = RHO_DEFAULT
         end if
       end if
       !---------------------------------------------
       ! Field for viscosity
       if (nc_var_exists(trim(filename), trim(viscvarname))) then
         call fieldset%add_field("VISC", viscvarname)
-        has_viscosity = .true.
+        viscosity_method = VISC_VARIABLE
         field_count = field_count + 1
       else
-        call throw_warning("initialise :: init_fieldset", "Could not find viscosity ('nuh') in "//trim(filename)// &
-                           ". Using default viscosity.")
+        call throw_warning("initialise :: init_fieldset", "Could not find viscosity ('"//trim(viscvarname)//"') in "//trim(filename))
+        if (nc_var_exists(trim(filename), trim(tempvarname)) .and. &
+            nc_var_exists(trim(filename), trim(saltvarname))) then
+          if (.not. fieldset%has_field("TEMP")) then
+            call fieldset%add_field("TEMP", tempvarname)
+            field_count = field_count + 1
+          end if
+          if (.not. fieldset%has_field("SALT")) then
+            call fieldset%add_field("SALT", saltvarname)
+            field_count = field_count + 1
+          end if
+          viscosity_method = VISC_CALC
+        else
+          call throw_warning("initialise :: init_fieldset", "Could not find temperature or salinity ('" &
+                             //trim(tempvarname)//"'/'"//trim(saltvarname)//"') in "//trim(filename)// &
+                             ". Using default viscosity.")
+          viscosity_method = VISC_DEFAULT
+        end if
       end if
       !---------------------------------------------
       ! Fields for bottom friction
       if ((nc_var_exists(trim(filename), trim(taubxvarname)) .and. (nc_var_exists(trim(filename), trim(taubyvarname))))) then
         call fieldset%add_field("TAUBX", taubxvarname, is_2d=.true.)
         call fieldset%add_field("TAUBY", taubyvarname, is_2d=.true.)
+        field_count = field_count + 2
         has_bottom_stress = .true.
+      else
+        call throw_warning("initialise :: init_fieldset", "Could not find bottom stress ('"//trim(taubxvarname)//"'/'"//trim(taubyvarname)//"') in "//trim(filename))
       end if
     end if
 

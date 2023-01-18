@@ -26,7 +26,7 @@ module mod_particle
     logical  :: is_active = .true.          ! Skip particle in loop if is_active == .false.
     logical  :: kill_beached, kill_boundary ! Set is_active=.false. if beached or on boundary?
     integer  :: warnings = 0
-    integer  :: state = ST_SUSPENDED              ! States: active, beached, on boundary, bottom. Enumerated in cppdefs.h
+    integer  :: state = ST_SUSPENDED        ! States: active, beached, on boundary, bottom. Enumerated in cppdefs.h
     real(rk) :: id                          ! Origin of particle, number
     !---------------------------------------------
     ! Indices
@@ -54,7 +54,6 @@ module mod_particle
     !---------------------------------------------
     real(rk) :: rho = ZERO                  ! Density
     real(rk) :: rho0 = ZERO                 ! Initial density
-    real(rk) :: delta_rho = ZERO            ! Density difference
     real(rk) :: radius = ZERO               ! Radius
     real(rk) :: radius0 = ZERO              ! Initial radius
     real(rk) :: age = ZERO                  ! Age
@@ -63,9 +62,13 @@ module mod_particle
     real(rk) :: time_on_beach = ZERO        ! Time spent in the beach area
     real(rk) :: beaching_time               ! Different particles may essentialy have different beaching times
     !---------------------------------------------
-#ifdef BIOFOULING_KOOI    
-    real(rk) :: aa_growth = ZERO            ! Attached algal growth
-#endif
+    ! Environment variables
+    real(rk) :: delta_rho = ZERO            ! Density difference between particle and surrounding water
+    real(rk) :: kin_visc = ZERO              ! Kinematic viscosity surrounding particle
+    real(rk) :: u_star = ZERO               ! Friction velocity surrounding particle
+    !---------------------------------------------
+    ! Biofouling variables
+    real(rk) :: growth_biofilm = ZERO       ! Attached algal growth
     real(rk) :: h_biofilm = ZERO            ! Thickness of biofilm
 
   contains
@@ -740,6 +743,9 @@ contains
     FMT2, this%u0, this%v0, this%w0
     FMT2, this%u1, this%v1, this%w1
 
+    FMT1, "Velocity from buoyancy"
+    FMT2, this%vel_vertical
+
     FMT1, "State"
     FMT2, "state: ", this%state
     FMT2, "is_active: ", this%is_active
@@ -747,10 +753,11 @@ contains
     FMT1, "Other characteristics"
     FMT2, "Age: ", this%age
     FMT2, "Distance: ", this%traj_len
-    FMT2, "Radius: ", this%radius
-    FMT2, "Density: ", this%rho
+    FMT2, "Radius (R, R0): ", this%radius, this%radius0
+    FMT2, "Density (rho, rho0): ", this%rho, this%rho0
     FMT2, "Time on beach: ", this%time_on_beach
     FMT2, "Beaching time: ", this%beaching_time
+    FMT2, "Biofilm thickness: ", this%h_biofilm
 
   end subroutine print_info
 
