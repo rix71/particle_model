@@ -68,6 +68,7 @@ module mod_fieldset
     procedure, public :: add_field
     procedure, public :: list_fields
     procedure, public :: get_field_index
+    procedure, public :: has_field
     procedure, public :: set_u_component
     procedure, public :: set_v_component
     procedure         :: get_u_comp_mask
@@ -302,6 +303,18 @@ contains
     return
   end function get_field_index
   !===========================================
+  logical function has_field(this, field_name) result(res)
+    class(t_fieldset), intent(in) :: this
+    character(*), intent(in)      :: field_name
+
+    res = .false.
+    if (this%get_field_index(field_name) > 0) then
+      res = .true.
+    end if
+
+    return
+  end function has_field
+  !===========================================
   subroutine get_u_comp_mask(this)
     !---------------------------------------------
     ! Make the velocity u component (similarly for v comp. in get_v_comp_mask)
@@ -360,8 +373,9 @@ contains
     class(t_fieldset), intent(inout) :: this
     character(*), intent(in)         :: u_comp_name
 
-    this%u_idx = this%fields%node_loc(trim(u_comp_name))
-    if (this%u_idx < 1) call throw_error("fieldset :: set_u_component", "Did not find "//trim(u_comp_name)//" in fieldset")
+    ! this%u_idx = this%fields%node_loc(trim(u_comp_name))
+    ! if (this%u_idx < 1) call throw_error("fieldset :: set_u_component", "Did not find "//trim(u_comp_name)//" in fieldset")
+    if (.not. this%has_field(trim(u_comp_name))) call throw_error("fieldset :: set_u_component", "Did not find "//trim(u_comp_name)//" in fieldset")
     call this%get_u_comp_mask()
 
   end subroutine set_u_component
@@ -370,8 +384,9 @@ contains
     class(t_fieldset), intent(inout) :: this
     character(*), intent(in)         :: v_comp_name
 
-    this%v_idx = this%fields%node_loc(trim(v_comp_name))
-    if (this%v_idx < 1) call throw_error("fieldset :: set_v_component", "Did not find "//trim(v_comp_name)//" in fieldset")
+    ! this%v_idx = this%fields%node_loc(trim(v_comp_name))
+    ! if (this%v_idx < 1) call throw_error("fieldset :: set_v_component", "Did not find "//trim(v_comp_name)//" in fieldset")
+    if (.not. this%has_field(trim(v_comp_name))) call throw_error("fieldset :: set_v_component", "Did not find "//trim(v_comp_name)//" in fieldset")
     call this%get_v_comp_mask()
 
   end subroutine set_v_component
@@ -382,6 +397,7 @@ contains
     integer, intent(in)              :: zax_style
     integer, intent(in)              :: zax_direction
 
+    if (.not. this%has_field(trim(zax_name))) call throw_error("fieldset :: set_zax", "Did not find "//trim(zax_name)//" in fieldset")
     this%zax_style = zax_style
     if (zax_direction > 0) then
       this%zax_dir = 1
@@ -393,7 +409,6 @@ contains
       this%zax_top_idx = 1
     end if
     this%zax_idx = this%fields%node_loc(trim(zax_name))
-    if (this%zax_idx < 1) call throw_error("fieldset :: set_zax", "Did not find "//trim(zax_name)//" in fieldset")
 
     return
   end subroutine set_zax
