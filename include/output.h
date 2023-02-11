@@ -20,12 +20,12 @@
 #define OUT_ID
 #define OUT_VELOCITY
 #define OUT_SETTLING_VELOCITY
-#define OUT_DENSITY
-#define OUT_RADIUS
+! #define OUT_DENSITY
+! #define OUT_RADIUS
 #define OUT_AGE
-#define OUT_TIME_ON_BEACH
-#define OUT_BEACHING_TIME
-#define OUT_H_BIOFILM
-#define OUT_GROWTH_BIOFILM
+! #define OUT_TIME_ON_BEACH
+! #define OUT_BEACHING_TIME
+! #define OUT_H_BIOFILM
+! #define OUT_GROWTH_BIOFILM
 #define OUT_STATE
 #endif

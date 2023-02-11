@@ -17,7 +17,7 @@ module mod_loop
   use field_vars, only: fieldset
   use mod_particle, only: t_particle
   use mod_domain_vars, only: domain
-  use mod_particle_vars, only: particles, init_coords, inputstep, &
+  use mod_particle_vars, only: particles, inputstep, &
                                max_age, runparts, kill_beached, kill_boundary, release_particles
   use time_vars, only: theDate, run_start_dt, run_end_dt, dt
   use mod_output, only: outputstep, restartstep, snap_interval, write_data, &
@@ -144,21 +144,24 @@ contains
 #endif
 
       !---------------------------------------------
+      ! Update time
+      call theDate%update(dt)
+
+      !---------------------------------------------
       ! Write output
       if ((mod(itime, outputstep) .eq. 0) .and. (runparts .gt. 0)) then
         if (write_all_particles) call write_data(runparts)
         if (write_active_particles) call write_data_only_active(runparts)
-
       end if
-      !---------------------------------------------
-      ! Update time
-      call theDate%update(dt)
-      itime = itime + 1
+
       !---------------------------------------------
       ! Write restart (save after updating the date so it could be used as initial state later)
       if ((restartstep > 0) .and. (mod(itime, restartstep) == 0)) then
         call write_restart(runparts)
       end if
+
+      !---------------------------------------------
+      itime = itime + 1
 
     end do
 

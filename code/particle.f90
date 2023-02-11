@@ -28,6 +28,7 @@ module mod_particle
     integer  :: warnings = 0
     integer  :: state = ST_SUSPENDED        ! States: active, beached, on boundary, bottom. Enumerated in cppdefs.h
     real(rk) :: id                          ! Origin of particle, number
+    logical  :: restarted = .false.         ! Particle was restarted from file
     !---------------------------------------------
     ! Indices
     integer  :: i0, j0, k0                  ! Position (grid cell indices, original)
@@ -96,6 +97,7 @@ contains
                                           id, beaching_time, &
                                           rho, radius, max_age, &
                                           kill_beached, kill_boundary, &
+                                          is_active, &
                                           fieldset, time) result(p)
     real(rk), intent(in)         :: lon, lat, depth
     real(rk), intent(in)         :: id
@@ -103,13 +105,22 @@ contains
     real(rk), intent(in)         :: rho, radius
     real(rk), intent(in)         :: max_age
     logical, intent(in)          :: kill_beached, kill_boundary
+    logical, intent(in)          :: is_active
     type(t_fieldset), intent(in) :: fieldset
     real(rk), intent(in)         :: time
 
+    p%id = id
     p%lon0 = lon
     p%lat0 = lat
     p%depth0 = depth
-    p%id = id
+    p%is_active = is_active
+
+    if (.not. p%is_active) then
+      p%state = ST_INIT_ERROR
+      ! No more information is needed if the particle is not active from the start
+      return
+    end if
+
     p%beaching_time = beaching_time
     p%rho = rho
     p%rho0 = rho
@@ -151,6 +162,10 @@ contains
     p%lat0 = lat
     p%depth0 = depth
 
+    p%lon1 = lon
+    p%lat1 = lat
+    p%depth1 = depth
+
     p%i0 = i0
     p%j0 = j0
     p%k0 = k0
@@ -158,9 +173,21 @@ contains
     p%jr0 = jr0
     p%kr0 = kr0
 
+    p%i1 = i0
+    p%j1 = j0
+    p%k1 = k0
+    p%ir1 = ir0
+    p%jr1 = jr0
+    p%kr1 = kr0
+
     p%u0 = u0
     p%v0 = v0
     p%w0 = w0
+
+    p%u1 = u0
+    p%v1 = v0
+    p%w1 = w0
+
     p%vel_vertical = vel_vertical
 
     p%traj_len = traj_len
@@ -184,6 +211,8 @@ contains
 
     p%kill_beached = kill_beached
     p%kill_boundary = kill_boundary
+
+    p%restarted = .true.
 
   end function ctor_particle_restart
   !===========================================
@@ -329,7 +358,6 @@ contains
 
 #ifdef DEBUG
       if ((abs(di) > 1) .or. (abs(dj) > 1)) then
-
         call throw_warning("particle :: bounce", "di or dj greater than 1!")
         ! return ! then what?
       end if
@@ -642,11 +670,6 @@ contains
     real(rk), intent(in)             :: time
     integer                          :: i, j
     integer                          :: seamask_val
-#ifdef DEBUG
-    real(rk)                         :: lon_t0 = 0., lat_t0 = 0.
-    real(rk)                         :: lon_t1 = 0., lat_t1 = 0.
-    real(rk)                         :: lon_t2 = 0., lat_t2 = 0.
-#endif
 
     ! call fieldset%domain%get_indices_2d(this%lon1, this%lat1, i=i, j=j)
     i = this%i1
@@ -685,19 +708,6 @@ contains
       this%lon1 = this%lon0
       this%lat1 = this%lat0
       this%depth1 = this%depth0
-#endif
-
-#if defined DEBUG && (defined PARTICLE_BOUNCE || defined PARTICLE_REDIRECT)
-      lon_t2 = this%lon1
-      lat_t2 = this%lat1
-      if ((lon_t0 == lon_t2) .and. (lat_t0 == lat_t2)) then
-
-      end if
-
-      lon_t0 = lon_t1
-      lat_t0 = lat_t1
-      lon_t1 = lon_t2
-      lat_t1 = lat_t2
 #endif
 
       !---------------------------------------------
@@ -749,6 +759,7 @@ contains
     FMT1, "State"
     FMT2, "state: ", this%state
     FMT2, "is_active: ", this%is_active
+    FMT2, "restarted: ", this%restarted
 
     FMT1, "Other characteristics"
     FMT2, "Age: ", this%age
@@ -768,19 +779,26 @@ module mod_particle_vars
   ! This module includes variables related to particles:
   ! - number of particles, initial locations or something (maybe)...
   ! - anything else?
-  ! TODO: Initial coordinates from netCDF
   !----------------------------------------------------------------
+#ifdef USE_OMP
+  use omp_lib
+#endif
   use mod_precdefs
   use mod_errors
   use mod_particle
   use nc_manager, only: nc_read_real_1d, nc_read_real_2d, nc_get_dim, nc_var_exists
-  use mod_domain_vars, only: domain
-  use time_vars, only: nTimes, run_start_dt, dt
+  use mod_domain, only: t_domain
+  use time_vars, only: nTimes, run_start_dt, run_end_dt, dt
   use run_params, only: runid, restart, restart_path
   use mod_datetime, only: t_datetime, datetime_from_netcdf
   use mod_fieldset, only: t_fieldset
   implicit none
+  private
   !===================================================
+  public :: inputstep, particle_init_method, coordfile, &
+            max_age, kill_beached, kill_boundary, runparts
+  public :: particles
+  public :: initialise_particles, release_particles
   !---------------------------------------------
   logical                       :: kill_beached, kill_boundary ! Set is_active=.false. if beached or on boundary?
   integer                       :: inputstep, &                ! How often are particles released?
@@ -799,10 +817,14 @@ module mod_particle_vars
     integer                             :: next_idx = 1, &
                                            time_idx = 1, &
                                            n_particles
+#ifdef IGNORE_BAD_PARTICLES
+    integer                             :: n_good_particles = 0
+#endif
     real(rk), allocatable, dimension(:) :: x, y, z, &
                                            rho, radius, &
                                            beaching_time, &
                                            id
+    logical, allocatable, dimension(:) :: is_active
   contains
     procedure :: allocate_n_init_particles
     procedure :: check_initial_coordinates
@@ -810,17 +832,22 @@ module mod_particle_vars
   !---------------------------------------------
   type(t_initial_position), allocatable :: init_coords(:)
   !---------------------------------------------
+  interface initialise_particles
+    module procedure init_particles
+  end interface initialise_particles
+  !---------------------------------------------
   integer :: ierr
   !===================================================
 contains
   !===========================================
-  subroutine init_particles()
+  subroutine init_particles(fieldset)
+    type(t_fieldset), intent(in) :: fieldset
 
     select case (particle_init_method)
     case (TXT_FILE)
-      call init_particles_from_coordfile ! particle.f90
+      call init_particles_from_coordfile(fieldset) ! particle.f90
     case (NC_FILE)
-      call init_particles_from_netcdf    ! particle.f90
+      call init_particles_from_netcdf(fieldset)    ! particle.f90
     end select
 
     if (restart) then
@@ -886,7 +913,7 @@ contains
     open (RESTARTFILE, file=trim(restart_filename), action='read', status='old', iostat=ierr)
     read (RESTARTFILE, *)
     do i = 1, n_restart_particles
-      read (RESTARTFILE, *) lon, lat, depth, &
+      read (RESTARTFILE, *, iostat=ierr) lon, lat, depth, &
         i0, j0, k0, &
         ir0, jr0, kr0, &
         id, beaching_time, &
@@ -896,6 +923,10 @@ contains
         age, max_age, kill_beached, kill_boundary, &
         u0, v0, w0, vel_vertical, &
         traj_len, time_on_beach, is_active, state
+
+      if (ierr /= 0) then
+        call throw_error("particle :: read_restart_file", "Error reading restart file.")
+      end if
 
       particles(i) = t_particle(lon, lat, depth, &
                                 i0, j0, k0, &
@@ -922,18 +953,32 @@ contains
 
     allocate (this%x(n_init_p), this%y(n_init_p), this%z(n_init_p), &
               this%rho(n_init_p), this%radius(n_init_p), &
-              this%beaching_time(n_init_p), this%id(n_init_p))
+              this%beaching_time(n_init_p), this%id(n_init_p), &
+              this%is_active(n_init_p))
 
     this%x = ZERO; this%y = ZERO; this%z = ZERO; 
     this%rho = ZERO; this%radius = ZERO; 
     this%beaching_time = ZERO; this%id = ZERO
+    this%is_active = .true.
 
   end subroutine allocate_n_init_particles
   !===========================================
-  subroutine check_initial_coordinates(this)
-    class(t_initial_position), intent(in) :: this
-    integer :: ipart, i, j, on_land = 0
+  subroutine check_initial_coordinates(this, domain)
+    class(t_initial_position), intent(inout) :: this
+    class(t_domain), intent(in) :: domain
+    integer :: ipart, i, j, on_land
+    integer :: n_good_particles, n_bad_particles
+    integer, allocatable, dimension(:, :) :: seamask
 
+    n_good_particles = 0
+    n_bad_particles = 0
+
+    seamask = domain%get_seamask()
+
+    on_land = 0
+#ifdef USE_OMP
+    !$omp parallel do private(i, j) shared(this, domain) reduction(+:on_land, n_good_particles, n_bad_particles)
+#endif
     do ipart = 1, this%n_particles
       if ((this%x(ipart) < domain%get_lons(1)) .or. (this%x(ipart) > domain%get_lons(domain%nx)) .or. &
           (this%y(ipart) < domain%get_lats(1)) .or. (this%y(ipart) > domain%get_lats(domain%ny))) then
@@ -942,25 +987,42 @@ contains
         call throw_error("particle_vars :: check_initial_coordinates", "Particle initialised outside of domain")
       end if
       call domain%get_indices_2d(this%x(ipart), this%y(ipart), i=i, j=j)
-      if (domain%get_seamask(i, j) == DOM_LAND) then
+      if (seamask(i, j) == DOM_LAND) then
         ! call throw_warning("particle_vars :: check_initial_coordinates", "Particle initialised on land")
+        this%is_active(ipart) = .false.
         on_land = on_land + 1
+#ifdef IGNORE_BAD_PARTICLES
+        n_bad_particles = n_bad_particles + 1
+      else
+        n_good_particles = n_good_particles + 1
+#endif
       end if
     end do
+#ifdef USE_OMP
+    !$omp end parallel do
+#endif
     if (on_land > 0) then
       call throw_warning("particle_vars :: check_initial_coordinates", "Particles initialised on land")
-      WARNING, on_land, "particles on land, time idx = ", this%time_idx
+      WARNING, on_land, " of ", this%n_particles, " particles on land, time idx = ", this%time_idx
       ! else
       !   FMT2, "Initial coordinates OK"
     end if
+#ifdef IGNORE_BAD_PARTICLES
+    ! Check that n_good_particles + n_bad_particles = n_particles
+    if (n_good_particles + n_bad_particles .ne. this%n_particles) then
+      call throw_error("particle_vars :: check_initial_coordinates", "n_good_particles + n_bad_particles .ne. n_particles")
+    end if
+    this%n_good_particles = n_good_particles
+#endif
 
     return
   end subroutine check_initial_coordinates
   !===========================================
-  subroutine init_particles_from_coordfile
+  subroutine init_particles_from_coordfile(fieldset)
     !---------------------------------------------
     ! Allocate array for estimated amount of particles
     !---------------------------------------------
+    type(t_fieldset), intent(in) :: fieldset
     integer :: ipart
 
     !print
@@ -981,11 +1043,15 @@ contains
     close (COORDFILE, iostat=ierr)
     if (ierr .ne. 0) call throw_error("particle_vars :: init_particles_from_coordfile", "Failed to close "//trim(coordfile), ierr)
 
-    call init_coords(1)%check_initial_coordinates()
+    call init_coords(1)%check_initial_coordinates(fieldset%domain)
 
     ! If inputstep is < 0, it means no additional particles will be released (for restart)
     if (inputstep > 0) then
+#ifdef IGNORE_BAD_PARTICLES
+      n_particles = init_coords(1)%n_good_particles * (nTimes / inputstep) + init_coords(1)%n_good_particles
+#else
       n_particles = init_coords(1)%n_particles * (nTimes / inputstep) + init_coords(1)%n_particles
+#endif
     else
       n_particles = 0
     end if
@@ -995,11 +1061,12 @@ contains
 
   end subroutine init_particles_from_coordfile
   !===========================================
-  subroutine init_particles_from_netcdf
+  subroutine init_particles_from_netcdf(fieldset)
     !---------------------------------------------
     ! Allocate array for estimated amount of particles
     !---------------------------------------------
-    integer :: itime
+    type(t_fieldset), intent(in) :: fieldset
+    integer :: itime, i_end
     real(rk), allocatable :: nInitParticles(:)
 
     FMT1, "======== Init particles ========"
@@ -1074,13 +1141,22 @@ contains
         init_coords(itime)%radius = 0.001
       end if
 
-      call init_coords(itime)%check_initial_coordinates()
+      call init_coords(itime)%check_initial_coordinates(fieldset%domain)
 
     end do
 
     do itime = 1, n_init_times
       if (run_start_dt <= init_coords(itime)%release_date) then
         i_release = itime
+        FMT2, "First release time:"
+        call init_coords(itime)%release_date%print_short_date()
+        exit
+      end if
+    end do
+    do itime = 1, n_init_times
+      if (run_end_dt <= init_coords(itime)%release_date) then
+        i_end = itime
+        FMT2, "Final release time:"
         call init_coords(itime)%release_date%print_short_date()
         exit
       end if
@@ -1088,9 +1164,20 @@ contains
 
     if (inputstep > 0) then
       if (n_init_times > 1) then
+#ifdef IGNORE_BAD_PARTICLES
+        ! Count the number of good particles, i.e. particles that are not outside the space or time domain
+        do itime = i_release, i_end
+          n_particles = n_particles + int(init_coords(itime)%n_good_particles)
+        end do
+#else
         n_particles = int(sum(nInitParticles))
+#endif
       else
+#ifdef IGNORE_BAD_PARTICLES
+        n_particles = int(init_coords(1)%n_good_particles) * (nTimes / inputstep) + int(nInitParticles(1))
+#else
         n_particles = int(nInitParticles(1)) * (nTimes / inputstep) + int(nInitParticles(1))
+#endif
       end if
     else
       n_particles = 0
@@ -1106,6 +1193,11 @@ contains
     type(t_fieldset), intent(in) :: fieldset
     real(rk), intent(in) :: fieldset_time
     integer :: ipart
+#ifdef IGNORE_BAD_PARTICLES
+    integer :: i_good_part
+
+    i_good_part = 0
+#endif
 
     if (inputstep <= 0) return
 
@@ -1120,6 +1212,31 @@ contains
       end if
     end select
 
+#ifdef IGNORE_BAD_PARTICLES
+    FMT2, "Releasing ", init_coords(i_release)%n_good_particles, " new particles at itime = ", itime
+    do ipart = 1, init_coords(i_release)%n_particles
+      if (init_coords(i_release)%is_active(ipart)) then
+        i_good_part = i_good_part + 1
+        particles(i_good_part + runparts) = t_particle(lon=init_coords(i_release)%x(ipart), &
+                                                       lat=init_coords(i_release)%y(ipart), &
+                                                       depth=init_coords(i_release)%z(ipart), &
+                                                       id=init_coords(i_release)%id(ipart), &
+                                                       beaching_time=init_coords(i_release)%beaching_time(ipart), &
+                                                       rho=init_coords(i_release)%rho(ipart), &
+                                                       radius=init_coords(i_release)%radius(ipart), &
+                                                       max_age=max_age, &
+                                                       kill_beached=kill_beached, &
+                                                       kill_boundary=kill_boundary, &
+                                                       is_active=init_coords(i_release)%is_active(ipart), &
+                                                       fieldset=fieldset, &
+                                                       time=fieldset_time)
+      end if
+    end do
+    if (i_good_part .ne. init_coords(i_release)%n_good_particles) call throw_error("particle :: release_particles", "i_good_part .ne. init_coords(i_release)%n_good_particles")
+    runparts = runparts + init_coords(i_release)%n_good_particles
+    FMT2, runparts, "particles"
+    i_release = init_coords(i_release)%next_idx
+#else
     FMT2, "Releasing ", init_coords(i_release)%n_particles, " new particles at itime = ", itime
     do ipart = 1, init_coords(i_release)%n_particles
       particles(ipart + runparts) = t_particle(lon=init_coords(i_release)%x(ipart), &
@@ -1132,12 +1249,14 @@ contains
                                                max_age=max_age, &
                                                kill_beached=kill_beached, &
                                                kill_boundary=kill_boundary, &
+                                               is_active=init_coords(i_release)%is_active(ipart), &
                                                fieldset=fieldset, &
                                                time=fieldset_time)
     end do
     runparts = runparts + init_coords(i_release)%n_particles
     FMT2, runparts, "particles"
     i_release = init_coords(i_release)%next_idx
+#endif
 
     return
   end subroutine release_particles

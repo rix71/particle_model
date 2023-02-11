@@ -32,8 +32,9 @@ contains
     vert_vel = buoyancy(p, fieldset, time, p%delta_rho, p%kin_visc) + resuspension(p, fieldset, time, p%u_star)
 
     p%depth1 = p%depth1 + (vert_vel * dt)
-    p%w1 = p%w1 + vert_vel
+    ! p%w1 = p%w1 + vert_vel
     p%vel_vertical = vert_vel
+    call fieldset%search_indices(t=time, x=p%lon1, y=p%lat1, z=p%depth1, k=p%k1, kr=p%kr1)
 
     return
   end subroutine vertical_velocity
@@ -121,14 +122,9 @@ contains
     real(rk), intent(in) :: kin_visc  ! Kinematic viscosity
     real(rk)             :: d_star    ! Dimensionless diameter
     real(rk)             :: w_star    ! Dimensionless settling velocity
-    ! real(rk)             ::  ! Density difference
-
-    ! kin_visc = mu_env / rho_env ! NOT USING VISCOSITY???
-    ! delta_rho = rho_p - rho_env
 
     dbghead(Kooi_vertical_velocity)
-    debug(delta_rho)
-    debug(kin_visc)
+    debug(delta_rho); debug(kin_visc)
 
     res = ZERO
     d_star = (delta_rho * g * (2.*rad_p)**3.) / (rho_env * (kin_visc**2.)) ! g negative?
@@ -153,6 +149,7 @@ contains
       res = (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
     end if
     debug(res)
+    
     dbgtail(Kooi_vertical_velocity)
     return
   end function Kooi_vertical_velocity

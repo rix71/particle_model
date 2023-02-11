@@ -18,9 +18,8 @@ module mod_initialise
   use mod_domain
   use nc_manager, only: nc_read_time_val, nc_var_exists
   use mod_particle_vars, only: inputstep, particle_init_method, coordfile, &
-                               max_age, &
-                               kill_beached, kill_boundary, &
-                               init_particles
+                               max_age, kill_beached, kill_boundary, &
+                               initialise_particles
   use time_vars
   use mod_datetime
   use mod_biofouling, only: init_biofouling
@@ -280,7 +279,7 @@ contains
         viscosity_method = VISC_VARIABLE
         field_count = field_count + 1
       else
-        call throw_warning("initialise :: init_fieldset", "Could not find viscosity ('"//trim(viscvarname)//"') in "//trim(filename))
+       call throw_warning("initialise :: init_fieldset", "Could not find viscosity ('"//trim(viscvarname)//"') in "//trim(filename))
         if (nc_var_exists(trim(filename), trim(tempvarname)) .and. &
             nc_var_exists(trim(filename), trim(saltvarname))) then
           if (.not. fieldset%has_field("TEMP")) then
@@ -324,6 +323,12 @@ contains
 
   end subroutine init_fieldset
   !===========================================
+  subroutine init_particles
+
+    call initialise_particles(fieldset)
+
+  end subroutine init_particles
+  !===========================================
   subroutine init_model
     !---------------------------------------------
     ! Call all the subroutines to initialise the model
@@ -333,7 +338,7 @@ contains
     call init_domain                   ! init.f90
     call init_time                     ! init.f90
     call init_fieldset                 ! init.f90
-    call init_particles
+    call init_particles                ! init.f90
     call init_output                   ! output.f90
 
   end subroutine init_model

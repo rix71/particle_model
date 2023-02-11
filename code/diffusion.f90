@@ -84,7 +84,8 @@ contains
 #endif
 
     call fieldset%domain%xy2lonlat(x1, y1, p%lon1, p%lat1)
-    call fieldset%search_indices(x=p%lon1, y=p%lat1, i=p%i1, j=p%j1, ir=p%ir1, jr=p%jr1)
+    call fieldset%search_indices(t=time, x=p%lon1, y=p%lat1, z=z1, i=p%i1, j=p%j1, k=p%k1, ir=p%ir1, jr=p%jr1, kr=p%kr1)
+    p%depth1 = z1
 
     return
   end subroutine diffuse_3D

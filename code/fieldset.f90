@@ -161,12 +161,6 @@ contains
     character(*), intent(in)         :: field_name, nc_varname
     logical, optional, intent(in)    :: is_2d
     logical :: fld_2d
-#ifdef DEBUG
-    integer, save :: NFIELD = 0
-
-    NFIELD = NFIELD + 1
-
-#endif
 
     fld_2d = .false.
     if (present(is_2d)) then
@@ -397,7 +391,7 @@ contains
     integer, intent(in)              :: zax_style
     integer, intent(in)              :: zax_direction
 
-    if (.not. this%has_field(trim(zax_name))) call throw_error("fieldset :: set_zax", "Did not find "//trim(zax_name)//" in fieldset")
+  if (.not. this%has_field(trim(zax_name))) call throw_error("fieldset :: set_zax", "Did not find "//trim(zax_name)//" in fieldset")
     this%zax_style = zax_style
     if (zax_direction > 0) then
       this%zax_dir = 1
@@ -643,15 +637,6 @@ contains
     integer                                :: i
     integer(rk)                            :: YYYYMMDD
     character(len=LEN_CHAR_L)              :: testdir
-#ifdef DEBUG
-    integer, save                          :: NCall = 0
-#endif
-
-#ifdef DEBUG
-    NCall = NCall + 1
-
-    call date%print_short_date()
-#endif
 
     if (this%nentries == 1) then
       write (testdir, '(a,i0.8)') trim(this%PATH)//'/', this%dirlist(1)
@@ -703,23 +688,9 @@ contains
     character(len=LEN_CHAR_L), intent(out) :: thefile
     integer, optional, intent(out)         :: file_idx
     integer                                :: i, n_times
-#ifdef DEBUG
-    integer, save                          :: NCall = 0
-    type(t_datetime)                       :: testdate
-#endif
-
-#ifdef DEBUG
-    NCall = NCall + 1
-
-    call date%print_short_date()
-#endif
 
     if (this%nentries == 1) then
       write (thefile, '(a)') trim(this%PATH)//'/'//trim(this%filelist(1))
-#ifdef DEBUG
-      testdate = datetime_from_netcdf(trim(thefile), 1)
-
-#endif
       if ((date < datetime_from_netcdf(trim(thefile), 1))) then
         call throw_error("fieldset :: find_file", "The date is earlier than first date in data file")
       end if
@@ -746,6 +717,10 @@ contains
   end subroutine find_file
   !===========================================
   subroutine get_indices_vertical(this, t, z, i, j, k, kr)
+    !---------------------------------------------
+    ! Get the vertical indices for a given depth
+    ! TODO: zax direction should be taken into account
+    !---------------------------------------------
     class(t_fieldset), intent(in)   :: this
     real(rk), intent(in)            :: t, z
     integer, intent(in)             :: i, j
@@ -755,6 +730,8 @@ contains
     real(rk)                        :: dep
     integer                         :: ik
 
+    dbghead(fieldset :: get_indices_vertical)
+
     dep = this%domain%get_bathymetry(i, j)
 
     if (dep < ZERO) then
@@ -762,8 +739,8 @@ contains
       if (present(kr)) kr = real(this%nz, rk)
 #ifdef DEBUG
       call throw_warning("fieldset :: get_indices_vertical", "Particle on ground") ! Better error message
-
 #endif
+      dbgtail(fieldset :: get_indices_vertical)
       return
     end if
 
@@ -771,26 +748,27 @@ contains
       if (present(k)) k = 1
       if (present(kr)) kr = 1.0d0
 #ifdef DEBUG
-      call throw_warning("fieldset :: get_indices_vertical", "Out of bounds") ! Better error message
-
+      call throw_warning("fieldset :: get_indices_vertical", "Out of bounds (z < depth)") ! Better error message
 #endif
+      dbgtail(fieldset :: get_indices_vertical)
       return
     end if
 
+    DBG, "fieldset :: get_indices_vertical: Calling get_zax with t, i, j = ", t, i, j
     zax = this%get_zax(t, i, j) ! Don't want to interpolate the Z axis in space, so we're taking the closest indices
 
     if (z > zax(this%nz)) then
       if (present(k)) k = this%nz
       if (present(kr)) kr = real(this%nz, kind=rk)
 #ifdef DEBUG
-      call throw_warning("fieldset :: get_indices_vertical", "Out of bounds") ! Better error message
-
+      call throw_warning("fieldset :: get_indices_vertical", "Out of bounds (z > top)") ! Better error message
 #endif
+      dbgtail(fieldset :: get_indices_vertical)
       return
     end if
 
     !---------------------------------------------
-    ! Could there be a way to do this without looping?
+    ! ? Could there be a way to do this without looping?
     do ik = 1, this%nz - 1
       if (zax(ik + 1) .ge. z) then
         if ((zax(ik + 1) - zax(ik)) <= ZERO) cycle ! There may be zeros at the bottom
@@ -801,6 +779,7 @@ contains
           kr = ik + (z - zax(ik)) / (zax(ik + 1) - zax(ik))
           if (kr < ONE) kr = ONE
         end if
+        dbgtail(fieldset :: get_indices_vertical)
         return
       end if
     end do
@@ -814,7 +793,7 @@ contains
 #ifdef DEBUG
     call throw_warning("fieldset :: get_indices_vertical", "Did not find vertical index!")
 #endif
-
+    dbgtail(fieldset :: get_indices_vertical)
     return
   end subroutine get_indices_vertical
   !===========================================
@@ -867,6 +846,17 @@ contains
     real(rk)                      :: arr_zax(this%nz), tmp_zax(this%nz)
     real(rk)                      :: res(this%nz)
     integer                       :: ik
+
+#ifdef DEBUG
+    if (i < 1 .or. i > this%domain%nx) then
+      ERROR, "fieldset :: get_zax ", "i out of bounds"
+      ERROR, "fieldset :: get_zax ", "i = ", i
+    end if
+    if (j < 1 .or. j > this%domain%ny) then
+      ERROR, "fieldset :: get_zax ", "j out of bounds"
+      ERROR, "fieldset :: get_zax ", "j = ", j
+    end if
+#endif
 
     call this%fields%get_item(this%zax_idx, p_field)
     call p_field%get_array_1D(t=t, i=i, j=j, n=this%nz, dim=3, res=arr_zax)
@@ -970,6 +960,8 @@ contains
     integer                          :: i_field
     logical                          :: ign_chk, ud
 
+    dbghead(update)
+
     if (present(ignore_check)) then
       ign_chk = ignore_check
     else
@@ -978,14 +970,13 @@ contains
 
     ! Check if it's even time to read
     if ((.not. ign_chk) .and. (date < this%next_read_dt)) then
-
+      dbgtail(update)
       return
     end if
 
 #ifdef DEBUG
-
+    DBG, "Updating fieldset"
     call date%print_short_date()
-
 #endif
 
     ! Read nc (if - else because loop over subdomains might need to be the other way)
@@ -1029,6 +1020,7 @@ contains
       call this%date_t2%update(this%nc_timestep)
     end if
 
+    dbgtail(update)
     return
   end subroutine update
   !===========================================
@@ -1106,12 +1098,6 @@ contains
       else
         count(2) = this%nyp
       end if
-
-#ifdef DEBUG
-      if (mod(i_subdom, 50) .eq. 0) then
-
-      end if
-#endif
 
       allocate (tmp_arr(count(1), count(2), count(3)))
 
@@ -1288,8 +1274,6 @@ contains
     where (buffer <= MISSING_VAL) buffer = ZERO
 
     if (n_dims == 3) then
-      DBG, "Checking top and bottom for NaNs"
-
       t_nan = all(buffer(:, :, this%zax_top_idx) == ZERO)
       b_nan = all(buffer(:, :, this%zax_bot_idx) == ZERO)
     end if

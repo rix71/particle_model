@@ -168,6 +168,9 @@ contains
 #ifdef BIOFOULING_TSIARAS
     FMT2, "-BIOFOULING_TSIARAS"
 #endif
+#ifdef IGNORE_BAD_PARTICLES
+    FMT2, "-IGNORE_BAD_PARTICLES"
+#endif
 
     return
   end subroutine print_compile_info

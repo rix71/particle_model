@@ -1,5 +1,5 @@
 FC = gfortran
-FFLAGS = -O3 -cpp -ffree-line-length-none -Wall \
+FFLAGS = -O3 -g -cpp -ffree-line-length-none -Wall \
 	 -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
@@ -38,6 +38,9 @@ FFLAGS += -DPARTICLE_SNAP_SEALVL
 # FFLAGS += -DPARTICLE_BOUNCE
 FFLAGS += -DPARTICLE_REDIRECT
 # FFLAGS += -DPARTICLE_BEACH_IMMEDIATELY
+
+# Ignore particles that are outside the domain
+FFLAGS += -DIGNORE_BAD_PARTICLES
 
 # Compile and run the postprocessing module
 # FFLAGS += -DPOSTPROCESS
