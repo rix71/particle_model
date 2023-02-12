@@ -17,6 +17,7 @@ More to-do in TODO.txt
 Installing is as easy as:
 
 ```
+[git clone]
 cd particle_model/code
 make
 ```
