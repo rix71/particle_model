@@ -3,6 +3,9 @@ FFLAGS = -O3 -g -cpp -ffree-line-length-none -Wall \
 	 -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface \
 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
+#--------------------------------------------------
+# COMPILER FLAGS
+#--------------------------------------------------
 # Profiling flags
 # FFLAGS += -pg -no-pie
 
@@ -48,10 +51,10 @@ FFLAGS += -DIGNORE_BAD_PARTICLES
 # Use OpenMP
 FFLAGS += -DUSE_OMP -fopenmp
 
-#--------------------------------------------------
 # Biofouling model (Kooi, Tsiaras or Simple)
 BF_MODEL = Simple
 
+#--------------------------------------------------
 ifeq ($(BF_MODEL), Kooi)
 	FFLAGS += -DBIOFOULING_KOOI
 	BF_PATH = biofouling/kooi
