@@ -4,8 +4,21 @@
 
 - [x] Resuspension: u -> u\* (bottom friction velocity)
 - [x] Resuspension tests
-- [ ] Biofouling tests
-- [ ] Restart tests
-- [ ] Add run scripts
+- [x] Biofouling tests
+- [x] Restart tests
+- [x] Run scripts
+- [ ] Test cases
+- [ ] Install/run instructions
 
 More to-do in TODO.txt
+
+## Installing
+
+Installing is as easy as:
+
+```
+cd particle_model/code
+make
+```
+
+If you change nothing in the Makefile, your executable will be in `particle_model/bin` directory.
