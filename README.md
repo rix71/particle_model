@@ -22,6 +22,8 @@ Or do a recursive clone, if you want the postprocessor as well.
 
 **NB! The postprocessor is still a work-in-progress.** Better use your own scripts for now.
 
+---
+
 Installing is as easy as:
 ```
 cd particle_model/code
