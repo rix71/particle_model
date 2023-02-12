@@ -1,0 +1,173 @@
+#!/bin/bash
+#==================================
+export OMP_NUM_THREADS=4
+#==================================
+# Namelist variables
+export runid="case_name"
+
+# 2D/3D
+export run_3d=True
+
+# Dry run
+export dry_run=False
+
+# Hydrodynamic data
+export getmpath="${PWD}/data"
+export topofile="${PWD}/topo.nc"
+export pmapfile="${PWD}/par_setup.dat"
+export file_prefix=""
+export file_suffix=""
+
+# Hydrodynamic data variables
+export lonvarname="lon"
+export latvarname="lat"
+export uvarname="uu"
+export vvarname="vv"
+export zaxvarname="h"
+
+# Model domain
+export nx=1557
+export ny=890
+export nlevels=60
+export has_subdomains=True
+export zax_style=2
+
+# Advetion + buoyancy
+export do_velocity=True
+
+# Diffusion
+export do_diffusion=False
+export cm_smagorinsky=0.3
+
+# Resuspension
+export resuspension_coeff=0.05
+export resuspension_threshold=0.148
+
+# Biofouling
+export do_biofouling=True
+gt=10 # growth time in days
+export growth_timescale=`python3 -c "print($gt*24.*3600.)"` # in seconds
+
+# Boundary interactions
+export kill_beached=True
+export kill_boundary=True
+
+# Time
+# Start and end dates for each run are set below
+export dt=30.
+
+# Input
+export particle_init_method=1
+export coordfile="${PWD}/ini.dat"
+in_hours=24
+export inputstep=`python3 -c "print(int($in_hours*3600./$dt))"`
+
+# Output
+out_hours=12
+export outputstep=`python3 -c "print(int($out_hours*3600./$dt))"`
+export write_all_particles=False
+export write_active_particles=True
+export write_snapshot=False
+
+# Restart
+# Restart variable is set below
+# Write at the end of the run (default in namelist template)
+# restart_hours=1440
+# export restartstep=`python3 -c "print(int($restart_hours*3600./$dt))"`
+#==================================
+#--------------------
+RUN_DIR=${PWD}
+BASE_DIR=${RUN_DIR}/..
+NML_PATH=${BASE_DIR}/nml
+#--------------------
+MODEL_DIR=${BASE_DIR}/bin
+MODEL_BIN=${MODEL_DIR}/main
+#--------------------
+OUT_BASE_DIR="${RUN_DIR}/out"
+#--------------------
+# Entire simulation period
+sim_start="2018-01-01"
+sim_end="2021-01-01"
+#--------------------
+step_days=7
+#--------------------
+date_start=$(date -I -d "$sim_start")
+date_end=$(date -I -d "$sim_end")
+dateval=$date_start
+#--------------------
+# Start of the run
+first_run=True
+num_run=0
+#--------------------
+echo "===================="
+echo "Running model:"
+${MODEL_BIN} -c
+#--------------------
+# Set timer
+tic=$(date +%s)
+#--------------------
+while [ $(date -d "$dateval" +%s) -lt $(date -d "$date_end" +%s) ]; do
+    #--------------------
+    num_run=$((num_run+1))
+    echo "===================="
+    echo "This is run number $num_run"
+    echo "Date: $dateval"
+    #--------------------
+    # Set run start and end dates
+    export run_start=$dateval' 00:00:00'
+    export run_end=$(date -I -d "$dateval+$step_days day")' 00:00:00'
+    #--------------------
+    echo "The model is running from $run_start to $run_end"
+    #--------------------
+    # Set output directory
+    YYYYMMDD=$(date -d "$run_start" +%Y%m%d)
+    export outdir="${OUT_BASE_DIR}/${YYYYMMDD}"
+    echo "Making output directory: $outdir"
+    mkdir -p ${outdir}
+    #--------------------
+    if [ "$first_run" = True ]; then
+        first_run=False
+        export restart=False
+    else
+        # Copy restart file from previous run
+        echo "Moving restart file to the next folder..."
+        mv ${outdir_prev}/*${YYYYMMDD}*restart* ${outdir}/.
+        err=$?
+        if [ $err -ne 0 ]; then
+            echo "===================="
+            echo "ERROR: Restart file not found"
+            echo "===================="
+            exit 1
+        fi
+        export restart=True
+        export restart_path="${outdir}"
+    fi
+    #--------------------
+    outdir_prev=$outdir
+    #--------------------
+    # Make namelists
+    ${NML_PATH}/makenamelist.py -i ${NML_PATH}/nmltemplate
+    ${NML_PATH}/makenamelist.py -i ${NML_PATH}/nmltemplate_biofouling_simple -o biofouling.inp
+    cp input.inp ${outdir}/.
+    #--------------------
+    # Run model
+    echo "Running model..."
+    tic_m=$(date +%s)
+    ${MODEL_BIN}
+    toc_m=$(date +%s)
+    #--------------------
+    echo "Model run number ${num_run} finished"
+    echo "Model wall time: $((toc_m-tic_m)) seconds" 
+    echo "===================="
+    #--------------------
+    # Copy output
+    echo "Copying output to run folder..."
+    cp ${runid}.stdout ${outdir}/.
+    #--------------------
+    dateval=$(date -I -d "$dateval+$step_days day")
+done
+toc=$(date +%s)
+echo "===================="
+echo "All finished!"
+echo "Total time: $((toc-tic)) seconds"
+echo "===================="
