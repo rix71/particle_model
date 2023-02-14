@@ -1,4 +1,4 @@
-Updated: Sat Feb 11 23:37:34 EET 2023
+Updated: Tue Feb 14 10:21:27 PM EET 2023
 code/datetime.f90-67-  type(t_datetime) function ctor_datetime(date_str) result(res)
 code/datetime.f90-68-    !---------------------------------------------
 code/datetime.f90-69-    ! Constructor for datetime
@@ -39,40 +39,40 @@ code/domain.f90-91-    !       Boundary should have a thickness!
 code/domain.f90-92-    FMT2, "Making seamask"
 code/domain.f90-93-    do ii = 2, nx - 1
 --
-code/fieldset.f90-488-    ! Get a list of directories or files that contain the data
-code/fieldset.f90-489-    ! The files should be named so that ls command would give them
-code/fieldset.f90-490-    ! in the right order. Including the date in the file name should be enough.
-code/fieldset.f90:491:    ! TODO: Alternatively, if all the files are in one directory,
-code/fieldset.f90-492-    !       it should list all the files in this%PATH.
-code/fieldset.f90-493-    !       (separate routine e.g., init_filelist ?)
-code/fieldset.f90:494:    ! TODO (later, probably never): sort the files somehow so all of this
-code/fieldset.f90-495-    !       would not depend on ls getting it right.
-code/fieldset.f90-496-    !---------------------------------------------
-code/fieldset.f90-497-    class(t_fieldset), intent(inout) :: this
+code/fieldset.f90-491-    ! Get a list of directories or files that contain the data
+code/fieldset.f90-492-    ! The files should be named so that ls command would give them
+code/fieldset.f90-493-    ! in the right order. Including the date in the file name should be enough.
+code/fieldset.f90:494:    ! TODO: Alternatively, if all the files are in one directory,
+code/fieldset.f90-495-    !       it should list all the files in this%PATH.
+code/fieldset.f90-496-    !       (separate routine e.g., init_filelist ?)
+code/fieldset.f90:497:    ! TODO (later, probably never): sort the files somehow so all of this
+code/fieldset.f90-498-    !       would not depend on ls getting it right.
+code/fieldset.f90-499-    !---------------------------------------------
+code/fieldset.f90-500-    class(t_fieldset), intent(inout) :: this
 --
-code/fieldset.f90-548-  subroutine init_proc_mask(this)
-code/fieldset.f90-549-    !---------------------------------------------
-code/fieldset.f90-550-    ! This maps the pieces of GETM data using par_setup.
-code/fieldset.f90:551:    ! TODO: Since pmask takes up a lot of unnecessary space,
-code/fieldset.f90-552-    !       maybe this should only be called when par_setup is wanted
-code/fieldset.f90-553-    !      (either a compilation flag or "if (parallel)" or something in init_model)
-code/fieldset.f90-554-    ! EDIT: This is called from init_model only if this%has_subdomains=.true.
+code/fieldset.f90-551-  subroutine init_proc_mask(this)
+code/fieldset.f90-552-    !---------------------------------------------
+code/fieldset.f90-553-    ! This maps the pieces of GETM data using par_setup.
+code/fieldset.f90:554:    ! TODO: Since pmask takes up a lot of unnecessary space,
+code/fieldset.f90-555-    !       maybe this should only be called when par_setup is wanted
+code/fieldset.f90-556-    !      (either a compilation flag or "if (parallel)" or something in init_model)
+code/fieldset.f90-557-    ! EDIT: This is called from init_model only if this%has_subdomains=.true.
 --
-code/fieldset.f90-624-  !===========================================
-code/fieldset.f90-625-  subroutine find_folder(this, date, thedir, folder_idx)
-code/fieldset.f90-626-    !---------------------------------------------
-code/fieldset.f90:627:    ! TODO: might have to check if nc files start at time
-code/fieldset.f90-628-    ! [date] 00:00:00 or [date] 00:00:10 (at least in this particular example)
-code/fieldset.f90-629-    ! Compare every time?
-code/fieldset.f90-630-    ! Some validity check would be nice
+code/fieldset.f90-627-  !===========================================
+code/fieldset.f90-628-  subroutine find_folder(this, date, thedir, folder_idx)
+code/fieldset.f90-629-    !---------------------------------------------
+code/fieldset.f90:630:    ! TODO: might have to check if nc files start at time
+code/fieldset.f90-631-    ! [date] 00:00:00 or [date] 00:00:10 (at least in this particular example)
+code/fieldset.f90-632-    ! Compare every time?
+code/fieldset.f90-633-    ! Some validity check would be nice
 --
-code/fieldset.f90-719-  subroutine get_indices_vertical(this, t, z, i, j, k, kr)
-code/fieldset.f90-720-    !---------------------------------------------
-code/fieldset.f90-721-    ! Get the vertical indices for a given depth
-code/fieldset.f90:722:    ! TODO: zax direction should be taken into account
+code/fieldset.f90-722-  subroutine get_indices_vertical(this, t, z, i, j, k, kr)
 code/fieldset.f90-723-    !---------------------------------------------
-code/fieldset.f90-724-    class(t_fieldset), intent(in)   :: this
-code/fieldset.f90-725-    real(rk), intent(in)            :: t, z
+code/fieldset.f90-724-    ! Get the vertical indices for a given depth
+code/fieldset.f90:725:    ! TODO: zax direction should be taken into account
+code/fieldset.f90-726-    !---------------------------------------------
+code/fieldset.f90-727-    class(t_fieldset), intent(in)   :: this
+code/fieldset.f90-728-    real(rk), intent(in)            :: t, z
 --
 code/init.f90-168-  subroutine init_fieldset
 code/init.f90-169-    !---------------------------------------------
@@ -114,21 +114,21 @@ code/main.f90-11-#if (defined(BIOFOULING_KOOI) || defined(BIOFOULING_TSIARAS) ||
 code/main.f90-12-  use run_params, only: biofouling_nmlfilename
 code/main.f90-13-#endif
 --
-code/output.f90-326-  subroutine write_data(nwrite)
-code/output.f90-327-    !---------------------------------------------
-code/output.f90-328-    ! Write the output
-code/output.f90:329:    ! TODO: selection for output
-code/output.f90-330-    !---------------------------------------------
-code/output.f90-331-
-code/output.f90-332-    integer, intent(in) :: nwrite
+code/output.f90-374-  subroutine write_data(nwrite)
+code/output.f90-375-    !---------------------------------------------
+code/output.f90-376-    ! Write the output
+code/output.f90:377:    ! TODO: selection for output
+code/output.f90-378-    !---------------------------------------------
+code/output.f90-379-
+code/output.f90-380-    integer, intent(in) :: nwrite
 --
-code/output.f90-840-  subroutine write_restart(nwrite)
-code/output.f90-841-    ! ---------------------------------------
-code/output.f90-842-    ! Write restart file
-code/output.f90:843:    ! TODO: this should be a method of the particle (array) class
-code/output.f90-844-    ! ---------------------------------------
-code/output.f90-845-    integer, intent(in) :: nwrite
-code/output.f90-846-    character(len=LEN_CHAR_L) :: restart_file
+code/output.f90-888-  subroutine write_restart(nwrite)
+code/output.f90-889-    ! ---------------------------------------
+code/output.f90-890-    ! Write restart file
+code/output.f90:891:    ! TODO: this should be a method of the particle (array) class
+code/output.f90-892-    ! ---------------------------------------
+code/output.f90-893-    integer, intent(in) :: nwrite
+code/output.f90-894-    character(len=LEN_CHAR_L) :: restart_file
 --
 code/particle.f90-283-  !===========================================
 code/particle.f90-284-  subroutine check_depth(this, fieldset, t)

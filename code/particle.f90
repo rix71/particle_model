@@ -796,7 +796,7 @@ module mod_particle_vars
   private
   !===================================================
   public :: inputstep, particle_init_method, coordfile, &
-            max_age, kill_beached, kill_boundary, runparts
+            max_age, kill_beached, kill_boundary, runparts, n_total_particles
   public :: particles
   public :: initialise_particles, release_particles
   !---------------------------------------------
@@ -805,6 +805,7 @@ module mod_particle_vars
                                    particle_init_method, &     ! Read initial positions (1 - txt, 2 - .nc)
                                    n_particles, &              ! Number of particles
                                    n_restart_particles, &
+                                   n_total_particles, &        ! Total number of particles (including restart)
                                    n_init_times, &
                                    runparts = 0, &             ! Number of particles to loop over
                                    i_release = 1
@@ -855,9 +856,11 @@ contains
       allocate (particles(n_particles + n_restart_particles))
       FMT2, "Allocated array for", n_particles + n_restart_particles, "particles"
       call read_restart_file
+      n_total_particles = n_particles + n_restart_particles
     else
       allocate (particles(n_particles))
       FMT2, "Allocated array for", n_particles, "particles"
+      n_total_particles = n_particles
     end if
 
   end subroutine init_particles
@@ -969,19 +972,25 @@ contains
     integer :: ipart, i, j, on_land
     integer :: n_good_particles, n_bad_particles
     integer, allocatable, dimension(:, :) :: seamask
+    real(rk) :: lon_l, lon_u, lat_l, lat_u ! domain limits
 
     n_good_particles = 0
     n_bad_particles = 0
 
     seamask = domain%get_seamask()
 
+    lon_l = domain%get_lons(1); debug(lon_l)
+    lon_u = domain%get_lats(1); debug(lon_u)
+    lat_l = domain%get_lons(domain%nx); debug(lat_l)
+    lat_u = domain%get_lats(domain%ny); debug(lat_u)
+
     on_land = 0
 #ifdef USE_OMP
     !$omp parallel do private(i, j) shared(this, domain) reduction(+:on_land, n_good_particles, n_bad_particles)
 #endif
     do ipart = 1, this%n_particles
-      if ((this%x(ipart) < domain%get_lons(1)) .or. (this%x(ipart) > domain%get_lons(domain%nx)) .or. &
-          (this%y(ipart) < domain%get_lats(1)) .or. (this%y(ipart) > domain%get_lats(domain%ny))) then
+      if ((this%x(ipart) < lon_l) .or. (this%x(ipart) > lon_u) .or. &
+          (this%y(ipart) < lat_l) .or. (this%y(ipart) > lat_u)) then
         ERROR, "Particle", ipart, ":", &
           this%x(ipart), this%y(ipart)
         call throw_error("particle_vars :: check_initial_coordinates", "Particle initialised outside of domain")

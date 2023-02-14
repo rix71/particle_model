@@ -5,12 +5,15 @@ module mod_output
   !----------------------------------------------------------------
   ! Module for writing the output
   !----------------------------------------------------------------
+#ifdef USE_OMP
+  use omp_lib
+#endif
   use mod_precdefs
   use mod_errors
   use mod_particle
   use run_params, only: runid, nmlfilename
   use mod_params, only: run_3d
-  use mod_particle_vars, only: particles
+  use mod_particle_vars, only: particles, n_total_particles
   use time_vars, only: theDate, nTimes, dt
   use netcdf
   use nc_manager, only: nc_write, nc_initialise, &
@@ -22,7 +25,7 @@ module mod_output
   !===================================================
   !---------------------------------------------
   public :: outputstep, restartstep, snap_interval, init_output, &
-            write_data, &
+            write_data, write_data_matrix, &
             write_data_only_active, write_restart, &
             write_all_particles, write_active_particles, &
             write_data_snapshot, outDir, write_snapshot
@@ -76,6 +79,7 @@ contains
     if (write_all_particles) then
       nc_fileout_all = trim(outDir)//'/'//trim(runid)//'.all.nc'
       call init_nc_output(nc_fileout_all)
+      call throw_warning("output :: init_output", "*.all.nc file writes only the position at the moment! No other variables are written! This will be fixed in the (very near) future!")
     end if
 
     if (write_active_particles) then
@@ -215,7 +219,7 @@ contains
 
     call nc_initialise(file_name)
     call nc_add_dimension(file_name, "time", nc_t_dimid)
-    call nc_add_dimension(file_name, "particle", nc_p_dimid)
+    call nc_add_dimension(file_name, "particle", nc_p_dimid, n_total_particles)
 
     call nc_add_variable(file_name, "time", "float", 1, [nc_t_dimid])
     call nc_add_attr(file_name, "time", "units", "seconds since 1900-01-01 00:00:00")
@@ -322,6 +326,50 @@ contains
 #endif
 
   end subroutine init_nc_output
+  !===========================================
+  subroutine write_data_matrix(nwrite)
+    !---------------------------------------------
+    ! Write the output
+    ! Gathers all data in a matrix and writes it in one go
+    !---------------------------------------------
+    integer, intent(in)   :: nwrite
+    integer               :: ipart, ncid, varid
+    integer, save         :: nc_itime_out = 0
+    real(rk), allocatable :: var(:, :)
+    real(rk)              :: dateval(1)
+
+    call theDate%print_short_date
+    FMT2, "Saving all... ", nwrite, " particles"
+
+    nc_itime_out = nc_itime_out + 1
+    call nc_check(trim(nc_fileout_all), nf90_open(trim(nc_fileout_all), nf90_write, ncid), "write_data_matrix :: open")
+    call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "time", varid), "write_data_matrix :: inq_varid")
+    dateval(1) = theDate%date2num()
+    call nc_check(trim(nc_fileout_all), nf90_put_var(ncid, varid, dateval, start=[nc_itime_out], count=[1]), "write_data_matrix :: put_var")
+
+    allocate (var(nwrite, 3))
+
+    !$omp parallel do private(ipart) shared(var)
+    do ipart = 1, nwrite
+      var(ipart, 1) = particles(ipart)%lon0
+      var(ipart, 2) = particles(ipart)%lat0
+      var(ipart, 3) = particles(ipart)%depth0
+    end do
+    !$omp end parallel do
+
+    call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "lon", varid), "write_data_matrix :: inq_varid")
+    call nc_check(trim(nc_fileout_all), nf90_put_var(ncid, varid, var(:,1), start=[1, nc_itime_out], count=[nwrite, 1]), "write_data_matrix :: put_var")
+    call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "lat", varid), "write_data_matrix :: inq_varid")
+    call nc_check(trim(nc_fileout_all), nf90_put_var(ncid, varid, var(:,2), start=[1, nc_itime_out], count=[nwrite, 1]), "write_data_matrix :: put_var")
+    call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "depth", varid), "write_data_matrix :: inq_varid")
+    call nc_check(trim(nc_fileout_all), nf90_put_var(ncid, varid, var(:,3), start=[1, nc_itime_out], count=[nwrite, 1]), "write_data_matrix :: put_var")
+
+    deallocate (var)
+
+    call nc_check(trim(nc_fileout_all), nf90_close(ncid), "write_data_matrix :: close")
+
+    return
+  end subroutine write_data_matrix
   !===========================================
   subroutine write_data(nwrite)
     !---------------------------------------------
