@@ -408,30 +408,33 @@ contains
   end subroutine set_zax
   !===========================================
   subroutine set_start_time(this, date)
+    !---------------------------------------------
+    ! Set the start time of the fieldset.
+    ! date0 is the time of the first time step in the first file.
+    ! read_idx is the index of the time step closest to date (before the current date).
+    ! date1 is the next time step after date0 in the file.
+    ! next_read_dt is also the date of the next time step, this is when the next time step will be read.
+    !---------------------------------------------
     class(t_fieldset), intent(inout) :: this
     type(t_datetime), intent(in)     :: date
+    type(t_datetime)                 :: date0, date1
 
     if (this%has_subdomains) then
       call this%find_folder(date, this%current_path, this%dirlist_idx)
       call nc_get_dim(trim(this%current_path)//PROC0, 'time', this%current_ntimes)
-      if (nc_read_time_val(trim(this%current_path)//PROC0, 1) == ZERO) then
-        ! If RefTime is the same as the first nc_timestep, then 1 must be added
-        this%read_idx = int(date_diff(datetime_from_netcdf(trim(this%current_path)//PROC0), date) / this%nc_timestep) + 1
-      else
-        this%read_idx = int(date_diff(datetime_from_netcdf(trim(this%current_path)//PROC0), date) / this%nc_timestep)
-      end if
+      date0 = datetime_from_netcdf(trim(this%current_path)//PROC0, n=1)
+      this%read_idx = int(date_diff(date0, date) / this%nc_timestep) + 1 ! +1 because index starts at 1
+      date1 = datetime_from_netcdf(trim(this%current_path)//PROC0, n=this%read_idx)
     else
       call this%find_file(date, this%current_path, this%dirlist_idx)
       call nc_get_dim(trim(this%current_path), 'time', this%current_ntimes)
-      if (nc_read_time_val(trim(this%current_path), 1) == ZERO) then
-        this%read_idx = int(date_diff(datetime_from_netcdf(trim(this%current_path)), date) / this%nc_timestep) + 1
-      else
-        this%read_idx = int(date_diff(datetime_from_netcdf(trim(this%current_path)), date) / this%nc_timestep)
-      end if
+      date0 = datetime_from_netcdf(trim(this%current_path), n=1)
+      this%read_idx = int(date_diff(date0, date) / this%nc_timestep) + 1
+      date1 = datetime_from_netcdf(trim(this%current_path), n=this%read_idx)
     end if
-    this%next_read_dt = date
-    this%date_t1 = date
-    this%date_t2 = date%nextDate(this%nc_timestep)
+    this%date_t1 = date1
+    this%date_t2 = date1%nextDate(this%nc_timestep)
+    this%next_read_dt = this%date_t2
 
     return
   end subroutine set_start_time
@@ -754,7 +757,6 @@ contains
       return
     end if
 
-    DBG, "fieldset :: get_indices_vertical: Calling get_zax with t, i, j = ", t, i, j
     zax = this%get_zax(t, i, j) ! Don't want to interpolate the Z axis in space, so we're taking the closest indices
 
     if (z > zax(this%nz)) then
@@ -1025,10 +1027,16 @@ contains
   end subroutine update
   !===========================================
   subroutine read_first_timesteps(this, date)
+    !---------------------------------------------
+    ! Read the first two timesteps of the fieldset
+    ! The dates are not updated and simulation time is not compared
+    ! to next_read_dt.
+    ! read_idx should be incremented twice after this.
+    !---------------------------------------------
     class(t_fieldset), intent(inout) :: this
     type(t_datetime), intent(in)     :: date
 
-    call this%update(date, update_dates=.false.)
+    call this%update(date, ignore_check=.true., update_dates=.false.)
     call this%update(date, ignore_check=.true., update_dates=.false.)
 
     return

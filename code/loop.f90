@@ -20,7 +20,7 @@ module mod_loop
   use mod_particle_vars, only: particles, inputstep, &
                                max_age, runparts, kill_beached, kill_boundary, release_particles
   use time_vars, only: theDate, run_start_dt, run_end_dt, dt
-  use mod_output, only: outputstep, restartstep, snap_interval, write_data, &
+  use mod_output, only: outputstep, restartstep, snap_interval, write_data, write_data_matrix, &
                         write_data_only_active, write_restart, &
                         write_all_particles, write_active_particles, write_data_snapshot, write_snapshot
   implicit none
@@ -46,7 +46,7 @@ contains
     call date_and_time(date=d, time=t)
     FMT2, t(1:2), ":", t(3:4), ":", t(5:10)
 #ifdef USE_OMP
-    FMT2, "Using OpenMP with ", omp_get_num_procs(), " processes"
+    FMT2, "Using OpenMP with ", omp_get_max_threads(), " processes"
 #endif
 
     ! Read appropriate fields:
@@ -150,7 +150,7 @@ contains
       !---------------------------------------------
       ! Write output
       if ((mod(itime, outputstep) .eq. 0) .and. (runparts .gt. 0)) then
-        if (write_all_particles) call write_data(runparts)
+        if (write_all_particles) call write_data_matrix(runparts)
         if (write_active_particles) call write_data_only_active(runparts)
       end if
 

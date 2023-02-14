@@ -10,7 +10,7 @@ FFLAGS = -O3 -g -cpp -ffree-line-length-none -Wall \
 # FFLAGS += -pg -no-pie
 
 # Print everything to .stdout file
-FFLAGS += -DWRITESTDOUT
+# FFLAGS += -DWRITESTDOUT
 
 # Print debug messages
 # FFLAGS += -DDEBUG

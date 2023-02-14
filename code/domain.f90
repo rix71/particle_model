@@ -235,9 +235,9 @@ contains
       call throw_error("domain :: get_lats_idx", "Index out of bounds! (Less than 1)")
 #endif
     end if
-    if (idx > this%nx) then
+    if (idx > this%ny) then
 #ifdef SNAP_TO_BOUNDS
-      idx = this%nx
+      idx = this%ny
 #else
       call throw_error("domain :: get_lats_idx", "Index out of bounds! (Greater than ny)")
 #endif
