@@ -1,4 +1,4 @@
-Updated: Tue Feb 14 10:21:27 PM EET 2023
+Updated: Wed Feb 15 08:06:56 PM EET 2023
 code/datetime.f90-67-  type(t_datetime) function ctor_datetime(date_str) result(res)
 code/datetime.f90-68-    !---------------------------------------------
 code/datetime.f90-69-    ! Constructor for datetime
@@ -98,14 +98,6 @@ code/interp.f90-50-    !---------------------------------------------
 code/interp.f90-51-
 code/interp.f90-52-    real(rk), intent(in)  :: x1, x2
 --
-code/loop.f90-133-        !---------------------------------------------
-code/loop.f90-134-        ! Write snapshot
-code/loop.f90-135-        ! Cannot use this with openMP
-code/loop.f90:136:        ! TODO: parallel i/o
-code/loop.f90-137-        if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
-code/loop.f90-138-          call write_data_snapshot(particles(ipart), ipart)
-code/loop.f90-139-        end if
---
 code/main.f90-7-  use run_params, only: runid
 code/main.f90-8-#endif
 code/main.f90-9-  use run_params, only: dry_run, nmlfilename
@@ -114,29 +106,21 @@ code/main.f90-11-#if (defined(BIOFOULING_KOOI) || defined(BIOFOULING_TSIARAS) ||
 code/main.f90-12-  use run_params, only: biofouling_nmlfilename
 code/main.f90-13-#endif
 --
-code/output.f90-374-  subroutine write_data(nwrite)
-code/output.f90-375-    !---------------------------------------------
-code/output.f90-376-    ! Write the output
-code/output.f90:377:    ! TODO: selection for output
-code/output.f90-378-    !---------------------------------------------
-code/output.f90-379-
-code/output.f90-380-    integer, intent(in) :: nwrite
+code/output.f90-614-  subroutine write_restart(nwrite)
+code/output.f90-615-    ! ---------------------------------------
+code/output.f90-616-    ! Write restart file
+code/output.f90:617:    ! TODO: this should be a method of the particle (array) class
+code/output.f90-618-    ! ---------------------------------------
+code/output.f90-619-    integer, intent(in) :: nwrite
+code/output.f90-620-    character(len=LEN_CHAR_L) :: restart_file
 --
-code/output.f90-888-  subroutine write_restart(nwrite)
-code/output.f90-889-    ! ---------------------------------------
-code/output.f90-890-    ! Write restart file
-code/output.f90:891:    ! TODO: this should be a method of the particle (array) class
-code/output.f90-892-    ! ---------------------------------------
-code/output.f90-893-    integer, intent(in) :: nwrite
-code/output.f90-894-    character(len=LEN_CHAR_L) :: restart_file
---
-code/particle.f90-283-  !===========================================
-code/particle.f90-284-  subroutine check_depth(this, fieldset, t)
-code/particle.f90-285-    !---------------------------------------------
-code/particle.f90:286:    ! TODO: Interpolation for bathymetry?
-code/particle.f90-287-    !---------------------------------------------
-code/particle.f90-288-
-code/particle.f90-289-    class(t_particle), intent(inout) :: this
+code/particle.f90-284-  !===========================================
+code/particle.f90-285-  subroutine check_depth(this, fieldset, t)
+code/particle.f90-286-    !---------------------------------------------
+code/particle.f90:287:    ! TODO: Interpolation for bathymetry?
+code/particle.f90-288-    !---------------------------------------------
+code/particle.f90-289-
+code/particle.f90-290-    class(t_particle), intent(inout) :: this
 --
 code/physics.f90-6-module mod_physics
 code/physics.f90-7-  !----------------------------------------------------------------

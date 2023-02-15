@@ -118,7 +118,7 @@ all: $(PROGRAM)
 
 $(PROGRAM): $(OBJS) | $(BIN) $(MOD)
 	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
-	mv *.mod *.smod $(MOD)/.
+	make remove_mods
 
 $(BUILD)/%.o: %.f90 | $(BUILD)
 	$(fc-command)
@@ -126,14 +126,19 @@ $(BUILD)/%.o: %.f90 | $(BUILD)
 $(BUILD)/$(BF_PATH)/%.o: $(BF_PATH)/%.f90 | $(BUILD)/$(BF_PATH)
 	$(fc-command)
 
-# $(BUILD)/%.o: %.f90 | $(BUILD)
-# 	$(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
-
 $(BIN) $(BUILD) $(BUILD)/$(BF_PATH) $(MOD):
 	mkdir -p $@
 
 clean:
 	rm -rf $(BUILD) $(MOD) 
+
+remove_mods:
+ifneq ($(wildcard ./*.mod),)	
+	mv *.mod $(MOD)/.
+endif
+ifneq ($(wildcard ./*.smod),)	
+	mv *.smod $(MOD)/.
+endif
 
 show:
 	@ echo $(OBJS)

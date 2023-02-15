@@ -1,5 +1,6 @@
 #include "cppdefs.h"
 #include "particle.h"
+#include "ompdefs.h"
 module mod_loop
   !----------------------------------------------------------------
   ! Main loop
@@ -20,9 +21,11 @@ module mod_loop
   use mod_particle_vars, only: particles, inputstep, &
                                max_age, runparts, kill_beached, kill_boundary, release_particles
   use time_vars, only: theDate, run_start_dt, run_end_dt, dt
-  use mod_output, only: outputstep, restartstep, snap_interval, write_data, write_data_matrix, &
-                        write_data_only_active, write_restart, &
-                        write_all_particles, write_active_particles, write_data_snapshot, write_snapshot
+  use mod_output, only: outputstep, restartstep, write_data, &
+#ifdef OUT_SUPPORT_ACTIVE
+                        write_data_only_active, &
+#endif
+                        write_restart, write_all_particles, write_active_particles
   implicit none
   private
   !===================================================
@@ -71,9 +74,8 @@ contains
         if (itime .ne. 0) then
           active_particles = 0
           inactive_particles = 0
-#ifdef USE_OMP
-          !$omp parallel do reduction(+: active_particles, inactive_particles)
-#endif
+
+          START_OMP_DO reduction(+:active_particles, inactive_particles)
           do ipart = 1, runparts
             if (particles(ipart)%is_active) then
               active_particles = active_particles + 1
@@ -81,9 +83,7 @@ contains
               inactive_particles = inactive_particles + 1
             end if
           end do
-#ifdef USE_OMP
-          !$omp end parallel do
-#endif
+          END_OMP_DO
           FMT2, active_particles, " active particles"
           FMT2, inactive_particles, " inactive particles"
         end if
@@ -92,10 +92,7 @@ contains
 
       !---------------------------------------------
       ! Start particle loop
-
-#ifdef USE_OMP
-      !$omp parallel do shared(particles, fieldset, domain)
-#endif
+      START_OMP_DO shared(particles, fieldset, domain)
       do ipart = 1, runparts
         DBG, LINE
         DBG, "Particle nr.", ipart
@@ -129,19 +126,8 @@ contains
 #endif
         call particles(ipart)%update(fieldset, time)
 
-#ifndef USE_OMP
-        !---------------------------------------------
-        ! Write snapshot
-        ! Cannot use this with openMP
-        ! TODO: parallel i/o
-        if ((mod(particles(ipart)%age, snap_interval) == 0) .and. (write_snapshot)) then
-          call write_data_snapshot(particles(ipart), ipart)
-        end if
-#endif
       end do
-#ifdef USE_OMP
-      !$omp end parallel do
-#endif
+      END_OMP_DO
 
       !---------------------------------------------
       ! Update time
@@ -150,8 +136,10 @@ contains
       !---------------------------------------------
       ! Write output
       if ((mod(itime, outputstep) .eq. 0) .and. (runparts .gt. 0)) then
-        if (write_all_particles) call write_data_matrix(runparts)
+        if (write_all_particles) call write_data(runparts)
+#ifdef OUT_SUPPORT_ACTIVE
         if (write_active_particles) call write_data_only_active(runparts)
+#endif
       end if
 
       !---------------------------------------------

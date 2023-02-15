@@ -2,6 +2,7 @@
 #include "particle.h"
 #include "field.h"
 #include "file.h"
+#include "ompdefs.h"
 module mod_particle
   !----------------------------------------------------------------
   ! This is the particle type definition
@@ -979,15 +980,14 @@ contains
 
     seamask = domain%get_seamask()
 
-    lon_l = domain%get_lons(1); debug(lon_l)
-    lon_u = domain%get_lats(1); debug(lon_u)
-    lat_l = domain%get_lons(domain%nx); debug(lat_l)
-    lat_u = domain%get_lats(domain%ny); debug(lat_u)
+    lon_l = domain%get_lons(1)
+    lon_u = domain%get_lats(1)
+    lat_l = domain%get_lons(domain%nx)
+    lat_u = domain%get_lats(domain%ny)
 
     on_land = 0
-#ifdef USE_OMP
-    !$omp parallel do private(i, j) shared(this, domain) reduction(+:on_land, n_good_particles, n_bad_particles)
-#endif
+
+    START_OMP_DO private(i, j) shared(this, domain) reduction(+:on_land, n_good_particles, n_bad_particles)
     do ipart = 1, this%n_particles
       if ((this%x(ipart) < lon_l) .or. (this%x(ipart) > lon_u) .or. &
           (this%y(ipart) < lat_l) .or. (this%y(ipart) > lat_u)) then
@@ -1007,9 +1007,7 @@ contains
 #endif
       end if
     end do
-#ifdef USE_OMP
-    !$omp end parallel do
-#endif
+    END_OMP_DO
     if (on_land > 0) then
       call throw_warning("particle_vars :: check_initial_coordinates", "Particles initialised on land")
       WARNING, on_land, " of ", this%n_particles, " particles on land, time idx = ", this%time_idx
