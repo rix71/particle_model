@@ -16,3 +16,4 @@ code/*.mod
 code/mod
 code/obj
 sync_from_base.sh
+copy_test_cases.sh

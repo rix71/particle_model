@@ -1,6 +1,11 @@
-#!/bin/bash
 #==================================
 clear
+echo "===================="
+echo "North-West Atlantic Shelf test case"
+echo "===================="
+#======================================================================
+# RUNNING THE MODEL
+#======================================================================
 #==================================
 export OMP_NUM_THREADS=16
 #==================================
@@ -61,10 +66,9 @@ export coordfile="${PWD}/data/input/init_particles_full.dat"
 export inputstep=999999999
 
 # Output
-out_hours=5
+out_hours=0.5
 export outputstep=`python3 -c "print(int($out_hours*3600./$dt))"`
 export write_all_particles=True
-export write_active_particles=False
 export write_snapshot=False
 
 # Restart
@@ -85,9 +89,9 @@ OUT_BASE_DIR="${RUN_DIR}/out"
 #--------------------
 # Entire simulation period
 sim_start="2022-06-02"
-sim_end="2022-06-09"
+sim_end="2022-06-05"
 #--------------------
-step_days=7
+step_days=3
 #--------------------
 date_start=$(date -I -d "$sim_start")
 date_end=$(date -I -d "$sim_end")
@@ -152,7 +156,15 @@ while [ $(date -d "$dateval" +%s) -lt $(date -d "$date_end" +%s) ]; do
     echo "Running model..."
     tic_m=$(date +%s)
     ${MODEL_BIN}
+    err=$?
     toc_m=$(date +%s)
+    #--------------------
+    if [ $err -ne 0 ]; then
+        echo "===================="
+        echo "ERROR: Model run failed"
+        echo "===================="
+        exit 1
+    fi
     #--------------------
     echo "Model run number ${num_run} finished"
     echo "Model wall time: $((toc_m-tic_m)) seconds" 
@@ -168,4 +180,20 @@ toc=$(date +%s)
 echo "===================="
 echo "All finished!"
 echo "Total time: $((toc-tic)) seconds"
+echo "===================="
+
+#======================================================================
+# PLOTTING THE RESULTS
+#======================================================================
+clear
+mkdir -p ${OUT_BASE_DIR}/counts
+for d in $( ls -d ${OUT_BASE_DIR}/2* ); do
+    echo "Calculating counts in $d"
+    python3 calculate_counts.py -np 8 -s $d/${runid}.out.nc -o ${OUT_BASE_DIR}/counts/counts.$(basename $d).nc --topo-file ${topofile}
+done
+mkdir -p ${OUT_BASE_DIR}/figs
+python3 plot_counts.py -s ${OUT_BASE_DIR}/counts/counts.*.nc -o ${OUT_BASE_DIR}/figs
+
+echo "===================="
+echo "All finished!"
 echo "===================="

@@ -1,10 +1,16 @@
 #!/bin/bash
 #==================================
 clear
+echo "===================="
 echo "Eddy test case"
+echo "===================="
 #======================================================================
 # SETTING UP THE RUN
 #======================================================================
+echo "===================="
+echo "Setting up the run..."
+echo "===================="
+
 cd data
 python3 make_eddy.py
 python3 make_init.py
@@ -105,8 +111,6 @@ export run_end=$sim_end
 echo "The model is running from $run_start to $run_end"
 #--------------------
 # Set output directory
-export outdir="${OUT_BASE_DIR}"
-echo "Making output directory: $outdir"
 mkdir -p ${outdir}
 #--------------------
 # Make namelists
@@ -136,4 +140,7 @@ echo "===================="
 #======================================================================
 # PLOTTING THE RESULTS
 #======================================================================
+echo "===================="
+echo "Plotting results..."
+echo "===================="
 python3 plot_trajectory.py
