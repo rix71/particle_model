@@ -504,7 +504,7 @@ contains
     FMT1, "======== Init dirlist ========"
     inquire (file=trim(dirinfile), exist=dirlist_exists)
     if (.not. dirlist_exists) then
-#ifndef NOSYSCALLS
+#if !defined(NOSYSCALLS) && defined(FC_GNU)
       select case (this%has_subdomains)
       case (.true.)
         FMT2, "Getting directory list..."

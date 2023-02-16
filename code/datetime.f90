@@ -13,6 +13,10 @@ module mod_datetime
   !---------------------------------------------
   public :: t_datetime, date_diff, datetime_from_netcdf
   !---------------------------------------------
+#ifdef FC_INTEL  
+  public :: operator(>), operator(<), operator(==), operator(>=), operator(<=)
+#endif
+  !---------------------------------------------
   type t_datetime
     integer           :: year = 1, month = 1, day = 1
     integer           :: hour = 0, minute = 0, second = 0
@@ -30,6 +34,7 @@ module mod_datetime
     procedure :: shortDate
     !---------------------------------------------
     ! Operator overloading
+#ifdef FC_GNU
     procedure, pass(this) :: date_gt
     generic :: operator(>) => date_gt
     generic :: operator(.gt.) => date_gt
@@ -45,7 +50,26 @@ module mod_datetime
     procedure, pass(this) :: date_le
     generic :: operator(<=) => date_le
     generic :: operator(.le.) => date_le
+#endif
   end type t_datetime
+  !---------------------------------------------
+#ifdef FC_INTEL
+  interface operator(>)
+    module procedure date_gt
+  end interface
+  interface operator(<)
+    module procedure date_lt
+  end interface
+  interface operator(==)
+    module procedure date_eq
+  end interface
+  interface operator(>=)
+    module procedure date_ge
+  end interface
+  interface operator(<=)
+    module procedure date_le
+  end interface
+#endif
   !---------------------------------------------
   interface t_datetime
     procedure :: ctor_datetime

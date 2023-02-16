@@ -1,35 +1,35 @@
-Updated: Wed Feb 15 08:06:56 PM EET 2023
-code/datetime.f90-67-  type(t_datetime) function ctor_datetime(date_str) result(res)
-code/datetime.f90-68-    !---------------------------------------------
-code/datetime.f90-69-    ! Constructor for datetime
-code/datetime.f90:70:    ! TODO: Date validation
-code/datetime.f90-71-    !---------------------------------------------
-code/datetime.f90-72-    character(len=LEN_CHAR_S), intent(in) :: date_str
-code/datetime.f90-73-    integer                       :: year, month, day
+Updated: Thu Feb 16 03:02:47 PM EET 2023
+code/datetime.f90-91-  type(t_datetime) function ctor_datetime(date_str) result(res)
+code/datetime.f90-92-    !---------------------------------------------
+code/datetime.f90-93-    ! Constructor for datetime
+code/datetime.f90:94:    ! TODO: Date validation
+code/datetime.f90-95-    !---------------------------------------------
+code/datetime.f90-96-    character(len=LEN_CHAR_S), intent(in) :: date_str
+code/datetime.f90-97-    integer                       :: year, month, day
 --
-code/datetime.f90-168-    !---------------------------------------------
-code/datetime.f90-169-    ! Update the date
-code/datetime.f90-170-    ! Timestep must be in seconds
-code/datetime.f90:171:    ! TODO: Backwards update
-code/datetime.f90-172-    !---------------------------------------------
-code/datetime.f90-173-
-code/datetime.f90-174-    class(t_datetime), intent(inout) :: this
+code/datetime.f90-192-    !---------------------------------------------
+code/datetime.f90-193-    ! Update the date
+code/datetime.f90-194-    ! Timestep must be in seconds
+code/datetime.f90:195:    ! TODO: Backwards update
+code/datetime.f90-196-    !---------------------------------------------
+code/datetime.f90-197-
+code/datetime.f90-198-    class(t_datetime), intent(inout) :: this
 --
-code/datetime.f90-222-    ! Changes the second number in daysInMonth to 29
-code/datetime.f90-223-    ! if the year is a leap year.
-code/datetime.f90-224-    ! daysInMonth then stays like this, so it must be reset
-code/datetime.f90:225:    ! TODO: Make into pure function or something so won't have to reset
-code/datetime.f90-226-    !---------------------------------------------
-code/datetime.f90-227-
-code/datetime.f90-228-    class(t_datetime), intent(in) :: this
+code/datetime.f90-246-    ! Changes the second number in daysInMonth to 29
+code/datetime.f90-247-    ! if the year is a leap year.
+code/datetime.f90-248-    ! daysInMonth then stays like this, so it must be reset
+code/datetime.f90:249:    ! TODO: Make into pure function or something so won't have to reset
+code/datetime.f90-250-    !---------------------------------------------
+code/datetime.f90-251-
+code/datetime.f90-252-    class(t_datetime), intent(in) :: this
 --
-code/datetime.f90-288-  real(rk) function date_diff(start, end)
-code/datetime.f90-289-    !---------------------------------------------
-code/datetime.f90-290-    ! Gives the difference between two dates in seconds
-code/datetime.f90:291:    ! TODO: - operator?
-code/datetime.f90-292-    !---------------------------------------------
-code/datetime.f90-293-    type(t_datetime), intent(in) :: start, end
-code/datetime.f90-294-    real(rk)                     :: start_num, end_num
+code/datetime.f90-312-  real(rk) function date_diff(start, end)
+code/datetime.f90-313-    !---------------------------------------------
+code/datetime.f90-314-    ! Gives the difference between two dates in seconds
+code/datetime.f90:315:    ! TODO: - operator?
+code/datetime.f90-316-    !---------------------------------------------
+code/datetime.f90-317-    type(t_datetime), intent(in) :: start, end
+code/datetime.f90-318-    real(rk)                     :: start_num, end_num
 --
 code/domain.f90-87-    call nc_read_real_2d(trim(TOPOFILE), trim(bathy), nx, ny, d%depdata)
 code/domain.f90-88-

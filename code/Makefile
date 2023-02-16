@@ -1,7 +1,19 @@
-FC = gfortran
-FFLAGS = -O3 -g -cpp -ffree-line-length-none -Wall \
+FC = ifort
+
+ifeq ($(FC), ifort)
+	FPP_FLAGS = -noJ -free -DFC_INTEL
+	FPP = fpp
+	FFLAGS = -O3 -g -free -warn all -traceback -mcmodel=large -DFC_INTEL
+else ifeq ($(FC), gfortran)
+	FFLAGS = -O3 -g -cpp -ffree-line-length-none -Wall \
 	 -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface \
-	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
+	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large -DFC_GNU
+else
+	$(error "Unknown compiler")
+endif
+# FFLAGS = -O3 -g -cpp -ffree-line-length-none -Wall \
+# 	 -Wcharacter-truncation -Wsurprising -Waliasing -Wimplicit-interface \
+# 	 -Wunused-parameter -fwhole-file -fcheck=all -fbacktrace -mcmodel=large
 
 #--------------------------------------------------
 # COMPILER FLAGS
@@ -85,6 +97,10 @@ endif
 
 FFLAGS += -I../include
 
+ifeq ($(FC), ifort)
+	FPP_FLAGS += -I../include
+endif
+
 NETCDF_DIR=`nf-config --prefix`
 NETCDF_INC=-I${NETCDF_DIR}/include
 NETCDF_LIB=-L${NETCDF_DIR}/lib
@@ -106,16 +122,25 @@ SRCS = precdefs.f90 errors.f90 \
 	   main.f90 
 
 OBJS = $(patsubst %.f90, $(BUILD)/%.o, $(SRCS))
+FPP_FILES = $(patsubst %.f90, $(BUILD)/%_fpp.f90, $(SRCS))
 
 #--------------------------------------------------
 define fc-command
 $(FC) $(FFLAGS) -c $< -o $@ $(LIBS)
 endef
 #--------------------------------------------------
+define fpp-command
+$(FPP) $(FPP_FLAGS) $< $@
+endef
+#--------------------------------------------------
 PROGRAM = $(BIN)/main
 
 all: $(PROGRAM)
 
+$(BIN) $(BUILD) $(BUILD)/$(BF_PATH) $(MOD):
+	mkdir -p $@
+
+ifeq ($(FC), gfortran)
 $(PROGRAM): $(OBJS) | $(BIN) $(MOD)
 	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
 	make remove_mods
@@ -126,8 +151,24 @@ $(BUILD)/%.o: %.f90 | $(BUILD)
 $(BUILD)/$(BF_PATH)/%.o: $(BF_PATH)/%.f90 | $(BUILD)/$(BF_PATH)
 	$(fc-command)
 
-$(BIN) $(BUILD) $(BUILD)/$(BF_PATH) $(MOD):
-	mkdir -p $@
+else ifeq ($(FC), ifort)
+$(PROGRAM): $(FPP_FILES) $(OBJS) | $(BIN) $(MOD)
+	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
+	make remove_mods
+
+$(BUILD)/%_fpp.f90: %.f90 | $(BUILD) $(BUILD)/$(BF_PATH)
+	$(fpp-command)
+
+$(BUILD)/$(BF_PATH)/%_fpp.f90: %.f90 | $(BUILD)/$(BF_PATH)
+	$(fpp-command)
+
+$(BUILD)/%.o: $(BUILD)/%_fpp.f90 | $(BUILD)
+	$(fc-command)
+
+$(BUILD)/%.o: $(BUILD)/$(BF_PATH)/%_fpp.f90 | $(BUILD)
+	$(fc-command)	
+
+endif
 
 clean:
 	rm -rf $(BUILD) $(MOD) 
@@ -142,3 +183,5 @@ endif
 
 show:
 	@ echo $(OBJS)
+	@ echo $(FPP_FILES)
+	@ echo $(FPP_FLAGS)

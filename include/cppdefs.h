@@ -35,7 +35,7 @@
 
 #ifndef DEBUG
 #undef DBG
-#define DBG !just a comment...
+#define DBG ! !
 #endif
 
 #ifdef SAY_LESS
@@ -43,10 +43,10 @@
 #undef FMT2
 #undef FMT3
 #undef DBG
-#define FMT1 !just a comment...
-#define FMT2 !just a comment...
-#define FMT3 !just a comment...
-#define DBG !just a comment...
+#define FMT1 !just a comment... !
+#define FMT2 !just a comment... !
+#define FMT3 !just a comment... !
+#define DBG !just a comment... !
 #endif
 !---------------------------------------------
 ! Allow index modification
