@@ -672,9 +672,15 @@ contains
     integer                          :: i, j
     integer                          :: seamask_val
 
-    ! call fieldset%domain%get_indices_2d(this%lon1, this%lat1, i=i, j=j)
     i = this%i1
     j = this%j1
+
+    if (i < 1 .or. i > fieldset%domain%nx .or. &
+        j < 1 .or. j > fieldset%domain%ny) then
+      this%is_active = .false.
+      this%state = ST_BOUNDARY
+      return
+    end if
 
     seamask_val = fieldset%domain%get_seamask(i=i, j=j)
 
@@ -787,7 +793,7 @@ module mod_particle_vars
   use mod_precdefs
   use mod_errors
   use mod_particle
-  use nc_manager, only: nc_read_real_1d, nc_read_real_2d, nc_get_dim, nc_var_exists
+  use nc_manager, only: nc_read_real_1d, nc_read_real_2d, nc_get_dim_len, nc_var_exists
   use mod_domain, only: t_domain
   use time_vars, only: nTimes, run_start_dt, run_end_dt, dt
   use run_params, only: runid, restart, restart_path
@@ -975,14 +981,17 @@ contains
     integer, allocatable, dimension(:, :) :: seamask
     real(rk) :: lon_l, lon_u, lat_l, lat_u ! domain limits
 
+    dbghead(particle_vars :: check_initial_coordinates)
+
     n_good_particles = 0
     n_bad_particles = 0
 
+    allocate (seamask(domain%nx, domain%ny))
     seamask = domain%get_seamask()
 
     lon_l = domain%get_lons(1)
-    lon_u = domain%get_lats(1)
-    lat_l = domain%get_lons(domain%nx)
+    lon_u = domain%get_lons(domain%nx)
+    lat_l = domain%get_lats(1)
     lat_u = domain%get_lats(domain%ny)
 
     on_land = 0
@@ -995,7 +1004,8 @@ contains
           this%x(ipart), this%y(ipart)
         call throw_error("particle_vars :: check_initial_coordinates", "Particle initialised outside of domain")
       end if
-      call domain%get_indices_2d(this%x(ipart), this%y(ipart), i=i, j=j)
+      call domain%get_index(this%x(ipart), i=i, dim=1)
+      call domain%get_index(this%y(ipart), i=j, dim=2)
       if (seamask(i, j) == DOM_LAND) then
         ! call throw_warning("particle_vars :: check_initial_coordinates", "Particle initialised on land")
         this%is_active(ipart) = .false.
@@ -1022,6 +1032,7 @@ contains
     this%n_good_particles = n_good_particles
 #endif
 
+    dbgtail(particle_vars :: check_initial_coordinates)
     return
   end subroutine check_initial_coordinates
   !===========================================
@@ -1078,7 +1089,7 @@ contains
 
     FMT1, "======== Init particles ========"
 
-    call nc_get_dim(trim(coordfile), "time", n_init_times)
+    call nc_get_dim_len(trim(coordfile), "time", n_init_times)
     allocate (init_coords(n_init_times), nInitParticles(n_init_times))
 
     call nc_read_real_1d(trim(coordfile), "n_particles", n_init_times, nInitParticles)

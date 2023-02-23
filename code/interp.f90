@@ -8,11 +8,22 @@ module mod_interp
   private
   !===================================================
   !---------------------------------------------
-  public :: bilinearinterp, trilinearinterp, timeinterp, nbrs
+  public :: bilinearinterp, trilinearinterp, linearinterp, nbrs
   !---------------------------------------------
   integer, parameter :: nbrs(2, 8) = reshape([0, 1, 1, 0, -1, 0, 0, -1, 1, 1, 1, -1, -1, -1, -1, 1], [2, 8])
   !===================================================
 contains
+  !===========================================
+  subroutine linearinterp(x1, x2, y1, y2, x, y)
+    real(rk), intent(in)  :: x1, x2
+    real(rk), intent(in)  :: y1, y2
+    real(rk), intent(in)  :: x
+    real(rk), intent(out) :: y
+
+    y = (y2 - y1) / (x2 - x1) * (x - x1) + y1
+
+    return
+  end subroutine linearinterp
   !===========================================
   subroutine bilinearinterp(x11, x12, x21, x22, y1, y2, c11, c12, c21, c22, x, y, c)
 
@@ -76,20 +87,5 @@ contains
     return
   end subroutine trilinearinterp
   !===========================================
-  subroutine timeinterp(arr_t1, arr_t2, arr_out, dt, dt_arr, nx, ny, nz, method)
-    integer, intent(in)   :: nx, ny, nz
-    integer, intent(in)   :: method
-    real(rk), intent(in)  :: arr_t1(nx, ny, nz)
-    real(rk), intent(in)  :: arr_t2(nx, ny, nz)
-    real(rk), intent(in)  :: dt, dt_arr
-    real(rk), intent(out) :: arr_out(nx, ny, nz)
 
-    select case (method)
-    case (0)
-      arr_out = arr_t1
-    case (1)
-      arr_out = arr_t1 + (arr_t2 - arr_t1) / dt_arr * dt
-    end select
-
-  end subroutine timeinterp
 end module mod_interp

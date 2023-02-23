@@ -95,6 +95,7 @@ module field_vars
                                rhovarname, tempvarname, &
                                saltvarname, viscvarname, &
                                taubxvarname, taubyvarname
+  character(len=LEN_CHAR_S) :: xdimname, ydimname, zdimname    ! Names of the dimensions.
   character(len=LEN_CHAR_L) :: file_prefix, file_suffix        ! What comes before and after the proc. number?
   character(len=LEN_CHAR_L) :: GETMPATH, PMAPFILE              ! Path to GETM output and processor map
   type(t_fieldset)          :: fieldset

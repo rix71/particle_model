@@ -1,4 +1,4 @@
-Updated: Wed Feb 15 08:06:56 PM EET 2023
+Updated: Thu Feb 23 08:30:58 PM EET 2023
 code/datetime.f90-67-  type(t_datetime) function ctor_datetime(date_str) result(res)
 code/datetime.f90-68-    !---------------------------------------------
 code/datetime.f90-69-    ! Constructor for datetime
@@ -31,72 +31,72 @@ code/datetime.f90-292-    !---------------------------------------------
 code/datetime.f90-293-    type(t_datetime), intent(in) :: start, end
 code/datetime.f90-294-    real(rk)                     :: start_num, end_num
 --
-code/domain.f90-87-    call nc_read_real_2d(trim(TOPOFILE), trim(bathy), nx, ny, d%depdata)
-code/domain.f90-88-
-code/domain.f90-89-    !---------------------------------------------
-code/domain.f90:90:    ! TODO: Seamask could have another value (4) to represent boundaries.
-code/domain.f90-91-    !       Boundary should have a thickness!
-code/domain.f90-92-    FMT2, "Making seamask"
-code/domain.f90-93-    do ii = 2, nx - 1
+code/domain.f90-51-    !---------------------------------------------
+code/domain.f90-52-    ! Initialize the global longitude/latitude
+code/domain.f90-53-    ! and seamask
+code/domain.f90:54:    ! TODO: dx, dy, dlon, dlat should be 2D arrays
+code/domain.f90-55-    !---------------------------------------------
+code/domain.f90-56-#ifdef DEBUG
+code/domain.f90-57-    use nc_manager
 --
-code/fieldset.f90-491-    ! Get a list of directories or files that contain the data
-code/fieldset.f90-492-    ! The files should be named so that ls command would give them
-code/fieldset.f90-493-    ! in the right order. Including the date in the file name should be enough.
-code/fieldset.f90:494:    ! TODO: Alternatively, if all the files are in one directory,
-code/fieldset.f90-495-    !       it should list all the files in this%PATH.
-code/fieldset.f90-496-    !       (separate routine e.g., init_filelist ?)
-code/fieldset.f90:497:    ! TODO (later, probably never): sort the files somehow so all of this
-code/fieldset.f90-498-    !       would not depend on ls getting it right.
-code/fieldset.f90-499-    !---------------------------------------------
-code/fieldset.f90-500-    class(t_fieldset), intent(inout) :: this
+code/domain.f90-88-    call nc_read_real_2d(trim(TOPOFILE), trim(bathy), nx, ny, d%depdata)
+code/domain.f90-89-
+code/domain.f90-90-    !---------------------------------------------
+code/domain.f90:91:    ! TODO: Seamask could have another value (4) to represent boundaries.
+code/domain.f90-92-    !       Boundary should have a thickness!
+code/domain.f90-93-    FMT2, "Making seamask"
+code/domain.f90-94-    do ii = 2, nx - 1
 --
-code/fieldset.f90-551-  subroutine init_proc_mask(this)
-code/fieldset.f90-552-    !---------------------------------------------
-code/fieldset.f90-553-    ! This maps the pieces of GETM data using par_setup.
-code/fieldset.f90:554:    ! TODO: Since pmask takes up a lot of unnecessary space,
-code/fieldset.f90-555-    !       maybe this should only be called when par_setup is wanted
-code/fieldset.f90-556-    !      (either a compilation flag or "if (parallel)" or something in init_model)
-code/fieldset.f90-557-    ! EDIT: This is called from init_model only if this%has_subdomains=.true.
+code/fieldset.f90-343-    ! Get a list of directories or files that contain the data
+code/fieldset.f90-344-    ! The files should be named so that ls command would give them
+code/fieldset.f90-345-    ! in the right order. Including the date in the file name should be enough.
+code/fieldset.f90:346:    ! TODO: Alternatively, if all the files are in one directory,
+code/fieldset.f90-347-    !       it should list all the files in this%PATH.
+code/fieldset.f90-348-    !       (separate routine e.g., init_filelist ?)
+code/fieldset.f90:349:    ! TODO (later, probably never): sort the files somehow so all of this
+code/fieldset.f90-350-    !       would not depend on ls getting it right.
+code/fieldset.f90-351-    !---------------------------------------------
+code/fieldset.f90-352-    class(t_fieldset), intent(inout) :: this
 --
-code/fieldset.f90-627-  !===========================================
-code/fieldset.f90-628-  subroutine find_folder(this, date, thedir, folder_idx)
-code/fieldset.f90-629-    !---------------------------------------------
-code/fieldset.f90:630:    ! TODO: might have to check if nc files start at time
-code/fieldset.f90-631-    ! [date] 00:00:00 or [date] 00:00:10 (at least in this particular example)
-code/fieldset.f90-632-    ! Compare every time?
-code/fieldset.f90-633-    ! Some validity check would be nice
+code/fieldset.f90-745-    ! adaptive vertical (sigma) coordinates change in time
+code/fieldset.f90-746-    ! and need to be read from the netcdf file. The domain class
+code/fieldset.f90-747-    ! does not handle this.
+code/fieldset.f90:748:    ! TODO: zax direction should be taken into account
+code/fieldset.f90-749-    !---------------------------------------------
+code/fieldset.f90-750-    class(t_fieldset), intent(in)   :: this
+code/fieldset.f90-751-    real(rk), intent(in)            :: t, z
 --
-code/fieldset.f90-722-  subroutine get_indices_vertical(this, t, z, i, j, k, kr)
-code/fieldset.f90-723-    !---------------------------------------------
-code/fieldset.f90-724-    ! Get the vertical indices for a given depth
-code/fieldset.f90:725:    ! TODO: zax direction should be taken into account
-code/fieldset.f90-726-    !---------------------------------------------
-code/fieldset.f90-727-    class(t_fieldset), intent(in)   :: this
-code/fieldset.f90-728-    real(rk), intent(in)            :: t, z
+code/fieldset.f90-961-  !===========================================
+code/fieldset.f90-962-  subroutine find_directory(this, date, dir_name, dir_idx)
+code/fieldset.f90-963-    !---------------------------------------------
+code/fieldset.f90:964:    ! TODO: might have to check if nc files start at time
+code/fieldset.f90-965-    ! [date] 00:00:00 or [date] 00:00:10 (at least in this particular example)
+code/fieldset.f90-966-    ! Compare every time?
+code/fieldset.f90-967-    ! Some validity check would be nice
 --
-code/init.f90-168-  subroutine init_fieldset
-code/init.f90-169-    !---------------------------------------------
-code/init.f90-170-    ! Allocate arrays for current data.
-code/init.f90:171:    ! TODO: Right now it is assumed that all subdomains
-code/init.f90-172-    !       are the same size. Also it is assumed that subdomains
-code/init.f90-173-    !       exist at all. There should be a switch (e.g. has_subdomains).
-code/init.f90-174-    !       This also changes allocation.
+code/init.f90-173-  subroutine init_fieldset
+code/init.f90-174-    !---------------------------------------------
+code/init.f90-175-    ! Initialise the fieldset
+code/init.f90:176:    ! TODO: Fix memory calculation
+code/init.f90-177-    !---------------------------------------------
+code/init.f90-178-    character(len=LEN_CHAR_L)              :: initPath
+code/init.f90-179-    character(len=LEN_CHAR_L)              :: filename
 --
-code/init.f90-245-
-code/init.f90-246-      if (nc_var_exists(trim(filename), trim(elevvarname))) then
-code/init.f90-247-        call fieldset%add_field("ELEV", elevvarname, is_2d=.true.)
-code/init.f90:248:        ! TODO: set_elev for faster lookup
-code/init.f90-249-        field_count = field_count + 1
-code/init.f90-250-      end if
-code/init.f90-251-    end if
+code/init.f90-271-
+code/init.f90-272-      if (nc_var_exists(trim(filename), trim(elevvarname))) then
+code/init.f90-273-        call fieldset%add_field("ELEV", elevvarname)
+code/init.f90:274:        ! TODO: set_elev for faster lookup
+code/init.f90-275-        ! ! field_count = field_count + 1
+code/init.f90-276-      end if
+code/init.f90-277-    end if
 --
-code/interp.f90-46-    !      c_k
-code/interp.f90-47-    !        1 - bottom point along y-axis
-code/interp.f90-48-    !        2 - top point along y-axis
-code/interp.f90:49:    ! TODO: Maybe calculate dx, dy and dz for each edge?
-code/interp.f90-50-    !---------------------------------------------
-code/interp.f90-51-
-code/interp.f90-52-    real(rk), intent(in)  :: x1, x2
+code/interp.f90-57-    !      c_k
+code/interp.f90-58-    !        1 - bottom point along y-axis
+code/interp.f90-59-    !        2 - top point along y-axis
+code/interp.f90:60:    ! TODO: Maybe calculate dx, dy and dz for each edge?
+code/interp.f90-61-    !---------------------------------------------
+code/interp.f90-62-
+code/interp.f90-63-    real(rk), intent(in)  :: x1, x2
 --
 code/main.f90-7-  use run_params, only: runid
 code/main.f90-8-#endif
@@ -130,13 +130,13 @@ code/physics.f90-10-  ! - drag
 code/physics.f90-11-  !----------------------------------------------------------------
 code/physics.f90-12-  use mod_errors
 --
-code/physics.f90-208-  real(rk) function seawater_viscosity_from_temp_and_salt(T, S)
-code/physics.f90-209-    !---------------------------------------------
-code/physics.f90-210-    ! Dynamic viscosity of seawater
-code/physics.f90:211:    ! TODO: Add proper reference
-code/physics.f90-212-    ! https://ittc.info/media/4048/75-02-01-03.pdf
-code/physics.f90-213-    !---------------------------------------------
-code/physics.f90-214-    real(rk), intent(in) :: T, S
+code/physics.f90-221-  real(rk) function seawater_viscosity_from_temp_and_salt(T, S)
+code/physics.f90-222-    !---------------------------------------------
+code/physics.f90-223-    ! Dynamic viscosity of seawater
+code/physics.f90:224:    ! TODO: Add proper reference
+code/physics.f90-225-    ! https://ittc.info/media/4048/75-02-01-03.pdf
+code/physics.f90-226-    !---------------------------------------------
+code/physics.f90-227-    real(rk), intent(in) :: T, S
 --
 code/vars.f90-17-module mod_params
 code/vars.f90-18-  !----------------------------------------------------------------
@@ -162,10 +162,10 @@ code/vertical_motion.f90-47-    ! perhaps should be calculated as the particles'
 code/vertical_motion.f90-48-    ! Ref: Erosion Behavior of Different Microplastic Particles in Comparison to Natural Sediments
 code/vertical_motion.f90-49-    !       Kryss Waldschläger and Holger Schüttrumpf
 --
-code/vertical_motion.f90-80-  real(rk) function buoyancy(p, fieldset, time, delta_rho, kin_visc) result(res)
-code/vertical_motion.f90-81-    !---------------------------------------------
-code/vertical_motion.f90-82-    ! Calculate the vertical velocity due to buoyancy
-code/vertical_motion.f90:83:    ! TODO: Which timestep should be used? (original or t + dt?)
-code/vertical_motion.f90-84-    !---------------------------------------------
-code/vertical_motion.f90-85-    type(t_particle), intent(in)    :: p
-code/vertical_motion.f90-86-    type(t_fieldset), intent(in)    :: fieldset
+code/vertical_motion.f90-87-  real(rk) function buoyancy(p, fieldset, time, delta_rho, kin_visc) result(res)
+code/vertical_motion.f90-88-    !---------------------------------------------
+code/vertical_motion.f90-89-    ! Calculate the vertical velocity due to buoyancy
+code/vertical_motion.f90:90:    ! TODO: Which timestep should be used? (original or t + dt?)
+code/vertical_motion.f90-91-    !---------------------------------------------
+code/vertical_motion.f90-92-    type(t_particle), intent(in)    :: p
+code/vertical_motion.f90-93-    type(t_fieldset), intent(in)    :: fieldset

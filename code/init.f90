@@ -12,6 +12,7 @@ module mod_initialise
   use mod_fieldset
   use field_vars, only: GETMPATH, PMAPFILE, has_subdomains, density_method, viscosity_method, has_bottom_stress, &
                         file_prefix, file_suffix, nlevels, &
+                        xdimname, ydimname, zdimname, &
                         uvarname, vvarname, wvarname, zaxvarname, elevvarname, rhovarname, &
                         tempvarname, saltvarname, viscvarname, taubxvarname, taubyvarname, zax_style, zax_direction, fieldset
   use mod_domain_vars, only: TOPOFILE, bathyvarname, lonvarname, latvarname, nx, ny, domain
@@ -60,6 +61,7 @@ contains
     namelist /time_vars/ run_start, run_end, dt
     namelist /field_vars/ GETMPATH, PMAPFILE, has_subdomains, &
       file_prefix, file_suffix, nlevels, &
+      xdimname, ydimname, zdimname, &
       uvarname, vvarname, wvarname, zaxvarname, elevvarname, rhovarname, &
       tempvarname, saltvarname, viscvarname, taubxvarname, taubyvarname, zax_style, zax_direction
 
@@ -112,6 +114,9 @@ contains
     FMT3, var2val_char(file_prefix)
     FMT3, var2val_char(file_suffix)
     FMT3, var2val(nlevels)
+    FMT3, var2val_char(xdimname)
+    FMT3, var2val_char(ydimname)
+    FMT3, var2val_char(zdimname)
     FMT3, var2val_char(uvarname)
     FMT3, var2val_char(vvarname)
     FMT3, var2val_char(zaxvarname)
@@ -167,42 +172,58 @@ contains
   !===========================================
   subroutine init_fieldset
     !---------------------------------------------
-    ! Allocate arrays for current data.
-    ! TODO: Right now it is assumed that all subdomains
-    !       are the same size. Also it is assumed that subdomains
-    !       exist at all. There should be a switch (e.g. has_subdomains).
-    !       This also changes allocation.
-    ! EDIT: Only full domain is used, even when the data is in chunks,
-    !       since reading into subdomains is not ready yet.
+    ! Initialise the fieldset
+    ! TODO: Fix memory calculation
     !---------------------------------------------
-    character(len=LEN_CHAR_L) :: initPath
-    character(len=LEN_CHAR_L) :: filename
-    real(rk)                  :: real_var
-    integer(rk)               :: field_count = 0, field_mem
+    character(len=LEN_CHAR_L)              :: initPath
+    character(len=LEN_CHAR_L)              :: filename
+    character(len=LEN_CHAR_S), allocatable :: dimnames(:)
+    real(rk)                               :: real_var
+    ! integer(rk)                            :: field_count = 0, field_mem
+    integer                                :: ndim      ! The (default) number of dimensions for the fieldset
+    integer, allocatable                   :: dim_idx(:) ! The default dimensions for the fieldset
 
     FMT1, "======== Init fields ========"
 
-    field_mem = (nx * ny * nlevels * 2) * sizeof(real_var)
-    FMT2, "Using full domain"
-    FMT2, "Allocating fields of size (nx, ny, nz): (", nx, ", ", ny, ", ", nlevels, ")", field_mem, " bytes per field"
-    if (has_subdomains) then
-      fieldset = t_fieldset(nx, ny, nlevels, &
-                            file_prefix=trim(file_prefix), file_suffix=trim(file_suffix), &
-                            domain=domain, &
-                            path=GETMPATH, pmap=PMAPFILE)
+    if (run_3d) then
+      ndim = 3
+      dim_idx = [1, 2, 3]
+      dimnames = [character(LEN_CHAR_S) :: trim(xdimname), trim(ydimname), trim(zdimname)]
     else
-      fieldset = t_fieldset(nx, ny, nlevels, &
-                            file_prefix=trim(file_prefix), file_suffix=trim(file_suffix), &
-                            domain=domain, &
-                            path=GETMPATH)
+      ndim = 2
+      dim_idx = [1, 2]
+      if (trim(zdimname) == "") then
+        dimnames = [character(LEN_CHAR_S) :: trim(xdimname), trim(ydimname)]
+      else
+        dimnames = [character(LEN_CHAR_S) :: trim(xdimname), trim(ydimname), trim(zdimname)]
+      end if
     end if
 
-    call fieldset%set_start_time(run_start_dt)
-    call fieldset%set_simulation_timestep(dt)
+    ! dimnames = [character(LEN_CHAR_S) :: trim(xdimname), trim(ydimname), trim(zdimname)]
+
+    ! field_mem = (nx * ny * nlevels * 2) * sizeof(real_var)
+    ! FMT2, "Allocating fields of size (nx, ny, nz): (", nx, ", ", ny, ", ", nlevels, ")", field_mem, " bytes per field"
+    if (has_subdomains) then
+      fieldset = t_fieldset(path=GETMPATH, &
+                            domain=domain, &
+                            dimnames=dimnames, &
+                            start=run_start_dt, dt=dt, &
+                            file_prefix=trim(file_prefix), file_suffix=trim(file_suffix), &
+                            pmap=PMAPFILE)
+    else
+      fieldset = t_fieldset(path=GETMPATH, &
+                            domain=domain, &
+                            dimnames=dimnames, &
+                            start=run_start_dt, dt=dt, &
+                            file_prefix=trim(file_prefix), file_suffix=trim(file_suffix))
+    end if
+
+    ! call fieldset%set_start_time(run_start_dt)
+    ! call fieldset%set_simulation_timestep(dt)
 
     select case (has_subdomains)
     case (.true.)
-      initPath = fieldset%get_folder(1)
+      initPath = fieldset%get_directory(1)
       write (filename, '(a)') trim(initPath)//PROC0
     case (.false.)
       initPath = fieldset%get_file(1)
@@ -224,7 +245,7 @@ contains
     else
       call throw_error("initialise :: init_fieldset", "Variable for V velocity does not exist: "//trim(vvarname))
     end if
-    field_count = field_count + 2
+    ! ! field_count = field_count + 2
     !---------------------------------------------
     ! Fields for v. velocity
     if (run_3d) then
@@ -235,18 +256,23 @@ contains
       end if
 
       if (nc_var_exists(trim(filename), trim(zaxvarname))) then
-        call fieldset%add_field("ZAX", zaxvarname)
+        select case (zax_style)
+        case (STATIC_DEPTH_VALUES)
+          call fieldset%add_field("ZAX", zaxvarname)
+        case (DEPTH_VALUES, LAYER_THICKNESS)
+          call fieldset%add_field("ZAX", zaxvarname)
+        end select
         call fieldset%set_zax("ZAX", zax_style, zax_direction)
       else
         call throw_error("initialise :: init_fieldset", "Variable for Z axis does not exist: "//trim(zaxvarname))
       end if
 
-      field_count = field_count + 2
+      ! ! field_count = field_count + 2
 
       if (nc_var_exists(trim(filename), trim(elevvarname))) then
-        call fieldset%add_field("ELEV", elevvarname, is_2d=.true.)
+        call fieldset%add_field("ELEV", elevvarname)
         ! TODO: set_elev for faster lookup
-        field_count = field_count + 1
+        ! ! field_count = field_count + 1
       end if
     end if
     !---------------------------------------------
@@ -255,7 +281,7 @@ contains
       ! Field for density
       if (nc_var_exists(trim(filename), trim(rhovarname))) then
         call fieldset%add_field("RHO", rhovarname)
-        field_count = field_count + 1
+        ! ! field_count = field_count + 1
         density_method = RHO_VARIABLE
       else
         call throw_warning("initialise :: init_fieldset", "Could not find density ('"//trim(rhovarname)//"') in "//trim(filename))
@@ -263,7 +289,7 @@ contains
             nc_var_exists(trim(filename), trim(saltvarname))) then
           call fieldset%add_field("TEMP", tempvarname)
           call fieldset%add_field("SALT", saltvarname)
-          field_count = field_count + 2
+          ! ! field_count = field_count + 2
           density_method = RHO_CALC
         else
           call throw_warning("initialise :: init_fieldset", "Could not find temperature or salinity ('" &
@@ -277,18 +303,18 @@ contains
       if (nc_var_exists(trim(filename), trim(viscvarname))) then
         call fieldset%add_field("VISC", viscvarname)
         viscosity_method = VISC_VARIABLE
-        field_count = field_count + 1
+        ! ! field_count = field_count + 1
       else
        call throw_warning("initialise :: init_fieldset", "Could not find viscosity ('"//trim(viscvarname)//"') in "//trim(filename))
         if (nc_var_exists(trim(filename), trim(tempvarname)) .and. &
             nc_var_exists(trim(filename), trim(saltvarname))) then
           if (.not. fieldset%has_field("TEMP")) then
             call fieldset%add_field("TEMP", tempvarname)
-            field_count = field_count + 1
+            ! ! field_count = field_count + 1
           end if
           if (.not. fieldset%has_field("SALT")) then
             call fieldset%add_field("SALT", saltvarname)
-            field_count = field_count + 1
+            ! ! field_count = field_count + 1
           end if
           viscosity_method = VISC_CALC
         else
@@ -301,9 +327,9 @@ contains
       !---------------------------------------------
       ! Fields for bottom friction
       if ((nc_var_exists(trim(filename), trim(taubxvarname)) .and. (nc_var_exists(trim(filename), trim(taubyvarname))))) then
-        call fieldset%add_field("TAUBX", taubxvarname, is_2d=.true.)
-        call fieldset%add_field("TAUBY", taubyvarname, is_2d=.true.)
-        field_count = field_count + 2
+        call fieldset%add_field("TAUBX", taubxvarname)
+        call fieldset%add_field("TAUBY", taubyvarname)
+        ! ! field_count = field_count + 2
         has_bottom_stress = .true.
       else
         call throw_warning("initialise :: init_fieldset", "Could not find bottom stress ('"//trim(taubxvarname)//"'/'"//trim(taubyvarname)//"') in "//trim(filename))
@@ -315,10 +341,9 @@ contains
       call init_biofouling(fieldset)
     end if
     !---------------------------------------------
-    ! if (has_subdomains) call fieldset%init_proc_mask()
 
     FMT1, LINE
-    FMT2, "Fields allocated: total", fieldset%num_fields * field_mem, " bytes"
+    ! FMT2, "Fields allocated: total", fieldset%num_fields * field_mem, " bytes"
     call fieldset%list_fields()
 
   end subroutine init_fieldset

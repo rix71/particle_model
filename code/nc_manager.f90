@@ -11,7 +11,7 @@ module nc_manager
   !===================================================
   !---------------------------------------------
   public :: nc_read_real_1d, nc_read_real_2d, nc_read_real_3d, nc_read_real_4d, nc_read_time_val, &
-            nc_get_dim, nc_get_timeunit, nc_var_exists, nc_check
+            nc_get_dim_len, nc_get_file_dims, nc_get_var_dims, nc_get_timeunit, nc_var_exists, nc_check
 
   !---------------------------------------------
   ! Public write variables/functions
@@ -415,20 +415,102 @@ call nc_check(trim(fname), nf90_get_var(ncid, varid, dataout, start=start, count
     return
   end function nc_read_time_val
   !===========================================
-  subroutine nc_get_dim(fname, dname, ndim)
+  subroutine nc_get_dim_len(fname, dname, dimlen)
+    !---------------------------------------------
+    ! Inquire the length of a dimension
+    !---------------------------------------------
 
-    integer, intent(out)         :: ndim
+    integer, intent(out)         :: dimlen
     integer                      :: ncid, dimid
     character(len=*), intent(in) :: fname
     character(len=*), intent(in) :: dname
 
-    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "get_dim :: open")
-    call nc_check(trim(fname), nf90_inq_dimid(ncid, dname, dimid), 'get_dim :: inq_dim_id '//trim(dname))
-    call nc_check(trim(fname), nf90_inquire_dimension(ncid, dimid, len=ndim), 'get_dim :: inq_dim '//trim(dname))
-    call nc_check(trim(fname), nf90_close(ncid), 'get_dim :: close')
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "get_dim_len :: open")
+    call nc_check(trim(fname), nf90_inq_dimid(ncid, dname, dimid), 'get_dim_len :: inq_dim_id '//trim(dname))
+    call nc_check(trim(fname), nf90_inquire_dimension(ncid, dimid, len=dimlen), 'get_dim_len :: inq_dim '//trim(dname))
+    call nc_check(trim(fname), nf90_close(ncid), 'get_dim_len :: close')
 
     return
-  end subroutine nc_get_dim
+  end subroutine nc_get_dim_len
+  !===========================================
+  subroutine nc_get_file_dims(fname, ndims, dimnames, dimlens)
+    !---------------------------------------------
+    ! Inquire the dimensions of a file
+    ! All outputs are optional
+    ! Output: ndims, dimnames, dimlens
+    !---------------------------------------------
+    character(len=*), intent(in)  :: fname
+    integer, intent(out), optional :: ndims
+    character(len=*), allocatable, intent(out), optional :: dimnames(:)
+    integer, allocatable, intent(out), optional :: dimlens(:)
+    integer :: ncid, numdims
+    integer :: i
+
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "get_file_dims :: open")
+    call nc_check(trim(fname), nf90_inquire(ncid, nDimensions=numdims), "get_file_dims :: inquire")
+    if (present(ndims)) then
+      ndims = numdims
+    end if
+
+    if (present(dimnames)) then
+      allocate (dimnames(numdims))
+      do i = 1, numdims
+        call nc_check(trim(fname), nf90_inquire_dimension(ncid, i, name=dimnames(i)), "get_file_dims :: inquire_dimension")
+      end do
+    end if
+
+    if (present(dimlens)) then
+      allocate (dimlens(numdims))
+      do i = 1, numdims
+        call nc_check(trim(fname), nf90_inquire_dimension(ncid, i, len=dimlens(i)), "get_file_dims :: inquire_dimension")
+      end do
+    end if
+
+    call nc_check(trim(fname), nf90_close(ncid), "get_file_dims :: close")
+
+    return
+  end subroutine nc_get_file_dims
+  !===========================================
+  subroutine nc_get_var_dims(fname, vname, ndims, dimnames, dimlens)
+    !---------------------------------------------
+    ! Inquire the dimensions of a variable
+    ! All outputs are optional
+    ! Output: ndims, dimnames, dimlens
+    !---------------------------------------------
+    character(len=*), intent(in)  :: fname
+    character(len=*), intent(in)  :: vname
+    integer, intent(out), optional :: ndims
+    character(len=*), allocatable, intent(out), optional :: dimnames(:)
+    integer, allocatable, intent(out), optional :: dimlens(:)
+    integer :: ncid, varid, numdims
+    integer :: dimids(nf90_max_var_dims)
+    integer :: i
+
+    call nc_check(trim(fname), nf90_open(fname, nf90_nowrite, ncid), "get_var_dims :: open")
+    call nc_check(trim(fname), nf90_inq_varid(ncid, vname, varid), "get_var_dims :: inq_var_id "//trim(vname))
+    call nc_check(trim(fname), nf90_inquire_variable(ncid, varid, ndims=numdims), "get_var_dims :: inq_var "//trim(vname))
+    if (present(ndims)) ndims = numdims
+
+    if (present(dimnames) .or. present(dimlens)) then
+    call nc_check(trim(fname), nf90_inquire_variable(ncid, varid, dimids=dimids(:numdims)), "get_var_dims :: inq_var "//trim(vname))
+      if (present(dimnames)) then
+        allocate (dimnames(numdims))
+        do i = 1, numdims
+      call nc_check(trim(fname), nf90_inquire_dimension(ncid, dimids(i), name=dimnames(i)), "get_var_dims :: inq_dim "//trim(vname))
+        end do
+      end if
+      if (present(dimlens)) then
+        allocate (dimlens(numdims))
+        do i = 1, numdims
+        call nc_check(trim(fname), nf90_inquire_dimension(ncid, dimids(i), len=dimlens(i)), "get_var_dims :: inq_dim "//trim(vname))
+        end do
+      end if
+    end if
+
+    call nc_check(trim(fname), nf90_close(ncid), "get_var_dims :: close")
+
+    return
+  end subroutine nc_get_var_dims
   !===========================================
   subroutine nc_get_timeunit(fname, timeunit)
 

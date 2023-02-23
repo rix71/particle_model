@@ -24,12 +24,12 @@ module mod_domain
     real(rk), allocatable :: lons(:), lats(:)
     real(rk), allocatable :: depdata(:, :)
     integer, allocatable  :: seamask(:, :)
-    real(rk)              :: lon0, lat0, lon1, lat1
+    real(rk)              :: lboundx, lboundy, uboundx, uboundy
     real(rk), public      :: dlon, dlat, dx, dy ! Could be arrays
   contains
     private
     procedure, public :: lonlat2xy, xy2lonlat
-    procedure, public :: get_indices_2d
+    procedure, public :: get_index
     generic, public   :: get_bathymetry => get_bathymetry_whole, get_bathymetry_idx, get_bathymetry_idx_interp
     procedure         :: get_bathymetry_whole, get_bathymetry_idx, get_bathymetry_idx_interp
     generic, public   :: get_seamask => get_seamask_whole, get_seamask_idx
@@ -51,6 +51,7 @@ contains
     !---------------------------------------------
     ! Initialize the global longitude/latitude
     ! and seamask
+    ! TODO: dx, dy, dlon, dlat should be 2D arrays
     !---------------------------------------------
 #ifdef DEBUG
     use nc_manager
@@ -70,13 +71,13 @@ contains
     call nc_read_real_1d(trim(TOPOFILE), trim(lon), nx, d%lons)
     call nc_read_real_1d(trim(TOPOFILE), trim(lat), ny, d%lats)
 
-    d%lat0 = d%lats(1); d%lat1 = d%lats(ny); d%dlat = d%lats(2) - d%lats(1); d%dy = d%dlat * 60.*1852.
-    d%lon0 = d%lons(1); d%lon1 = d%lons(nx); d%dlon = d%lons(2) - d%lons(1); d%dx = d%dlon * 60.*1852.*cos(0.5 * (d%lat0 + d%lat1) * pi / 180.)
+    d%lboundy = d%lats(1); d%uboundy = d%lats(ny); d%dlat = d%lats(2) - d%lats(1); d%dy = d%dlat * 60.*1852.
+    d%lboundx = d%lons(1); d%uboundx = d%lons(nx); d%dlon = d%lons(2) - d%lons(1); d%dx = d%dlon * 60.*1852.*cos(0.5 * (d%lboundy + d%uboundy) * pi / 180.)
 
     FMT2, LINE
     FMT2, "Coordinates:"
-    FMT3, var2val(d%lat0), "[deg N], ", var2val(d%lat1), "[deg N]"
-    FMT3, var2val(d%lon0), "[deg E], ", var2val(d%lon1), "[deg E]"
+    FMT3, var2val(d%lboundy), "[deg N], ", var2val(d%uboundy), "[deg N]"
+    FMT3, var2val(d%lboundx), "[deg E], ", var2val(d%uboundx), "[deg E]"
     FMT2, "Cell size:"
     FMT3, var2val(d%dlat), "[deg], ", var2val(d%dy), "[m]"
     FMT3, var2val(d%dlon), "[deg], ", var2val(d%dx), "[m]"
@@ -366,8 +367,8 @@ contains
     real(rk), intent(in)  :: lon, lat
     real(rk), intent(out) :: x, y
 
-    x = (lon - this%lon0) / this%dlon * this%dx
-    y = (lat - this%lat0) / this%dlat * this%dy
+    x = (lon - this%lboundx) / this%dlon * this%dx
+    y = (lat - this%lboundy) / this%dlat * this%dy
 
     return
   end subroutine lonlat2xy
@@ -377,13 +378,90 @@ contains
     real(rk), intent(in) :: x, y
     real(rk), intent(out) :: lon, lat
 
-    lon = x / this%dx * this%dlon + this%lon0
-    lat = y / this%dy * this%dlat + this%lat0
+    lon = x / this%dx * this%dlon + this%lboundx
+    lat = y / this%dy * this%dlat + this%lboundy
 
     return
   end subroutine xy2lonlat
   !===========================================
-  subroutine get_indices_2d(this, lon, lat, i, j, ir, jr)
+  subroutine get_index(this, loc, dim, i, ir)
+    class(t_domain), intent(in) :: this
+    real(rk), intent(in) :: loc ! Location in degrees (lon or lat)
+    integer, intent(in):: dim
+    integer, intent(out), optional :: i
+    real(rk), intent(out), optional  :: ir
+    integer :: it
+    real(rk) :: irt
+
+    select case (dim)
+    case (1)
+      ! Longitude
+      ! Check bounds
+      if (loc < this%lboundx) then
+#ifdef SNAP_TO_BOUNDS
+        if (present(i)) i = 1
+        if (present(ir)) ir = ONE
+        return
+#else
+        call throw_error("domain :: get_index", "lon is less than lboundx")
+#endif
+      end if
+      if (loc > this%uboundx) then
+#ifdef SNAP_TO_BOUNDS
+        if (present(i)) i = this%nx
+        if (present(ir)) ir = real(this%nx, rk)
+        return
+#else
+        call throw_error("domain :: get_index", "lon is greater than uboundx")
+#endif
+      end if
+      ! Get indices
+      it = minloc(abs(this%lons - loc), dim=1)
+      if (this%lons(it) > loc) then
+        it = it - 1
+      end if
+      ! Get real indices
+      irt = it + (loc - this%lons(it)) / (this%lons(it + 1) - this%lons(it))
+      if (present(i)) i = it
+      if (present(ir)) ir = irt
+    case (2)
+      ! Latitude
+      ! Check bounds
+      if (loc < this%lboundy) then
+#ifdef SNAP_TO_BOUNDS
+        if (present(i)) i = 1
+        if (present(ir)) ir = ONE
+        return
+#else
+        call throw_error("domain :: get_index", "lat is less than lboundy")
+#endif
+      end if
+      if (loc > this%uboundy) then
+#ifdef SNAP_TO_BOUNDS
+        if (present(i)) i = this%ny
+        if (present(ir)) ir = real(this%ny, rk)
+        return
+#else
+        call throw_error("domain :: get_index", "lat is greater than uboundy")
+#endif
+      end if
+      ! Get indices
+      it = minloc(abs(this%lats - loc), dim=1)
+      if (this%lats(it) > loc) then
+        it = it - 1
+      end if
+      ! Get real indices
+      irt = it + (loc - this%lats(it)) / (this%lats(it + 1) - this%lats(it))
+      if (present(i)) i = it
+      if (present(ir)) ir = irt
+    case default
+      call throw_error("domain :: get_index", "dim must be 1 or 2")
+    end select
+
+    return
+  end subroutine get_index
+  !===========================================
+  subroutine get_indices_2d_old(this, lon, lat, i, j, ir, jr)
     !---------------------------------------------
     ! Should integer indices be int(irt) or nint(irt) (nearest)?
     !---------------------------------------------
@@ -487,7 +565,7 @@ contains
     end if
 
     return
-  end subroutine get_indices_2d
+  end subroutine get_indices_2d_old
   !===========================================
 !   subroutine get_indices_2d(this, lon, lat, i, j, ir, jr)
 !     !---------------------------------------------
@@ -504,8 +582,8 @@ contains
 
 !
 
-!     irt = (lon - this%lon0) / this%dlon + 1
-!     jrt = (lat - this%lat0) / this%dlat + 1
+!     irt = (lon - this%lboundx) / this%dlon + 1
+!     jrt = (lat - this%lboundy) / this%dlat + 1
 
 ! #ifdef SNAP_TO_BOUNDS
 !     ! This is probably only necessary in case of large time steps

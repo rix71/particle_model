@@ -68,6 +68,13 @@ contains
       j = p%jr0
       k = p%kr0
 
+      if (k < fieldset%zax_bot_idx .or. k >= fieldset%zax_top_idx) then
+        ERROR, "Resuspension: about to call bottom_friction_velocity with k out of bounds"
+        ERROR, "i,j,k = ", i, j, k
+        ERROR, "particle state = ", p%state
+        ERROR, "particle depth = ", p%depth0, p%depth1
+      end if
+
       u_star = bottom_friction_velocity(fieldset, time, i, j, k)
       if (u_star > resuspension_threshold) then
         res = u_star * resuspension_coeff
@@ -123,34 +130,22 @@ contains
     real(rk)             :: d_star    ! Dimensionless diameter
     real(rk)             :: w_star    ! Dimensionless settling velocity
 
-    dbghead(Kooi_vertical_velocity)
-    debug(delta_rho); debug(kin_visc)
-
     res = ZERO
     d_star = (delta_rho * g * (2.*rad_p)**3.) / (rho_env * (kin_visc**2.)) ! g negative?
-    debug(d_star)
     if (d_star < 0.05) then
-      DBG, "d_star < 0.05"
       w_star = 1.74e-4 * (d_star**2)
     else if (d_star > 5.e9) then
-      DBG, "d_star > 5.e9"
       w_star = 1000.
     else
-      DBG, "d_star in range"
       w_star = 10.**(-3.76715 + (1.92944 * log10(d_star)) - (0.09815 * log10(d_star)**2.) &
                      - (0.00575 * log10(d_star)**3.) + (0.00056 * log10(d_star)**4.))
     end if
-    debug(w_star)
     if (delta_rho > ZERO) then
-      DBG, "delta_rho > 0"
       res = -1.0 * ((delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.) ! Getting NaNs with -1*g
     else
-      DBG, "delta_rho < 0"
       res = (-1.0 * (delta_rho / rho_env) * g * w_star * kin_visc)**(1./3.)
     end if
-    debug(res)
-    
-    dbgtail(Kooi_vertical_velocity)
+
     return
   end function Kooi_vertical_velocity
 

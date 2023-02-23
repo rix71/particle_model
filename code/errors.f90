@@ -21,7 +21,7 @@ contains
       call perror("   ERROR: "//trim(func))
       ERROR, "err ", code
     end if
-    stop
+    stop 1
 
     return
   end subroutine throw_error

@@ -2,6 +2,7 @@
 module mod_list
   use mod_precdefs
   use mod_errors
+  use mod_variable, only: t_variable
   use mod_field
   implicit none
   private
@@ -11,7 +12,7 @@ module mod_list
   !---------------------------------------------
   type t_node
     private
-    type(t_field), allocatable :: item
+    class(t_variable), allocatable :: item
     character(len=LEN_CHAR_S)  :: key
     type(t_node), pointer      :: next => null()
 
@@ -48,7 +49,7 @@ contains
   ! Node functions
   !---------------------------------------------
   type(t_node) function ctor_node(data, key) result(n)
-    type(t_field), intent(in)    :: data
+    class(t_variable), intent(in)    :: data
     character(len=*), intent(in) :: key
 
     n%item = data
@@ -129,7 +130,7 @@ contains
   subroutine l_get_key_item(this, key, res)
     class(t_list), intent(in)           :: this
     character(len=*), intent(in)        :: key
-    type(t_field), pointer, intent(out) :: res
+    class(t_variable), pointer, intent(out) :: res
     type(t_node), pointer               :: current_node
 
     call this%get_node(key, current_node)
@@ -141,7 +142,7 @@ contains
   subroutine l_get_idx_item(this, idx, res)
     class(t_list), intent(in)           :: this
     integer, intent(in)                 :: idx
-    type(t_field), pointer, intent(out) :: res
+    class(t_variable), pointer, intent(out) :: res
     type(t_node), pointer               :: current_node
 
     call this%get_node(idx, current_node)
@@ -153,13 +154,20 @@ contains
   subroutine l_get_info(this)
     class(t_list), intent(in) :: this
     type(t_node), pointer     :: current_node
+    class(t_variable), pointer :: item
 
     ! write (*, "('Nodes: ', i4)") this%num_nodes
     FMT2, "Nodes: ", this%num_nodes
     current_node => this%head
     do while (associated(current_node))
-      ! write (*, "(' -> ', a)", advance="no") trim(current_node%key)
       FMT3, "-> "//trim(current_node%key)
+      item => current_node%item
+      select type (item)
+      class is (t_field_static)
+        FMT3, "  Static field", item%get_dim(), "D"
+      class is (t_field_dynamic)
+        FMT3, "  Dynamic field", item%get_dim(), "D"
+      end select
       current_node => current_node%next
     end do
     current_node => null()
@@ -205,7 +213,7 @@ contains
   !===========================================
   subroutine l_add_node(this, key, data)
     class(t_list), intent(inout) :: this
-    type(t_field), intent(in)    :: data
+    class(t_variable), intent(in)    :: data
     character(len=*), intent(in) :: key
 
     if (associated(this%tail)) then

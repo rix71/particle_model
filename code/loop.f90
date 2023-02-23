@@ -49,7 +49,7 @@ contains
     call date_and_time(date=d, time=t)
     FMT2, t(1:2), ":", t(3:4), ":", t(5:10)
 #ifdef USE_OMP
-    FMT2, "Using OpenMP with ", omp_get_max_threads(), " processes"
+    FMT2, "Using OpenMP with ", omp_get_max_threads(), " threads"
 #endif
 
     ! Read appropriate fields:

@@ -412,7 +412,7 @@ contains
 #ifdef OUT_KIN_VISCOSITY
     if (.not. allocated(var)) allocate (var(nwrite, 1))
     GATHER_OMP_START_RV
-    GATHER_LOOP_RV(kin_viscosity)
+    GATHER_LOOP_RV(kin_visc)
     GATHER_OMP_END
     call nc_check(trim(nc_fileout_all), nf90_inq_varid(ncid, "kin_viscosity", varid), "write_data :: inq_varid")
     call nc_check(trim(nc_fileout_all), nf90_put_var(ncid, varid, var(:,1), start=[1, nc_itime_out], count=[nwrite, 1]), "write_data :: put_var")

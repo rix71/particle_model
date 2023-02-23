@@ -85,10 +85,9 @@ contains
     real(rk) :: chla, bf_growth
     real(rk) :: h_bf_max, h_bf, r_pl, rho_pl, r_tot, rho_tot
 
-    dbghead(biofouling)
+    dbghead(biofouling :: biofouling)
 
     chla = get_ambient_chla(fieldset, time, p%i0, p%j0, p%k0)
-    debug(chla); debug(p%i0); debug(p%j0); debug(p%k0)
     ! If chl-a concentration is above a threshold, biofouling can occur
     if (chla > growth_init_threshold) then
       h_bf = p%h_biofilm
@@ -96,13 +95,10 @@ contains
       rho_pl = p%rho0
       h_bf_max = h_bf_max_ratio * r_pl
 
-      debug(h_bf_max); debug(h_bf); debug(r_pl); debug(rho_pl); 
       bf_growth = (h_bf_max - h_bf) / growth_timescale * dt
       h_bf = h_bf + bf_growth
       r_tot = r_pl + h_bf
       rho_tot = (r_pl**3.*rho_pl + (r_tot**3.-r_pl**3.) * rho_bf) / (r_tot)**3.
-
-      debug(bf_growth); debug(h_bf); debug(r_tot); debug(rho_tot)
 
       p%growth_biofilm = bf_growth
       p%radius = max(r_tot, r_pl)
@@ -110,7 +106,7 @@ contains
       p%h_biofilm = h_bf
     end if
 
-    dbgtail(biofouling)
+    dbgtail(biofouling :: biofouling)
     return
   end subroutine biofouling
 

@@ -70,8 +70,8 @@ contains
 
     nc_filein_active = trim(outDir)//'/'//trim(runid)//'.active.nc'
 
-    call nc_get_dim(trim(nc_filein_active), "time", ntimes)
-    call nc_get_dim(trim(nc_filein_active), "particle", nparticles)
+    call nc_get_dim_len(trim(nc_filein_active), "time", ntimes)
+    call nc_get_dim_len(trim(nc_filein_active), "particle", nparticles)
 
     allocate (timevals(ntimes), x(ntimes, nparticles), y(ntimes, nparticles), age(ntimes, nparticles), stat=ierr)
     ! counts(nx, ny), &

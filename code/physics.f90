@@ -13,7 +13,7 @@ module mod_physics
   use mod_interp
   use mod_precdefs
   use mod_params
-  use field_vars, only: has_bottom_stress, density_method, viscosity_method
+  use field_vars, only: has_bottom_stress, density_method, viscosity_method, zax_style
   use time_vars, only: dt
   use mod_fieldset, only: t_fieldset
   implicit none
@@ -153,6 +153,7 @@ contains
     !---------------------------------------------
     ! Calculate the bottom stress using a logarithmic profile
     ! Returns taubx/rho, tauby/rho (stress divided by density)
+    !! Still debugging this
     !---------------------------------------------
     type(t_fieldset), intent(in)  :: fieldset
     real(rk), intent(in)          :: time
@@ -166,15 +167,27 @@ contains
     real(rk), allocatable         :: zax(:)
     real(rk)                      :: level_idx
 
-    if (int(k) /= fieldset%zax_bot_idx) call throw_error("physics :: bottom_stress", "Not bottom layer index!")
+    ! if (int(k) /= fieldset%zax_bot_idx) call throw_error("physics :: bottom_stress", "Not bottom layer index!")
 
     level_idx = real(int(k), rk)
-    if (fieldset%bottom_is_nan("U")) level_idx = level_idx + ONE * fieldset%zax_direction()
+    if (fieldset%bottom_is_nan("U")) level_idx = level_idx + ONE
+
+    if (level_idx < fieldset%zax_bot_idx .or. level_idx > fieldset%zax_top_idx) then
+      ERROR, "physics :: bottom_stress :: level_idx out of range"
+      ERROR, "level_idx = ", level_idx
+      ERROR, "bottom_nan = ", fieldset%bottom_is_nan("U")
+    end if
 
     u = fieldset%get("U", time, i, j, k=level_idx)
     v = fieldset%get("V", time, i, j, k=level_idx)
-    ! Automatic allocation should happen here!!!
-    zax = fieldset%get_zax(time, int(i), int(j))
+    ! Automatic allocation should happen here
+    select case (zax_style)
+    case (STATIC_DEPTH_VALUES)
+      zax = fieldset%get_zax()
+    case (DEPTH_VALUES, LAYER_THICKNESS)
+      zax = fieldset%get_zax(time, int(i), int(j))
+    end select
+    ! h is the height of the layer above the bottom
     h = -zax(int(level_idx))
     C = max((von_Karman**2./((log(h / roughness_height))**2.)), c_drag_min)
     taubx = -C * sqrt(u**2.+v**2.) * u

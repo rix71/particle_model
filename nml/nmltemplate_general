@@ -118,8 +118,9 @@
 ! taubxvarname   - [char] Name of bottom stress x-component in GETM data
 ! taubyvarname   - [char] Name of bottom stress y-component in GETM data
 ! zax_style      - [int]  Vertical coordinate values 
-!                         1 - depth values 
-!                         2 - layer thickness
+!                         0 - depth values (static)
+!                         1 - depth values (adaptive)
+!                         2 - layer thickness (adaptive)
 ! zax_direction  - [int]  Direction of z-axis
 !                         > 0 - positive up
 !                         < 0 - positive down
@@ -133,6 +134,9 @@
   file_prefix = ''
   file_suffix = ''
   nlevels = 1
+  xdimname = 'lon'
+  ydimname = 'lat'
+  zdimname = 'level'
   uvarname = 'velx3d'
   vvarname = 'vely3d'
   wvarname = 'w'

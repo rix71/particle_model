@@ -102,12 +102,14 @@ contains
                                        v1, v2
     real(rk)                        :: i, j
 
+    dbghead(advect :: advect_RK2_2D)
+
     i = p%ir0
     j = p%jr0
     call fieldset%domain%lonlat2xy(p%lon0, p%lat0, x0, y0)
 
-    u1 = fieldset%get("U", time, i, j)
-    v1 = fieldset%get("V", time, i, j)
+    u1 = fieldset%get("U", time, i, j); debug(u1)
+    v1 = fieldset%get("V", time, i, j); debug(v1)
 
     x1 = x0 + u1 * dt
     y1 = y0 + v1 * dt
@@ -115,8 +117,8 @@ contains
     call fieldset%domain%xy2lonlat(x1, y1, lon1, lat1)
     call fieldset%search_indices(x=lon1, y=lat1, ir=i, jr=j)
 
-    u2 = fieldset%get("U", time + dt, i, j)
-    v2 = fieldset%get("V", time + dt, i, j)
+    u2 = fieldset%get("U", time + dt, i, j); debug(u2)
+    v2 = fieldset%get("V", time + dt, i, j); debug(v2)
 
     x2 = x0 + 0.5 * (u1 + u2) * dt
     y2 = y0 + 0.5 * (v1 + v2) * dt
@@ -127,6 +129,7 @@ contains
     p%u1 = 0.5 * (u1 + u2)
     p%v1 = 0.5 * (v1 + v2)
 
+    dbgtail(advect :: advect_RK2_2D)
     return
   end subroutine advect_RK2_2D
   !===========================================

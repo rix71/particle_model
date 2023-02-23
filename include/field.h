@@ -1,5 +1,8 @@
 !--------------
 ! zax_style
+! Regular depth axis:
+#define STATIC_DEPTH_VALUES 0
+! Adaptive coordinates:
 #define DEPTH_VALUES 1
 #define LAYER_THICKNESS 2
 !--------------
