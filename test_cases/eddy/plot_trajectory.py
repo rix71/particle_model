@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 print("Plotting trajectory...")
 
-df = xr.open_dataset("./out/eddy.all.nc")
+df = xr.open_dataset("./out/eddy.out.nc")
 currents = xr.open_dataset("./data/data/eddy.nc")
 topo = xr.open_dataset("./data/eddy_topo.nc")
 

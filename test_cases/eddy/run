@@ -35,6 +35,9 @@ export getmpath="${PWD}/data/data"
 export topofile="${PWD}/data/eddy_topo.nc"
 
 # Hydrodynamic data variables
+export xdimname="lon"
+export ydimname="lat"
+export zdimname="level"
 export lonvarname="lon"
 export latvarname="lat"
 export uvarname="u"
@@ -111,6 +114,7 @@ export run_end=$sim_end
 echo "The model is running from $run_start to $run_end"
 #--------------------
 # Set output directory
+export outdir="${OUT_BASE_DIR}"
 mkdir -p ${outdir}
 #--------------------
 # Make namelists
@@ -121,7 +125,14 @@ cp input.inp ${outdir}/.
 echo "Running model..."
 tic_m=$(date +%s)
 ${MODEL_BIN}
+err=$?
 toc_m=$(date +%s)
+if [ $err -ne 0 ]; then
+  echo "Model exited with error"
+  exit
+else 
+  echo "Model exited without errors"
+fi
 #--------------------
 echo "Model wall time: $((toc_m-tic_m)) seconds" 
 echo "===================="

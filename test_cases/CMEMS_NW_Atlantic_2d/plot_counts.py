@@ -7,7 +7,7 @@ warnings.filterwarnings("ignore")
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--source", help="Source files", required=True)
+    parser.add_argument("-s", "--source", help="Source files", required=True, nargs="+")
     parser.add_argument("-o", "--output-path",
                         help="Output path", required=False, default=".")
 

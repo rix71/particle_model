@@ -24,6 +24,9 @@ export topofile="${PWD}/data/topo/topo.nc"
 
 
 # Hydrodynamic data variables
+export xdimname="longitude"
+export ydimname="latitude"
+export zdimname="depth"
 export lonvarname="lon"
 export latvarname="lat"
 export uvarname="uo"
@@ -31,8 +34,8 @@ export vvarname="vo"
 export zaxvarname="depth"
 
 # Model domain
-export nx=297
-export ny=375
+export nx=275
+export ny=353
 export nlevels=1
 export has_subdomains=False
 export zax_style=1
@@ -66,7 +69,7 @@ export coordfile="${PWD}/data/input/init_particles_full.dat"
 export inputstep=999999999
 
 # Output
-out_hours=0.5
+out_hours=24
 export outputstep=`python3 -c "print(int($out_hours*3600./$dt))"`
 export write_all_particles=True
 export write_snapshot=False
@@ -89,9 +92,9 @@ OUT_BASE_DIR="${RUN_DIR}/out"
 #--------------------
 # Entire simulation period
 sim_start="2022-06-02"
-sim_end="2022-06-05"
+sim_end="2022-06-22"
 #--------------------
-step_days=3
+step_days=10
 #--------------------
 date_start=$(date -I -d "$sim_start")
 date_end=$(date -I -d "$sim_end")
@@ -189,7 +192,7 @@ clear
 mkdir -p ${OUT_BASE_DIR}/counts
 for d in $( ls -d ${OUT_BASE_DIR}/2* ); do
     echo "Calculating counts in $d"
-    python3 calculate_counts.py -np 8 -s $d/${runid}.out.nc -o ${OUT_BASE_DIR}/counts/counts.$(basename $d).nc --topo-file ${topofile}
+    python3 calculate_counts.py -O -np 8 -s $d/${runid}.out.nc -o ${OUT_BASE_DIR}/counts/counts.$(basename $d).nc --topo-file ${topofile}
 done
 mkdir -p ${OUT_BASE_DIR}/figs
 python3 plot_counts.py -s ${OUT_BASE_DIR}/counts/counts.*.nc -o ${OUT_BASE_DIR}/figs
